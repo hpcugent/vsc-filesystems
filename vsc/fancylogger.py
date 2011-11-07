@@ -10,12 +10,15 @@ f.ex the threadname specifier which will insert the name of the thread
 
 usage:
 import fancylogger
+#will log to screen by default
 
-handler = fancylogger.logToFile('dir/filename') 
-fancylogger.setLevel(level) #set global loglevel
+fancylogger.logToFile('dir/filename') 
+fancylogger.setLogLevelDebug() #set global loglevel to debug
 logger = fancylogger.getLogger(name) #get a logger with a specific name
-logger.setLevel(level)  #local loglevel
-#you can now even use the handler to set a different formatter
+logger.setLevel(level) #set local debugging level
+
+#you can now even use the handler to set a different formatter by using
+handler = fancylogger.logToFile('dir/filename')
 handler.setFormatter(logging.Formatter('%(asctime)-15s %(levelname)-10s %(funcname)-15s %(threadname)-10s %(message)s))
 '''
 from logging import Logger
@@ -51,8 +54,10 @@ class NamedLogger(logging.getLoggerClass()):
         This function is typically called before any
         loggers are instantiated by applications which need to use custom
         logger behavior.
-        """
+                """
         Logger.__init__(self,name)
+        self.log_To_Screen = False
+        self.log_To_File = False
         
     def makeRecord(self, name, level, pathname, lineno, msg, args, exc_info, func=None, extra=None):
         """
@@ -74,6 +79,8 @@ def getLogger(name=None):
     fullname =getRootLoggerName()
     if name:
         fullname =  fullname + "." + name
+        
+    #print "creating logger for %s"%fullname
     return logging.getLogger(fullname)
       
 def getRootLoggerName():
@@ -82,7 +89,8 @@ def getRootLoggerName():
     """
     ret = _getRootModuleName()  
     if ret:
-        return LOGGER_NAME + "." + ret
+        #return LOGGER_NAME + "." + ret
+        return ret
     else:  
         return LOGGER_NAME           
 
@@ -96,26 +104,36 @@ def _getRootModuleName():
     except:
         return None
 
-def logToScreen(boolean=True,handler=None):
+def logToScreen(boolean=True,handler=None,name=None):
     """
     enable (or disable) logging to screen
     returns the screenhandler (this can be used to later disable logging to screen)
     
-    if you want to disable logging to screen, pass the earlier obtained screenhandler 
+    if you want to disable logging to screen, pass the earlier obtained screenhandler
+    
+    you can also pass the name of the logger for which to log to the screen
+    otherwise you'll get all logs on the screen 
     """
-    logger= getLogger()
-    if boolean:
+    logger= getLogger(name)
+    if boolean and not logger.log_To_Screen:
         if not handler:
             formatter = logging.Formatter(DEFAULT_LOGGING_FORMAT)
             handler = logging.StreamHandler()
             handler.setFormatter(formatter)
         logger.addHandler(handler)
-    else:
+        logger.log_To_Screen = True
+    elif not boolean:
         if handler:
             logger.removeHandler(handler)
+        else:
+            #removing the standard stdout logger doesn't work
+            #it will be readded if only one handler is present
+            lhStdout = logger.handlers[0]  # stdout is the first handler
+            lhStdout.setLevel(101)#50 is critical, so 101 should be nothing
+        logger.log_To_Screen = False
     return handler
         
-def logToFile(filename,boolean=True,filehandler=None):
+def logToFile(filename,boolean=True,filehandler=None,name=None):
     """
     enable (or disable) logging to file
     given filename
@@ -127,16 +145,17 @@ def logToFile(filename,boolean=True,filehandler=None):
     
     if you want to disable logging to screen, pass the earlier obtained filehandler 
     """
-    logger= getLogger()
-    if boolean:
+    logger= getLogger(name)
+    if boolean and not logger.log_To_File:
         if not filehandler:
             formatter = logging.Formatter(DEFAULT_LOGGING_FORMAT)
             filehandler = logging.handlers.RotatingFileHandler(filename, 'a', maxBytes=MAX_BYTES, backupCount=BACKUPCOUNT )
             filehandler.setFormatter(formatter)
         logger.addHandler(filehandler)
-    else:
-        if filehandler:
-            logger.removehandler(filehandler)
+        logger.log_To_File = True
+    elif not boolean: #stop logging to file (needs the handler, so fail if it's not specified)
+        logger.removehandler(filehandler)
+        logger.log_To_File = False
     return filehandler
             
 
@@ -146,9 +165,30 @@ def setLogLevel(level):
     set a global log level (for this root logger)
     """
     getLogger().setLevel(level)
-        
+    
+def setLogLevelDebug():
+    """
+    shorthand for setting debug level
+    """
+    setLogLevel(logging.DEBUG)
+
+def setLogLevelInfo():
+    """
+    shorthand for setting loglevel to Info
+    """
+    setLogLevel(logging.INFO)
+    
+def setLogLevelWarning():
+    """
+    shorthand for setting loglevel to Info
+    """
+    setLogLevel(logging.WARNING)
+ 
 # Register our logger
 logging.setLoggerClass(NamedLogger)
-
+ #log to screen by default
+logToScreen(boolean=True)
+#print "getting logger"
+#getLogger().critical( "created logger for %s"%getRootLoggerName())
 #create a root logger 
 #getLogger()
