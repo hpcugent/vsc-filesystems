@@ -64,7 +64,15 @@ class NamedLogger(logging.getLoggerClass()):
         overwrite make record to use a fancy record (with more options)
         """
         return FancyLogRecord(name, level, pathname, lineno, msg, args, exc_info)
-
+    
+    def raiseException(self,message,exception=Exception):
+        """
+        logs an exception (as warning, since it can be caught higher up and handled)
+        and raises it afterwards
+        """
+        self.warning(message)
+        raise exception(message)
+        
 def thread_name():
     """
     returns the current threads name
@@ -183,10 +191,10 @@ def setLogLevelWarning():
     shorthand for setting loglevel to Info
     """
     setLogLevel(logging.WARNING)
- 
+
 # Register our logger
 logging.setLoggerClass(NamedLogger)
- #log to screen by default
+#log to screen by default
 logToScreen(boolean=True)
 #print "getting logger"
 #getLogger().critical( "created logger for %s"%getRootLoggerName())
