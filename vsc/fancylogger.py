@@ -1,7 +1,7 @@
 '''
 Created on Oct 14, 2011
 
-@author: jens
+@author: Jens Timmerman
 This module implements a fancy logger on top of python logging
 
 it adds custom specifiers, rotating file handler, and a default formatter
@@ -22,40 +22,40 @@ handler = fancylogger.logToFile('dir/filename')
 handler.setFormatter(logging.Formatter('%(asctime)-15s %(levelname)-10s %(funcname)-15s %(threadname)-10s %(message)s))
 '''
 from logging import Logger
+import inspect
 import logging.handlers
 import threading
-import inspect
 
 
 #constants  
 LOGGER_NAME = "fancylogger"
-DEFAULT_LOGGING_FORMAT= '%(asctime)-15s %(levelname)-10s %(name)-15s %(threadname)-10s  %(message)s'
+DEFAULT_LOGGING_FORMAT = '%(asctime)-15s %(levelname)-10s %(name)-15s %(threadname)-10s  %(message)s'
 #DEFAULT_LOGGING_FORMAT= '%(asctime)-15s %(levelname)-10s %(module)-15s %(threadname)-10s %(message)s'
-MAX_BYTES = 100*1024*1024 #max bytes in a file with rotating file handler
+MAX_BYTES = 100 * 1024 * 1024 #max bytes in a file with rotating file handler
 BACKUPCOUNT = 10 #number of rotating log files to save
 
 # Adding extra specifiers is as simple as adding attributes to the log record
 # Custom log record
 class FancyLogRecord(logging.LogRecord):
     def __init__(self, *args, **kwargs):
-        logging.LogRecord.__init__(self,*args, **kwargs)
+        logging.LogRecord.__init__(self, *args, **kwargs)
         #modify custom specifiers here
         self.threadname = thread_name() #actually threadName already exists?
-        self.name= self.name.replace(LOGGER_NAME + ".","",1) #remove LOGGER_NAME prefix from view
+        self.name = self.name.replace(LOGGER_NAME + ".", "", 1) #remove LOGGER_NAME prefix from view
 
 
 # Custom logger that uses our log record
 class NamedLogger(logging.getLoggerClass()):
     _thread_aware = True #this attribute can be checked to know if the logger is thread aware
     
-    def __init__(self,name):
+    def __init__(self, name):
         """
         constructor
         This function is typically called before any
         loggers are instantiated by applications which need to use custom
         logger behavior.
                 """
-        Logger.__init__(self,name)
+        Logger.__init__(self, name)
         self.log_To_Screen = False
         self.log_To_File = False
         
@@ -65,7 +65,7 @@ class NamedLogger(logging.getLoggerClass()):
         """
         return FancyLogRecord(name, level, pathname, lineno, msg, args, exc_info)
     
-    def raiseException(self,message,exception=Exception):
+    def raiseException(self, message, exception=Exception):
         """
         logs an exception (as warning, since it can be caught higher up and handled)
         and raises it afterwards
@@ -84,9 +84,9 @@ def getLogger(name=None):
     """
     returns a fancylogger
     """
-    fullname =getRootLoggerName()
+    fullname = getRootLoggerName()
     if name:
-        fullname =  fullname + "." + name
+        fullname = fullname + "." + name
         
     #print "creating logger for %s"%fullname
     return logging.getLogger(fullname)
@@ -112,7 +112,7 @@ def _getRootModuleName():
     except:
         return None
 
-def logToScreen(boolean=True,handler=None,name=None):
+def logToScreen(boolean=True, handler=None, name=None):
     """
     enable (or disable) logging to screen
     returns the screenhandler (this can be used to later disable logging to screen)
@@ -122,7 +122,7 @@ def logToScreen(boolean=True,handler=None,name=None):
     you can also pass the name of the logger for which to log to the screen
     otherwise you'll get all logs on the screen 
     """
-    logger= getLogger(name)
+    logger = getLogger(name)
     if boolean and not logger.log_To_Screen:
         if not handler:
             formatter = logging.Formatter(DEFAULT_LOGGING_FORMAT)
@@ -141,7 +141,7 @@ def logToScreen(boolean=True,handler=None,name=None):
         logger.log_To_Screen = False
     return handler
         
-def logToFile(filename,boolean=True,filehandler=None,name=None):
+def logToFile(filename, boolean=True, filehandler=None, name=None):
     """
     enable (or disable) logging to file
     given filename
@@ -153,11 +153,11 @@ def logToFile(filename,boolean=True,filehandler=None,name=None):
     
     if you want to disable logging to screen, pass the earlier obtained filehandler 
     """
-    logger= getLogger(name)
+    logger = getLogger(name)
     if boolean and not logger.log_To_File:
         if not filehandler:
             formatter = logging.Formatter(DEFAULT_LOGGING_FORMAT)
-            filehandler = logging.handlers.RotatingFileHandler(filename, 'a', maxBytes=MAX_BYTES, backupCount=BACKUPCOUNT )
+            filehandler = logging.handlers.RotatingFileHandler(filename, 'a', maxBytes=MAX_BYTES, backupCount=BACKUPCOUNT)
             filehandler.setFormatter(formatter)
         logger.addHandler(filehandler)
         logger.log_To_File = True
