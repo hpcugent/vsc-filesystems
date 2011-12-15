@@ -59,11 +59,11 @@ class NamedLogger(logging.getLoggerClass()):
         self.log_To_Screen = False
         self.log_To_File = False
         
-    def makeRecord(self, name, level, pathname, lineno, msg, args, exc_info, func=None, extra=None):
+    def makeRecord(self, name, level, pathname, lineno, msg, args, excinfo, func=None, extra=None):
         """
         overwrite make record to use a fancy record (with more options)
         """
-        return FancyLogRecord(name, level, pathname, lineno, msg, args, exc_info)
+        return FancyLogRecord(name, level, pathname, lineno, msg, args, excinfo)
     
     def raiseException(self, message, exception=Exception):
         """
@@ -97,7 +97,7 @@ def getRootLoggerName():
     """
     ret = _getRootModuleName()  
     if ret:
-        #return LOGGER_NAME + "." + ret
+        return LOGGER_NAME + "." + ret
         return ret
     else:  
         return LOGGER_NAME           
@@ -111,6 +111,7 @@ def _getRootModuleName():
         return inspect.stack()[-1][1].split('/')[-1].split('.')[0]
     except:
         return None
+
 
 def logToScreen(boolean=True, handler=None, name=None):
     """
