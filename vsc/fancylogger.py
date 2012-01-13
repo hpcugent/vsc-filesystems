@@ -17,9 +17,23 @@ fancylogger.setLogLevelDebug() #set global loglevel to debug
 logger = fancylogger.getLogger(name) #get a logger with a specific name
 logger.setLevel(level) #set local debugging level
 
+#if you want the logger to be showing modulename.functionname as the name, use
+fancylogger.getLogger(fname=True)
+#creating a logger like this will use the name of the function calling the getLogger function, to be the loggers name.
+
 #you can now even use the handler to set a different formatter by using
 handler = fancylogger.logToFile('dir/filename')
 handler.setFormatter(logging.Formatter('%(asctime)-15s %(levelname)-10s %(funcname)-15s %(threadname)-10s %(message)s))
+
+#setting a global loglevel will impact all logers:
+>>> from vsc import fancylogger
+>>> logger = fancylogger.getLogger("test")
+>>> logger.warning("warning")
+2012-01-05 14:03:18,238 WARNING    <stdin>.test    MainThread  warning
+>>> logger.debug("warning")
+>>> fancylogger.setLogLevelDebug()
+>>> logger.debug("warning")
+2012-01-05 14:03:46,222 DEBUG      <stdin>.test    MainThread  warning
 '''
 from logging import Logger
 import inspect
@@ -54,7 +68,7 @@ class NamedLogger(logging.getLoggerClass()):
         This function is typically called before any
         loggers are instantiated by applications which need to use custom
         logger behavior.
-                """
+        """
         Logger.__init__(self, name)
         self.log_To_Screen = False
         self.log_To_File = False
@@ -80,13 +94,17 @@ def thread_name():
     return threading.currentThread().getName()
 
 
-def getLogger(name=None):
+def getLogger(name=None,fname=False):
     """
     returns a fancylogger
+    if fname is True, the loggers name will be 'modulename.functionname'
+    where functionname is the name of the function calling this function
     """
     fullname = getRootLoggerName()
     if name:
         fullname = fullname + "." + name
+    if fname:
+        fullname += "." + _getCallingFunctionName()
         
     #print "creating logger for %s"%fullname
     return logging.getLogger(fullname)
@@ -101,6 +119,16 @@ def getRootLoggerName():
         return ret
     else:  
         return LOGGER_NAME           
+
+def _getCallingFunctionName():
+    """
+    returns the name of the function calling the function calling this function
+    (for internal use only)
+    """
+    try:
+        return inspect.stack()[2][3]
+    except:
+        return None
 
 def _getRootModuleName():
     """
@@ -136,7 +164,7 @@ def logToScreen(boolean=True, handler=None, name=None):
             logger.removeHandler(handler)
         else:
             #removing the standard stdout logger doesn't work
-            #it will be readded if only one handler is present
+            #it will be re-added if only one handler is present
             lhStdout = logger.handlers[0]  # stdout is the first handler
             lhStdout.setLevel(101)#50 is critical, so 101 should be nothing
         logger.log_To_Screen = False
@@ -150,9 +178,9 @@ def logToFile(filename, boolean=True, filehandler=None, name=None):
     this will let the file grow to MAX_BYTES and then rotate it
     saving the last BACKUPCOUNT files. 
     
-    returns the filehandler (this can be used to later disable logging to screen)
+    returns the filehandler (this can be used to later disable logging to file)
     
-    if you want to disable logging to screen, pass the earlier obtained filehandler 
+    if you want to disable logging to file, pass the earlier obtained filehandler 
     """
     logger = getLogger(name)
     if boolean and not logger.log_To_File:
@@ -192,6 +220,9 @@ def setLogLevelWarning():
     shorthand for setting loglevel to Info
     """
     setLogLevel(logging.WARNING)
+    
+
+
 
 # Register our logger
 logging.setLoggerClass(NamedLogger)
