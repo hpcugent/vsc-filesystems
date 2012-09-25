@@ -69,6 +69,7 @@ import distutils.command.install_scripts
 import shutil
 import os
 
+
 class vsc_install_scripts(distutils.command.install_scripts.install_scripts):
     """Create the (fake) links for mympirun
         also remove .sh and .py extensions from the scripts
@@ -99,21 +100,21 @@ wdp = ('Wouter Depypere', 'wouter.depypere@ugent.be')
 lm = ('Luis Fernando Munoz Meji­as', 'luis.munoz@ugent.be')
 
 ## shared target config
-SHARED_TARGET = {'url':'http://hpcugent.github.com/VSC-tools',
-                 'download_url':'https://github.com/hpcugent/VSC-tools',
-                 'package_dir' : {'': 'lib'},
-                 'cmdclass' : {"install_scripts": vsc_install_scripts}
+SHARED_TARGET = {'url': 'http://hpcugent.github.com/VSC-tools',
+                 'download_url': 'https://github.com/hpcugent/VSC-tools',
+                 'package_dir': {'': 'lib'},
+                 'cmdclass': {"install_scripts": vsc_install_scripts}
                  }
 
 ## meta-package for allinone target
-VSC_ALLINONE = {'name':'python-vsc-tools',
-                'version':'0.0.1',
+VSC_ALLINONE = {'name': 'python-vsc-tools',
+                'version': '0.0.1',
                 }
 
 VSC_FILESYSTEMS = {'name': 'vsc-filesystems',
                    'version': '0.1',
                    'author': [sdw],
-                   'maintainer': [swd],
+                   'maintainer': [sdw],
                    'packages': ['vsc/filesystems'],
                    'py_modules': ['vsc/filesystems/gpfs',
                                   'vsc/filesystems/posix'],
@@ -129,6 +130,7 @@ VSC_FILESYSTEMS = {'name': 'vsc-filesystems',
 ###
 from distutils.core import setup
 import sys
+
 
 def parse_target(target):
     """Add some fields"""
@@ -146,8 +148,7 @@ def parse_target(target):
     return new_target
 
 
-
-all_targets = [VSC_BASE, VSC_MYMPIRUN, VSC_ALLINONE]
+all_targets = [VSC_ALLINONE]
 registered_names = ['vsc-all', 'vsc-allinone'] + [x['name'] for x in all_targets]
 
 envname = 'VSC_TOOLS_SETUP_TARGET'
