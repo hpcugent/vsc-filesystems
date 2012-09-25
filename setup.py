@@ -115,12 +115,15 @@ VSC_FILESYSTEMS = {'name': 'vsc-filesystems',
                    'version': '0.1',
                    'author': [sdw],
                    'maintainer': [sdw],
-                   'packages': ['vsc/filesystems'],
-                   'py_modules': ['vsc/filesystems/gpfs',
-                                  'vsc/filesystems/posix'],
+                   'packages': ['vsc/filesystem'],
+                   'py_modules': ['vsc/__init__',
+                                  'vsc/filesystem/__init__',
+                                  'vsc/filesystem/gpfs',
+                                  'vsc/filesystem/posix'],
                    'scripts': []
                    }
 
+all_targets = [VSC_ALLINONE, VSC_FILESYSTEMS]
 
 ############################################################################################
 ###
@@ -148,7 +151,6 @@ def parse_target(target):
     return new_target
 
 
-all_targets = [VSC_ALLINONE]
 registered_names = ['vsc-all', 'vsc-allinone'] + [x['name'] for x in all_targets]
 
 envname = 'VSC_TOOLS_SETUP_TARGET'
