@@ -224,7 +224,7 @@ VSC_GPFS = {
 
 VSC_ICINGADB = {
         'name': 'vsc-icingadb',
-        'version': '',
+        'version': '0.10',
         'author': [wdp],
         'maintainer': [wdp],
         'packages': ['vsc.icingadb'],
@@ -255,6 +255,19 @@ VSC_LOCKFILE= {
         }
 
 
+VSC_POSTGRES = {
+        'name': 'vsc-postgres',
+        'version': '0.1.1',
+        'author': [ag],
+        'maintainer': [],
+        #'packages': [],
+        'py_modules': [
+            'vsc.pg'
+            ],
+        'scripts': []
+        }
+
+
 
 
 
@@ -269,6 +282,7 @@ def get_all_targets():
         VSC_GPFS,
         VSC_ICINGADB,
         VSC_LOCKFILE,
+        VSC_POSTGRES,
         ]
 
 ############################################################################################
