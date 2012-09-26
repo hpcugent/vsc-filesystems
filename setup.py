@@ -169,7 +169,7 @@ VSC_ADMINISTRATION = {
 
 VSC_CORE = {
         'name': 'vsc-core',
-        'version': '0.3',
+        'version': '0.2.1',
         'author': [sdw, ag],
         'maintainer': [sdw, ag],
         'packages': ['vsc'],
@@ -204,6 +204,24 @@ VSC_GLOBFS = {
         'scripts': []
         }
 
+# FIXME: Check is this can be downloaded directly from PyPi
+VSC_LOCKFILE= {
+        'name': 'vsc-lockfile',
+        'version': '0.9.1.1',
+        'author': [ag],
+        'maintainer': [ag],
+        'packages': ['lockfile'],
+        'py_modules': [
+            'lockfile.linklockfile',
+            'lockfile.mkdirlockfile',
+            'lockfile.pidlockfile',
+            'lockfile.sqlitelockfile',
+            ],
+        'scripts': []
+        }
+
+
+
 
 
 
@@ -214,6 +232,7 @@ def get_all_targets():
         VSC_CORE,
         VSC_FILESYSTEMS,
         VSC_GLOBFS,
+        VSC_LOCKFILE,
         ]
 
 ############################################################################################
