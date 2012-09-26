@@ -176,7 +176,8 @@ VSC_CORE = {
         #'packages': ['vsc'],
         'py_modules': [
             'vsc.__init__',
-            'vsc.base'
+            'vsc.base',
+            'vsc.exceptions',
             ],
         'scripts': []
         }
