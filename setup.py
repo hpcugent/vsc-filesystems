@@ -204,6 +204,26 @@ VSC_GLOBFS = {
         'scripts': []
         }
 
+VSC_GPFS = {
+        'name': 'vsc-gpfs',
+        'version': '0.1.10',
+        'author': [ag],
+        'maintainer': [ag],
+        'packages': ['vsc.gpfs'],
+        'py_modules': [
+            'vsc.gpfs.quota.entities',
+            'vsc.gpfs.quota.fs_store',
+            'vsc.gpfs.quota.mmfs_utils',
+            'vsc.gpfs.quota.report',
+            'vsc.gpfs.utils.cache',
+            'vsc.gpfs.utils.exceptions',
+            'vsc.gpfs.utils.vo_utils',
+            ],
+        'scripts': []
+        }
+
+
+
 # FIXME: Check is this can be downloaded directly from PyPi
 VSC_LOCKFILE= {
         'name': 'vsc-lockfile',
@@ -232,6 +252,7 @@ def get_all_targets():
         VSC_CORE,
         VSC_FILESYSTEMS,
         VSC_GLOBFS,
+        VSC_GPFS,
         VSC_LOCKFILE,
         ]
 
