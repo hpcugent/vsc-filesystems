@@ -158,6 +158,7 @@ VSC_ADMINISTRATION = {
         'maintainer': [ag],
         'packages': ['vsc.administration'],
         'py_modules': [
+            'vsc.__init__',
             'vsc.administration.group',
             'vsc.administration.institute',
             'vsc.administration.tools',
@@ -172,8 +173,9 @@ VSC_CORE = {
         'version': '0.2.1',
         'author': [sdw, ag],
         'maintainer': [sdw, ag],
-        'packages': ['vsc'],
+        #'packages': ['vsc'],
         'py_modules': [
+            'vsc.__init__',
             'vsc.base'
             ],
         'scripts': []
@@ -198,6 +200,7 @@ VSC_GLOBFS = {
         'maintainer': [ag, sdw],
         'packages': ['vsc.globfs'],
         'py_modules': [
+            'vsc.__init__',
             'vsc.globfs.hpccollector',
             'vsc.globfs.moab'
             ],
@@ -211,6 +214,7 @@ VSC_GPFS = {
         'maintainer': [ag],
         'packages': ['vsc.gpfs'],
         'py_modules': [
+            'vsc.__init__',
             'vsc.gpfs.quota.entities',
             'vsc.gpfs.quota.fs_store',
             'vsc.gpfs.quota.mmfs_utils',
@@ -229,6 +233,7 @@ VSC_ICINGADB = {
         'maintainer': [wdp],
         'packages': ['vsc.icingadb'],
         'py_modules': [
+            'vsc.__init__',
             '.vsc.icingadb.icingadb',
             '.vsc.icingadb.showdb'
             ],
@@ -242,6 +247,7 @@ VSC_LDAP_CONFIGURATION = {
         'maintainer': [ag],
         'packages': ['vsc.ldap'],
         'py_modules': [
+            'vsc.__init__',
             'vsc.ldap.configuration'
             ],
         'scripts': []
@@ -271,14 +277,32 @@ VSC_POSTGRES = {
         'maintainer': [],
         #'packages': [],
         'py_modules': [
+            'vsc.__init__',
             'vsc.pg'
             ],
         'scripts': []
         }
 
 
-
-
+VSC_UTILS = {
+        'name': 'vsc-utils',
+        'version': '0.10',
+        'author': [ag, sdw],
+        'maintainer': [ag, sdw],
+        'packages': ['vsc.utils'],
+        'py_modules': [
+            'vsc.__init__',
+            'vsc.utils.crypt',
+            'vsc.utils.filesystem',
+            'vsc.utils.fs_store',
+            'vsc.utils.mail',
+            'vsc.utils.nagios',
+            'vsc.utils.patterns',
+            'vsc.utils.pickle_files',
+            'vsc.utils.timestamp_pid_lockfile'
+            ],
+        'scripts': []
+        }
 
 
 def get_all_targets():
@@ -293,6 +317,7 @@ def get_all_targets():
         VSC_LDAP_CONFIGURATION,
         VSC_LOCKFILE,
         VSC_POSTGRES,
+        VSC_UTILS,
         ]
 
 ############################################################################################
