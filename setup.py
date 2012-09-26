@@ -191,13 +191,29 @@ VSC_FILESYSTEMS = {'name': 'vsc-filesystems',
                    'scripts': []
                    }
 
+VSC_GLOBFS = {
+        'name': 'vsc-globfs',
+        'version': '',
+        'author': [ag, sdw],
+        'maintainer': [ag, sdw],
+        'packages': ['vsc.globfs'],
+        'py_modules': [
+            'vsc.globfs.hpccollector',
+            'vsc.globfs.moab'
+            ],
+        'scripts': []
+        }
+
+
+
 
 def get_all_targets():
     return [
         VSC_ALLINONE,
         VSC_ADMINISTRATION,
         VSC_CORE,
-        VSC_FILESYSTEMS
+        VSC_FILESYSTEMS,
+        VSC_GLOBFS,
         ]
 
 ############################################################################################
