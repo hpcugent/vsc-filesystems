@@ -235,8 +235,17 @@ VSC_ICINGADB = {
         'scripts': []
         }
 
-
-
+VSC_LDAP_CONFIGURATION = {
+        'name': 'vsc-ldap-configuration',
+        'version': '0.1',
+        'author': [ag],
+        'maintainer': [ag],
+        'packages': ['vsc.ldap'],
+        'py_modules': [
+            'vsc.ldap.configuration'
+            ],
+        'scripts': []
+        }
 
 # FIXME: Check is this can be downloaded directly from PyPi
 VSC_LOCKFILE= {
@@ -281,6 +290,7 @@ def get_all_targets():
         VSC_GLOBFS,
         VSC_GPFS,
         VSC_ICINGADB,
+        VSC_LDAP_CONFIGURATION,
         VSC_LOCKFILE,
         VSC_POSTGRES,
         ]
