@@ -170,7 +170,7 @@ VSC_ADMINISTRATION = {
 
 VSC_CORE = {
         'name': 'vsc-core',
-        'version': '0.2.1',
+        'version': '0.3',
         'author': [sdw, ag],
         'maintainer': [sdw, ag],
         #'packages': ['vsc'],
@@ -178,6 +178,7 @@ VSC_CORE = {
             'vsc.__init__',
             'vsc.base',
             'vsc.exceptions',
+            'vsc.utils.patterns',
             ],
         'scripts': []
         }
@@ -298,7 +299,6 @@ VSC_UTILS = {
             'vsc.utils.fs_store',
             'vsc.utils.mail',
             'vsc.utils.nagios',
-            'vsc.utils.patterns',
             'vsc.utils.pickle_files',
             'vsc.utils.timestamp_pid_lockfile'
             ],
