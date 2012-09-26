@@ -108,7 +108,7 @@ class vsc_install_scripts(install_scripts):
 
     def run(self):
         ## old-style class
-        distutils.command.install_scripts.install_scripts.run(self)
+        install_scripts.run(self)
         self.original_outfiles = self.get_outputs()[:] ## make a copy
         self.outfiles = [] ## reset it
         for script in self.original_outfiles:
@@ -167,6 +167,17 @@ VSC_ADMINISTRATION = {
         'scripts': []
         }
 
+VSC_CORE = {
+        'name': 'vsc-core',
+        'version': '0.3',
+        'author': [sdw, ag],
+        'maintainer': [sdw, ag],
+        'packages': ['vsc'],
+        'py_modules': [
+            'vsc.base'
+            ],
+        'scripts': []
+        }
 
 VSC_FILESYSTEMS = {'name': 'vsc-filesystems',
                    'version': '0.1',
@@ -185,6 +196,7 @@ def get_all_targets():
     return [
         VSC_ALLINONE,
         VSC_ADMINISTRATION,
+        VSC_CORE,
         VSC_FILESYSTEMS
         ]
 
