@@ -222,6 +222,20 @@ VSC_GPFS = {
         'scripts': []
         }
 
+VSC_ICINGADB = {
+        'name': 'vsc-icingadb',
+        'version': '',
+        'author': [wdp],
+        'maintainer': [wdp],
+        'packages': ['vsc.icingadb'],
+        'py_modules': [
+            '.vsc.icingadb.icingadb',
+            '.vsc.icingadb.showdb'
+            ],
+        'scripts': []
+        }
+
+
 
 
 # FIXME: Check is this can be downloaded directly from PyPi
@@ -253,6 +267,7 @@ def get_all_targets():
         VSC_FILESYSTEMS,
         VSC_GLOBFS,
         VSC_GPFS,
+        VSC_ICINGADB,
         VSC_LOCKFILE,
         ]
 
