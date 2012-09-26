@@ -37,9 +37,14 @@ targetname can be:
 
 
     vsc-tools ## this is the name of the allinone target
-    vsc-base
-    vsc-mympirun
-    ...
+    vsc-administration
+    vsc-core
+    vsc-globfs
+    vsc-gpfs
+    vsc-icingadb
+    vsc-lockfile
+    vsc-postgres
+    vsc-utils
 
 Warning:
 --------
@@ -65,17 +70,40 @@ TODO:
     create http://hpcugent.github.com/VSC-tools page, short description per package ?
 
 """
-import distutils.command.install_scripts
-import shutil
+#import distutils.command.install_scripts
 import os
+import shutil
+
+from collections import defaultdict
+from distutils import log
+
+try:
+    ## setuptools makes copies of the scripts, does not preserve symlinks
+    #raise("a")  # to try distutils, uncomment
+    from setuptools import setup
+    from setuptools.command.install_scripts import install_scripts
+    from setuptools.command.easy_install import easy_install
+except:
+    from distutils.core import setup
+    from distutils.command.install_scripts import install_scripts
+    easy_install = object
 
 
-class vsc_install_scripts(distutils.command.install_scripts.install_scripts):
+## 0 : WARN (default), 1 : INFO, 2 : DEBUG
+log.set_verbosity(1)
+
+
+class vsc_easy_install(easy_install):
+    def install_egg_scripts(self, dist):
+        easy_install.install_egg_scripts(self, dist)
+
+
+class vsc_install_scripts(install_scripts):
     """Create the (fake) links for mympirun
         also remove .sh and .py extensions from the scripts
     """
     def __init__(self, *args):
-        distutils.command.install_scripts.install_scripts.__init__(self, *args)
+        install_scripts.__init__(self, *args)
         self.original_outfiles = None
 
     def run(self):
@@ -103,13 +131,42 @@ lm = ('Luis Fernando Munoz Meji­as', 'luis.munoz@ugent.be')
 SHARED_TARGET = {'url': 'http://hpcugent.github.com/VSC-tools',
                  'download_url': 'https://github.com/hpcugent/VSC-tools',
                  'package_dir': {'': 'lib'},
-                 'cmdclass': {"install_scripts": vsc_install_scripts}
+                 'cmdclass': {'install_scripts': vsc_install_scripts,
+                              'easy_install': vsc_easy_install}
                  }
 
 ## meta-package for allinone target
 VSC_ALLINONE = {'name': 'python-vsc-tools',
                 'version': '0.0.1',
                 }
+
+VSC_= {
+        'name': 'vsc-',
+        'version': '',
+        'author': [ag],
+        'maintainer': [],
+        'packages': [],
+        'py_modules': [
+            ],
+        'scripts': []
+        }
+
+VSC_ADMINISTRATION = {
+        'name': 'vsc-administration',
+        'version': '0.1',
+        'author': [ag],
+        'maintainer': [ag],
+        'packages': ['vsc.administration'],
+        'py_modules': [
+            'vsc.administration.group',
+            'vsc.administration.institute',
+            'vsc.administration.tools',
+            'vsc.administration.user',
+            'vsc.administration.vo',
+            ],
+        'scripts': []
+        }
+
 
 VSC_FILESYSTEMS = {'name': 'vsc-filesystems',
                    'version': '0.1',
@@ -123,7 +180,13 @@ VSC_FILESYSTEMS = {'name': 'vsc-filesystems',
                    'scripts': []
                    }
 
-all_targets = [VSC_ALLINONE, VSC_FILESYSTEMS]
+
+def get_all_targets():
+    return [
+        VSC_ALLINONE,
+        VSC_ADMINISTRATION,
+        VSC_FILESYSTEMS
+        ]
 
 ############################################################################################
 ###
@@ -151,53 +214,81 @@ def parse_target(target):
     return new_target
 
 
-registered_names = ['vsc-all', 'vsc-allinone'] + [x['name'] for x in all_targets]
+def create_all_in_one_target(all_targets):
+    """Creates the complete target set, creating a sictionary to install all targets in a single go."""
 
-envname = 'VSC_TOOLS_SETUP_TARGET'
-tobuild = os.environ.get(envname, 'vsc-all')  ## default all
-if sys.argv[1] == 'vsc-showall':
-    print "Valid targets: %s" % " ".join(registered_names)
-    sys.exit(0)
-elif sys.argv[1] in registered_names:
-    tobuild = sys.argv[1]
-    sys.argv.pop(1)
+    all_in_one_target = defaultdict(list)
+    all_in_one_target.update(VSC_ALLINONE)  # default
 
-## create allinone / vsc-tools target
-for target in all_targets:
-    for k, v in target.items():
-        if k in ('name', 'version',):
-            continue
-        if not k in VSC_ALLINONE:
-            VSC_ALLINONE[k] = v
-        else:
+    for target in all_targets:
+        for k, v in target.items():
+            if k in ['name', 'version']:
+                continue
             if isinstance(v, list):
-                VSC_ALLINONE[k] += v
+                all_in_one_target[k] += v
             else:
                 print 'ERROR: unsupported type cfgname %s key %s value %s' % (target['name'], k, v)
                 sys.exit(1)
-## sanitize allinone/vsc-tools
-for k, v in VSC_ALLINONE.items():
-    if isinstance(v, list):
-        VSC_ALLINONE[k] = list(set(VSC_ALLINONE[k]))
-        VSC_ALLINONE[k].sort()
+    ## sanitize allinone/vsc-tools
+    for k, v in all_in_one_target.items():
+        if isinstance(v, list):
+            all_in_one_target[k] = list(set(all_in_one_target[k]))
+            all_in_one_target[k].sort()
+
+    return all_in_one_target
 
 
-if tobuild == 'vsc-allinone':
-    ## reset all_targets
-    all_targets = [VSC_ALLINONE]
+def main(args):
 
-## build what ?
-for target in all_targets:
-    target_name = target['name']
-    if (tobuild is not None) and not (tobuild in ('vsc-all', 'vsc-allinone' , target_name,)):
-        continue
-    if tobuild == 'vsc-all' and target_name == 'vsc-tools':
-        ## vsc-tools / allinone is not a default when vsc-all is selected
-        continue
+    all_targets = get_all_targets()
+    registered_names = ['vsc-all', 'vsc-allinone'] + [x['name'] for x in all_targets]
 
-    ## froim now on, build the exact targets.
-    os.environ[envname] = target_name
-    os.putenv(envname, target_name)
+    envname = 'VSC_TOOLS_SETUP_TARGET'
+    tobuild = os.environ.get(envname, 'vsc-all')  # default all
 
-    x = parse_target(target)
-    setup(**x)
+
+    if args[1] == 'vsc-showall':
+        print "Valid targets: %s" % " ".join(registered_names)
+        sys.exit(0)
+    elif args[1] in registered_names:
+        tobuild = args[1]
+        args.pop(1)
+
+    log.info("main: going to build %s (set through env: %s)" % (tobuild, envname in os.environ))
+
+    all_in_one_target = create_all_in_one_target(all_targets)
+
+    if tobuild == 'vsc-allinone':
+        # reset all_targets
+        all_targets = [all_in_one_target]
+
+    log.info("main: all targets are: %s" % (all_targets))
+
+    # build what ?
+    for target in all_targets:
+        target_name = target['name']
+
+        log.info("main: Checking if we should build target with name %s" % (target_name))
+        log.debug("main: tobuild = %s; target_name = %s" % (tobuild, target_name))
+
+        if (tobuild is not None) and not (tobuild in ('vsc-all', 'vsc-allinone' , target_name,)):
+            print "continuing from 1"
+            continue
+        if tobuild == 'vsc-all' and target_name == 'python-vsc-tools':
+            # vsc-tools / allinone is not a default when vsc-all is selected
+            continue
+            print "continuing from 2"
+
+        ## from now on, build the exact targets.
+        os.environ[envname] = target_name
+        os.putenv(envname, target_name)
+
+        x = parse_target(target)
+
+        log.info("Target information: %s" % (x))
+
+        setup(**x)
+
+
+if __name__ == '__main__':
+    main(sys.argv)
