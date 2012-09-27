@@ -86,7 +86,6 @@ try:
     from setuptools.command.easy_install import easy_install
     #from setuptools.distutils.dir_util import remove_tree
 except:
-    sys.exit(111)
     from distutils.core import setup
     from distutils.command.install_scripts import install_scripts
     easy_install = object
