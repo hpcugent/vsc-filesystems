@@ -272,7 +272,6 @@ VSC_LOCKFILE= {
         'author': [ag],
         'maintainer': [ag],
         'packages': ['lockfile'],
-        'namespace_packages': ['vsc'],
         'py_modules': [
             'lockfile.linklockfile',
             'lockfile.mkdirlockfile',
