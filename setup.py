@@ -73,6 +73,7 @@ TODO:
 #import distutils.command.install_scripts
 import os
 import shutil
+import sys
 
 from collections import defaultdict
 from distutils import log
@@ -83,14 +84,17 @@ try:
     from setuptools import setup
     from setuptools.command.install_scripts import install_scripts
     from setuptools.command.easy_install import easy_install
+    #from setuptools.distutils.dir_util import remove_tree
 except:
+    sys.exit(111)
     from distutils.core import setup
     from distutils.command.install_scripts import install_scripts
     easy_install = object
 
+from distutils.dir_util import remove_tree
 
 ## 0 : WARN (default), 1 : INFO, 2 : DEBUG
-log.set_verbosity(1)
+log.set_verbosity(2)
 
 
 class vsc_easy_install(easy_install):
@@ -140,7 +144,7 @@ VSC_ALLINONE = {'name': 'python-vsc-tools',
                 'version': '0.0.1',
                 }
 
-VSC_= {
+VSC_ = {
         'name': 'vsc-',
         'version': '',
         'author': [ag],
@@ -156,7 +160,7 @@ VSC_ADMINISTRATION = {
         'version': '0.1',
         'author': [ag],
         'maintainer': [ag],
-        'packages': ['vsc.administration'],
+        #'packages': ['vsc.administration'],
         'py_modules': [
             'vsc.__init__',
             'vsc.administration.group',
@@ -187,11 +191,11 @@ VSC_FILESYSTEMS = {'name': 'vsc-filesystems',
                    'version': '0.1',
                    'author': [sdw],
                    'maintainer': [sdw],
-                   'packages': ['vsc/filesystem'],
-                   'py_modules': ['vsc/__init__',
-                                  'vsc/filesystem/__init__',
-                                  'vsc/filesystem/gpfs',
-                                  'vsc/filesystem/posix'],
+                   'packages': ['vsc.filesystem'],
+                   'py_modules': ['vsc.__init__',
+                                  'vsc.filesystem.__init__',
+                                  'vsc.filesystem.gpfs',
+                                  'vsc.filesystem.posix'],
                    'scripts': []
                    }
 
@@ -327,9 +331,6 @@ def get_all_targets():
 ###
 ### BUILDING
 ###
-from distutils.core import setup
-import sys
-
 
 def parse_target(target):
     """Add some fields"""
@@ -404,7 +405,7 @@ def main(args):
         log.info("main: Checking if we should build target with name %s" % (target_name))
         log.debug("main: tobuild = %s; target_name = %s" % (tobuild, target_name))
 
-        if (tobuild is not None) and not (tobuild in ('vsc-all', 'vsc-allinone' , target_name,)):
+        if (tobuild is not None) and not (tobuild in ('vsc-all', 'vsc-allinone', target_name,)):
             print "continuing from 1"
             continue
         if tobuild == 'vsc-all' and target_name == 'python-vsc-tools':
@@ -420,6 +421,10 @@ def main(args):
 
         log.info("Target information: %s" % (x))
 
+        try:
+            remove_tree('build')
+        except OSError, _:
+            pass
         setup(**x)
 
 
