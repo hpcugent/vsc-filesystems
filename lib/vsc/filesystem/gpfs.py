@@ -48,13 +48,13 @@ class GpfsOperations(PosixOperations):
             else:
                 self.log.raiseException("_execute: please use a list or tuple for options: cmd %s opts %s" % (cmdname, opts), GpfsOperationError)
 
-        ec, out = PosixOperations._execute(self, cmd)
+        ec, out = super(GpfsOperations, self)._execute(cmd)
 
         return ec, out
 
     def _local_filesystems(self):
         """Add the gpfs device name"""
-        PosixOperations._localFilesystems(self)
+        super(GpfsOperations, self)._local_filesystems()
 
         if self.gpfslocalfilesystems is None:
             self.list_filesystems()

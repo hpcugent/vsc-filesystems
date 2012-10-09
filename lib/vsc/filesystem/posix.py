@@ -185,7 +185,7 @@ class PosixOperations(object):
             return
 
         if self.localfilesystems is None:
-            self._localFilesystems()
+            self._local_filesystems()
 
         try:
             fsid = os.stat(obj).st_dev  # this resolves symlinks
@@ -203,7 +203,7 @@ class PosixOperations(object):
             self.log.debug("Found filesystem for obj %s: %s" % (obj, fss[0]))
             return fss[0]
 
-    def _localFilesystems(self):
+    def _local_filesystems(self):
         """What filesystems are mounted / available atm"""
         # what is currently mounted
         if not os.path.isfile(OS_LINUX_MOUNTS):
