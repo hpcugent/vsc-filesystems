@@ -93,7 +93,7 @@ class PosixOperations(object):
         # filler for reducing lots of LOC
         if obj is None:
             if self.obj is None:
-                self.log.raiseException("_sanityCheck no obj passed and self.obj not set.", PosixOperationError())
+                self.log.raiseException("_sanityCheck no obj passed and self.obj not set.", PosixOperationError)
                 return
             else:
                 obj = self.obj
@@ -102,7 +102,7 @@ class PosixOperations(object):
 
         if self.forceabsolutepath:
             if not os.path.isabs(obj):  # other test: obj.startswith(os.path.sep)
-                self.log.raiseException("_sanityCheck check absolute path: obj %s is not an absolute path" % obj, PosixOperationError())
+                self.log.raiseException("_sanityCheck check absolute path: obj %s is not an absolute path" % obj, PosixOperationError)
                 return
 
         # check if filesystem matches current class
@@ -118,10 +118,10 @@ class PosixOperations(object):
                 if tmpfs[0] in self.supportedfilesystems:
                     fs = tmpfs[0]
                 else:
-                    self.log.raiseException("_sanityCheck found filesystem %s for subpath %s of obj %s is not a supported filesystem (supported %s)" % (tmpfs[0], fp, obj, self.supportedfilesystems), PosixOperationError())
+                    self.log.raiseException("_sanityCheck found filesystem %s for subpath %s of obj %s is not a supported filesystem (supported %s)" % (tmpfs[0], fp, obj, self.supportedfilesystems), PosixOperationError)
 
         if fs is None:
-            self.log.raiseException("_sanityCheck no valid filesystem found for obj %s" % obj, PosixOperationError())
+            self.log.raiseException("_sanityCheck no valid filesystem found for obj %s" % obj, PosixOperationError)
 
         # try readlink
         if not obj == os.path.realpath(obj):
@@ -129,7 +129,7 @@ class PosixOperations(object):
             if self.ignorerealpathmismatch:
                 self.log.debug("_sanityCheck obj %s doesn't correspond with realpath %s" % (obj, os.path.realpath(obj)))
             else:
-                self.log.raiseException("_sanityCheck obj %s doesn't correspond with realpath %s" % (obj, os.path.realpath(obj)), PosixOperationError())
+                self.log.raiseException("_sanityCheck obj %s doesn't correspond with realpath %s" % (obj, os.path.realpath(obj)), PosixOperationError)
                 return
 
         return obj
@@ -150,7 +150,7 @@ class PosixOperations(object):
             called by _sanityCheck and exists  or with sanitised obj
         """
         if obj is None:
-            self.log.raiseException("_exists: obj is None", PosixOperationError())
+            self.log.raiseException("_exists: obj is None", PosixOperationError)
 
         if os.path.exists(obj):
             return True
@@ -196,9 +196,9 @@ class PosixOperations(object):
         fss = [x for x in self.localfilesystems if x[self.localfilesystemnaming.index('id')] == fsid]
 
         if len(fss) == 0:
-            self.log.raiseException("No matching filesystem found for obj %s with id %s (localfilesystems: %s)" % (obj, fsid, self.localfilesystems), PosixOperationError())
+            self.log.raiseException("No matching filesystem found for obj %s with id %s (localfilesystems: %s)" % (obj, fsid, self.localfilesystems), PosixOperationError)
         elif len(fss) > 1:
-            self.log.raiseException("More then one matching filesystem found for obj %s with id %s (matched localfilesystems: %s)" % (obj, fsid, fss), PosixOperationError())
+            self.log.raiseException("More then one matching filesystem found for obj %s with id %s (matched localfilesystems: %s)" % (obj, fsid, fss), PosixOperationError)
         else:
             self.log.debug("Found filesystem for obj %s: %s" % (obj, fss[0]))
             return fss[0]
@@ -207,9 +207,9 @@ class PosixOperations(object):
         """What filesystems are mounted / available atm"""
         # what is currently mounted
         if not os.path.isfile(OS_LINUX_MOUNTS):
-            self.log.raiseException("Missing Linux OS overview of mounts %s" % OS_LINUX_MOUNTS, PosixOperationError())
+            self.log.raiseException("Missing Linux OS overview of mounts %s" % OS_LINUX_MOUNTS, PosixOperationError)
         if not os.path.isfile(OS_LINUX_FILESYSTEMS):
-            self.log.raiseException("Missing Linux OS overview of filesystems %s" % OS_LINUX_FILESYSTEMS, PosixOperationError())
+            self.log.raiseException("Missing Linux OS overview of filesystems %s" % OS_LINUX_FILESYSTEMS, PosixOperationError)
 
         try:
             currentmounts = [x.strip().split(" ") for x in open(OS_LINUX_MOUNTS).readlines()]
