@@ -46,7 +46,7 @@ class GpfsOperations(PosixOperations):
             if isinstance(opts, (tuple, list,)):
                 cmd += list(opts)
             else:
-                self.log.raiseException("_execute: please use a list or tuple for options: cmd %s opts %s" % (cmdname, opts), GpfsOperationError())
+                self.log.raiseException("_execute: please use a list or tuple for options: cmd %s opts %s" % (cmdname, opts), GpfsOperationError)
 
         ec, out = PosixOperations._execute(self, cmd)
 
@@ -72,10 +72,10 @@ class GpfsOperations(PosixOperations):
                             fs.append(gpfsdevice)
                         else:
                             fs.append(None)
-                            self.log.raiseException("While trying to resolve GPFS device from localfilesystem device fs %s found gpfsdevice %s that is not in gpfslocalfilesystems %s" % (fs, gpfsdevice, self.gpfslocalfilesystems.keys()), GpfsOperationError())
+                            self.log.raiseException("While trying to resolve GPFS device from localfilesystem device fs %s found gpfsdevice %s that is not in gpfslocalfilesystems %s" % (fs, gpfsdevice, self.gpfslocalfilesystems.keys()), GpfsOperationError)
                     else:
                         fs.append(None)
-                        self.log.raiseException("Something went wrong trying to resolve GPFS device from localfilesystem device: fs %s" % fs, GpfsOperationError())
+                        self.log.raiseException("Something went wrong trying to resolve GPFS device from localfilesystem device: fs %s" % fs, GpfsOperationError)
             else:
                 fs.append(None)
 
@@ -120,7 +120,7 @@ class GpfsOperations(PosixOperations):
 
 
         if len(what) == 0:
-            self.log.raiseException('No valid header start for output: %s' % out, GpfsOperationError())
+            self.log.raiseException('No valid header start for output: %s' % out, GpfsOperationError)
 
         ## sanity check
         nrfields = [len(x) for x in what]
@@ -134,13 +134,13 @@ class GpfsOperations(PosixOperations):
             ## sanity check
             for idx in xrange(1, len(what)):
                 if not (what[idx][0:2] == expectedheader[0:2]):
-                    self.log.raiseException("No expected start of header %s for full row %s" % (expectedheader[0:2], what[idx ]), GpfsOperationError())
+                    self.log.raiseException("No expected start of header %s for full row %s" % (expectedheader[0:2], what[idx ]), GpfsOperationError)
 
                 if nrfields[0] > nrfields[idx ]:
                     self.log.debug("Description length %s greater then %s. Adding whitespace. (names %s, row %s)" % (nrfields[0], nrfields[idx], what[0][6:], what[idx ][6:]))
                     what[idx].extend([''] * (nrfields[0] - nrfields[idx]))
                 elif nrfields[0] < nrfields[idx ]:
-                    self.log.raiseException("Description length %s smaller then %s. Not fixing. (names %s, row %s)" % (nrfields[0], nrfields[idx ], what[0][6:], what[idx ][6:]), GpfsOperationError())
+                    self.log.raiseException("Description length %s smaller then %s. Not fixing. (names %s, row %s)" % (nrfields[0], nrfields[idx ], what[0][6:], what[idx ][6:]), GpfsOperationError)
 
         res = {}
         try:
@@ -167,7 +167,7 @@ class GpfsOperations(PosixOperations):
         ## set the gpfsdevices
         gpfsdevices = list(set(info.get('deviceName', [])))
         if len(gpfsdevices) == 0:
-            self.log.raiseException("No devices found. Returned info %s" % info, GpfsOperationError())
+            self.log.raiseException("No devices found. Returned info %s" % info, GpfsOperationError)
         else:
             self.log.debug("listAllFilesystems found devices %s" % gpfsdevices)
 
@@ -340,11 +340,11 @@ class GpfsOperations(PosixOperations):
         obj = self._sanity_check(obj)
 
         if not self.exists(obj):
-            self.raiseException("getAttr: obj %s does not exist", GpfsOperationError())
+            self.raiseException("getAttr: obj %s does not exist", GpfsOperationError)
 
         ec, out = self._execute('mmlsattr', ["-L", obj])
         if ec > 0:
-            self.log.raiseException("getAttr: mmlsattr with opts -L %s failed" % (obj), GpfsOperationError())
+            self.log.raiseException("getAttr: mmlsattr with opts -L %s failed" % (obj), GpfsOperationError)
 
         res = {}
 
@@ -425,12 +425,12 @@ class GpfsOperations(PosixOperations):
 
         # does the path exist ?
         if self.exists(fsetpath):
-            self.log.raiseException("makeFileset for new_fileset_path %s returned sane fsetpath %s, but it already exists." % (new_fileset_path, fsetpath), GpfsOperationError())
+            self.log.raiseException("makeFileset for new_fileset_path %s returned sane fsetpath %s, but it already exists." % (new_fileset_path, fsetpath), GpfsOperationError)
 
         # choose unique name
         parentfsetpath = os.path.dirname(fsetpath)
         if not self.exists(parentfsetpath):
-            self.log.raiseException("parent dir %s of fsetpath %s does not exist. Not going to create it automatically." % (parentfsetpath, fsetpath), GpfsOperationError())
+            self.log.raiseException("parent dir %s of fsetpath %s does not exist. Not going to create it automatically." % (parentfsetpath, fsetpath), GpfsOperationError)
 
         fs = self.what_filesystem(parentfsetpath)
         foundgpfsdevice = fs[self.localfilesystemnaming.index('gpfsdevice')]
@@ -452,7 +452,7 @@ class GpfsOperations(PosixOperations):
             efsetpath = efset.get('path', None)
             efsetname = efset.get('filesetName', None)
             if efsetpath == fsetpath or efsetname == fileset_name:
-                self.log.raiseException("Found existing fileset %s that has same path %s or same name %s as new path %s or new name %s" % (efset, efsetpath, efsetname, fsetpath, fileset_name), GpfsOperationError())
+                self.log.raiseException("Found existing fileset %s that has same path %s or same name %s as new path %s or new name %s" % (efset, efsetpath, efsetname, fsetpath, fileset_name), GpfsOperationError)
 
         ## create the fileset
         ## if created, try to link it with -J to path
@@ -465,17 +465,17 @@ class GpfsOperations(PosixOperations):
                 if parent_fileset_name and parent_fileset_name == efset.get('filesetName', None):
                     parent_fileset_exists = True
             if not parent_fileset_exists:
-                self.log.raiseException("Parent fileset %s does not appear to exist." % parent_fileset_name, GpfsOperationError())
+                self.log.raiseException("Parent fileset %s does not appear to exist." % parent_fileset_name, GpfsOperationError)
             mmcrfileset_options += ['--inode-space', parent_fileset_name]
 
         (ec, out) = self._execute('mmcrfileset', mmcrfileset_options)
         if ec > 0:
-            self.log.raiseException("Creating fileset with name %s on device %s failed" % (fileset_name, foundgpfsdevice), GpfsOperationError())
+            self.log.raiseException("Creating fileset with name %s on device %s failed" % (fileset_name, foundgpfsdevice), GpfsOperationError)
 
         ## link the fileset
         ec, out = self._execute('mmlinkfileset', [foundgpfsdevice, fileset_name, '-J', fsetpath])
         if ec > 0:
-            self.log.raiseException("Linking fileset with name %s on device %s to path %s failed" % (fileset_name, foundgpfsdevice, fsetpath), GpfsOperationError())
+            self.log.raiseException("Linking fileset with name %s on device %s to path %s failed" % (fileset_name, foundgpfsdevice, fsetpath), GpfsOperationError)
 
         ## at the end, rescan the filesets and update the info
         self.list_filesets()
@@ -514,7 +514,7 @@ class GpfsOperations(PosixOperations):
 
         obj = self._sanity_check(obj)
         if not self.exists(obj):
-            self.raiseException("setQuota: can't set quota on none-existing obj %s" % obj, GpfsOperationError())
+            self.raiseException("setQuota: can't set quota on none-existing obj %s" % obj, GpfsOperationError)
 
         typ2opt = {'user':'u',
                    'group':'g',
@@ -524,7 +524,7 @@ class GpfsOperations(PosixOperations):
         soft2hard_factor = 1.05
 
         if not typ in typ2opt:
-            self.log.raiseException("setQuota: unsupported type %s" % typ, GpfsOperationError())
+            self.log.raiseException("setQuota: unsupported type %s" % typ, GpfsOperationError)
 
         if typ == 'fileset':
             ## who is the fileset name or fsid
@@ -533,7 +533,7 @@ class GpfsOperations(PosixOperations):
                 who = attr['filesetname']  ## force it
                 self.log.info("setQuota: typ %s setting fileset to %s for obj %s" % (typ, who, obj))
             else:
-                self.log.raiseException("setQuota: typ %s specified, but attrs for obj %s don't have filestename property (attr: %s)" % (typ, obj, attr), GpfsOperationError())
+                self.log.raiseException("setQuota: typ %s specified, but attrs for obj %s don't have filestename property (attr: %s)" % (typ, obj, attr), GpfsOperationError)
 
         opts = []
 
@@ -541,7 +541,7 @@ class GpfsOperations(PosixOperations):
             if hard is None:
                 hard = int(soft * soft2hard_factor)
             elif hard < soft:
-                self.raiseException("setQuota: can't set hard limit %s lower then soft limit %s" % (hard, soft), GpfsOperationError())
+                self.raiseException("setQuota: can't set hard limit %s lower then soft limit %s" % (hard, soft), GpfsOperationError)
 
 
             opts += ["-%s" % typ2opt[typ], who]
@@ -556,7 +556,7 @@ class GpfsOperations(PosixOperations):
 
         ec, out = self._execute('tssetquota', opts)
         if ec > 0:
-            self.log.raiseException("setQuota: tssetquota with opts %s failed" % (opts), GpfsOperationError())
+            self.log.raiseException("setQuota: tssetquota with opts %s failed" % (opts), GpfsOperationError)
 
 
 if __name__ == '__main__':
