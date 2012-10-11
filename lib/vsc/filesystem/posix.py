@@ -49,6 +49,8 @@ class PosixOperations(object):
 
         self.supportedfilesystems = []  # nothing generic, mostly due to missing generalised quota settings
 
+        self.dry_run = False
+
     def _execute(self, cmd):
         """Run command cmd, return exitcode,output"""
         ec = None
@@ -64,7 +66,11 @@ class PosixOperations(object):
             self.log.error("_execute unsupported type %s of cmd %s" % (type(cmd), cmd))
             return ec, res
 
-        '''Executes and captures the output of a succesful run.'''
+        if self.dry_run:
+            self.log.info("Dry run: not really executing cmd %s" % (cmd))
+            return 0, ""
+
+        # Executes and captures the output of a succesful run.
         if sys.hexversion >= 0x020700F0:
             try:
                 out = subprocess.check_output(cmd, shell=shell)
