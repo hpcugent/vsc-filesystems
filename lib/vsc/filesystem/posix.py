@@ -51,7 +51,7 @@ class PosixOperations(object):
 
         self.dry_run = False
 
-    def _execute(self, cmd):
+    def _execute(self, cmd, changes=False):
         """Run command cmd, return exitcode,output"""
         ec = None
         res = None
@@ -66,7 +66,7 @@ class PosixOperations(object):
             self.log.error("_execute unsupported type %s of cmd %s" % (type(cmd), cmd))
             return ec, res
 
-        if self.dry_run:
+        if changes and self.dry_run:
             self.log.info("Dry run: not really executing cmd %s" % (cmd))
             return 0, ""
 
@@ -230,7 +230,7 @@ class PosixOperations(object):
         if self.ignorefilesystems:
             self.localfilesystems = [x for x in self.localfilesystems if not x[self.localfilesystemnaming.index('type')] in OS_LINUX_IGNORE_FILESYSTEMS]
 
-    def _largestExistingPath(self, obj):
+    def _largest_existing_path(self, obj):
         """Given obj /a/b/c/d, check which subpath exists and will determine eg filesystem type of obj.
             Start with /a/b/c/d, then /a/b/c etc
         """
@@ -248,7 +248,7 @@ class PosixOperations(object):
 
         return res
 
-    def makeSymlink(self, target, obj=None, force=True):
+    def make_symlink(self, target, obj=None, force=True):
         """Create symlink from self.obj to target
             @type target: string representing path
         """
@@ -263,16 +263,16 @@ class PosixOperations(object):
         #       stop with error
         # make symlink
 
-    def isDir(self, obj=None):
+    def is_dir(self, obj=None):
         """Check if it is a directory"""
         obj = self._sanity_check(obj)
         # do symlinks count ?
 
-    def makeDir(self, obj=None):
+    def make_dir(self, obj=None):
         """Make a directory"""
         obj = self._sanity_check(obj)
 
-    def makeHomeDir(self, obj=None, shrc=None, sshpubkeys=None):
+    def make_home_dir(self, obj=None, shrc=None, sshpubkeys=None):
         """Make a homedirectory"""
         obj = self._sanity_check(obj)
         self.makeDir(obj)
@@ -285,7 +285,7 @@ class PosixOperations(object):
         obj = self._sanity_check(obj)
         self.log.error("listQuota not implemented for this class %s" % self.__class__.__name__)
 
-    def setQuota(self, soft, who, obj=None, typ='user', hard=None, grace=None):
+    def set_quota(self, soft, who, obj=None, typ='user', hard=None, grace=None):
         """Set quota
             @type soft: int, soft limit in bytes
             @type who: identifier (eg username or userid)
