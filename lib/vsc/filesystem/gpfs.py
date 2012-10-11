@@ -511,9 +511,9 @@ class GpfsOperations(PosixOperations):
         attr = self.getAttr(fileset_path)
         if 'filesetname' in attr:
             who = attr['filesetname']
-            self.log.info("set_fileset_quota: typ %s setting fileset to %s for obj %s" % (typ, who, obj))
+            self.log.info("set_fileset_quota: setting fileset to %s for obj %s" % (who, fileset_path))
         else:
-            self.log.raiseException("set_fileset_quota: typ %s specified, but attrs for obj %s don't have filestename property (attr: %s)" % (typ, obj, attr), GpfsOperationError)
+            self.log.raiseException("set_fileset_quota: attrs for obj %s don't have filestename property (attr: %s)" % (fileset_path, attr), GpfsOperationError)
 
         self._set_quota(soft, who=who, obj=fileset_path, typ='fileset', hard=hard)
 
