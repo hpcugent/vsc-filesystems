@@ -71,6 +71,7 @@ class VSC:
 
         self.institutes = ["gent", "leuven", "brussel", "antwerpen"]
 
+        # FIXME: cvan we get these from the LDAP schema?
         self.user_multi_value_attributes = ['pubkey', 'mailList', 'researchField']
         self.group_multi_value_attributes = ['memberUid', 'moderator', 'autogroup']
         self.project_multi_value_attributes = []
