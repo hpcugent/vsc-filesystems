@@ -118,7 +118,6 @@ class GpfsOperations(PosixOperations):
             what.pop(0)
             header = what[0][:6]
 
-
         if len(what) == 0:
             self.log.raiseException('No valid header start for output: %s' % out, GpfsOperationError)
 
@@ -480,13 +479,108 @@ class GpfsOperations(PosixOperations):
         ## at the end, rescan the filesets and update the info
         self.list_filesets()
 
-    def set_quota(self, soft, who, obj=None, typ='user', hard=None, grace=None):
-        """Set quota: set softlimit for type typ on obj
-            @type soft: int, number of bytes as softlimit
-            @type who: identifier (eg username or userid) (is redefined with filesetname from mmlsattr for typ=fileset)
-            @type grace: int, grace period in seconds for the whole type, not per user !!
+    def set_user_quota(self, soft, user, obj=None, hard=None):
+        """Set quota for a user.
 
-            current implementation only set block limits
+        @type soft: integer representing the soft limit expressed in bytes
+        @type user: string identifying the user
+        @type grace: integer representing the grace period expressed in days
+        """
+        self._set_quota(soft, who=user, obj=obj, typ='user', hard=hard)
+
+    def set_group_quota(self, soft, group, obj=None, hard=None):
+        """Set quota for a group on a given object (e.g., a path in the filesystem, which may correpond to a fileset)
+
+        @type soft: integer representing the soft limit expressed in bytes
+        @type group: string identifying the group
+        @type obj: the object, whatever it is
+        @type hard: integer representing the hard limit expressed in bytes. If None, then 1.05 * soft.
+        @type grace: integer representing the grace period expressed in days
+        """
+        self._set_quota(soft, who=group, obj=obj, typ='group', hard=hard)
+
+    def set_fileset_quota(self, soft, fileset_path, hard=None):
+        """Set quota on a fileset.
+
+        @type soft: integer representing the soft limit expressed in bytes
+        @type fileset_path: the linked path to the fileset
+        @type hard: integer representing the hard limit expressed in bytes. If None, then 1.05 * soft.
+        @type grace: integer representing the grace period expressed in days
+        """
+        # we need the corresponding fileset name
+        attr = self.getAttr(fileset_path)
+        if 'filesetname' in attr:
+            who = attr['filesetname']
+            self.log.info("set_fileset_quota: typ %s setting fileset to %s for obj %s" % (typ, who, obj))
+        else:
+            self.log.raiseException("set_fileset_quota: typ %s specified, but attrs for obj %s don't have filestename property (attr: %s)" % (typ, obj, attr), GpfsOperationError)
+
+        self._set_quota(soft, who=who, obj=fileset_path, typ='fileset', hard=hard)
+
+    def set_user_grace(self, obj, grace=0):
+        """Set the grace period for user data.
+
+        @type obj: string representing the path where the GPFS was mounted or the device itself
+        @type grace: grace period expressed in seconds
+        """
+        self._set_grace(obj, 'user', grace)
+
+    def set_group_grace(self, obj, grace=0):
+        """Set the grace period for user data.
+
+        @type obj: string representing the path where the GPFS was mounted or the device itself
+        @type grace: grace period expressed in seconds
+        """
+        self._set_grace(obj, 'group', grace)
+
+    def set_fileset_grace(self, obj, grace=0):
+        """Set the grace period for user data.
+
+        @type obj: string representing the path where the GPFS was mounted or the device itself
+        @type grace: grace period expressed in seconds
+        """
+        self._set_grace(obj, 'fileset', grace)
+
+    def _set_grace(self, obj, typ, grace=0):
+        """Set the grace period for a given type of objects in GPFS.
+
+        @type obj: the path or the GPFS device
+        @type typ: the type of entities for which we set the grace
+        @type grace: int representing the grace period in seconds
+        """
+
+        obj = self._sanity_check(obj)
+        if not self.exists(obj):
+            self.raiseException("setQuota: can't set quota on none-existing obj %s" % obj, GpfsOperationError)
+
+        # FIXME: this should be some constant or such
+        typ2opt = {'user':'u',
+                   'group':'g',
+                   'fileset':'j',
+                   }
+
+        opts = []
+        opts += ["-%s" % typ2opt[typ]]
+        opts += ["-t", "%sseconds" % int(grace)]
+
+        opts.append(obj)
+
+        ec, out = self._execute('tssetquota', opts)
+        if ec > 0:
+            self.log.raiseException("_set_grace: tssetquota with opts %s failed" % (opts), GpfsOperationError)
+
+    def _set_quota(self, soft, who, obj=None, typ='user', hard=None):
+        """Set quota on the given object.
+
+        @type soft: integer representing the soft limit expressed in bytes
+        @type who: string identifying the group
+        @type typ: string representing the type of object to set quota for: user, fileset or group.
+        @type hard: integer representing the hard limit expressed in bytes. If None, then 1.05 * soft.
+
+        @type who: identifier (eg username or userid) (is redefined with filesetname from mmlsattr for typ=fileset)
+        @type grace: integer representing the grace period expressed in seconds.
+
+            current implementation only sets block limits, not on the inodes
         """
         """
         Usage:
@@ -516,6 +610,7 @@ class GpfsOperations(PosixOperations):
         if not self.exists(obj):
             self.raiseException("setQuota: can't set quota on none-existing obj %s" % obj, GpfsOperationError)
 
+        # FIXME: this should be some constant or such
         typ2opt = {'user':'u',
                    'group':'g',
                    'fileset':'j',
@@ -524,39 +619,24 @@ class GpfsOperations(PosixOperations):
         soft2hard_factor = 1.05
 
         if not typ in typ2opt:
-            self.log.raiseException("setQuota: unsupported type %s" % typ, GpfsOperationError)
-
-        if typ == 'fileset':
-            ## who is the fileset name or fsid
-            attr = self.getAttr(obj)
-            if 'filesetname' in attr:
-                who = attr['filesetname']  ## force it
-                self.log.info("setQuota: typ %s setting fileset to %s for obj %s" % (typ, who, obj))
-            else:
-                self.log.raiseException("setQuota: typ %s specified, but attrs for obj %s don't have filestename property (attr: %s)" % (typ, obj, attr), GpfsOperationError)
+            self.log.raiseException("_set_quota: unsupported type %s" % typ, GpfsOperationError)
 
         opts = []
 
-        if grace is None:
-            if hard is None:
-                hard = int(soft * soft2hard_factor)
-            elif hard < soft:
-                self.raiseException("setQuota: can't set hard limit %s lower then soft limit %s" % (hard, soft), GpfsOperationError)
+        if hard is None:
+            hard = int(soft * soft2hard_factor)
+        elif hard < soft:
+            self.raiseException("setQuota: can't set hard limit %s lower then soft limit %s" % (hard, soft), GpfsOperationError)
 
-
-            opts += ["-%s" % typ2opt[typ], who]
-            opts += ["-s", "%sm" % int(soft // 1024 ** 2)]  ## round to MB
-            opts += ["-h", "%sm" % int(hard // 1024 ** 2)]  ## round to MB
-        else:
-            ## only set grace period
-            opts += ["-%s" % typ2opt[typ]]
-            opts += ["-t", "%sseconds" % int(grace)]
+        opts += ["-%s" % typ2opt[typ], who]
+        opts += ["-s", "%sm" % int(soft // 1024 ** 2)]  # round to MB
+        opts += ["-h", "%sm" % int(hard // 1024 ** 2)]  # round to MB
 
         opts.append(obj)
 
         ec, out = self._execute('tssetquota', opts)
         if ec > 0:
-            self.log.raiseException("setQuota: tssetquota with opts %s failed" % (opts), GpfsOperationError)
+            self.log.raiseException("_set_quota: tssetquota with opts %s failed" % (opts), GpfsOperationError)
 
 
 if __name__ == '__main__':
