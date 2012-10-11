@@ -30,7 +30,7 @@ class GpfsOperations(PosixOperations):
 
         self.gpfsdisks = None
 
-    def _execute(self, name, opts=None):
+    def _execute(self, name, opts=None, changes=False):
         """Return and check the GPFS command.
             @type cmd: string, will be prefixed by GPFS_BIN_PATH if not absolute
         """
@@ -48,7 +48,7 @@ class GpfsOperations(PosixOperations):
             else:
                 self.log.raiseException("_execute: please use a list or tuple for options: cmd %s opts %s" % (cmdname, opts), GpfsOperationError)
 
-        ec, out = super(GpfsOperations, self)._execute(cmd)
+        ec, out = super(GpfsOperations, self)._execute(cmd, changes)
 
         return ec, out
 
@@ -104,14 +104,14 @@ class GpfsOperations(PosixOperations):
         mmlsfs::0:1:::scratch:minFragmentSize:8192:
         mmlsfs::0:1:::scratch:inodeSize:512:
 
-        ## it's percent encoded: first split in :, then decode
+        # it's percent encoded: first split in :, then decode
         b = [[percentdecode(y) for y in  x.split(':')] for x in a]
         """
         what = [[percentdecode(y) for y in  x.strip().split(':')] for x in out.strip().split('\n')]
 
         expectedheader = [name, '', 'HEADER', 'version', 'reserved', 'reserved']
-        ## verify result
-        ## eg mmrepquota start with single line of unnecessary ouput
+        # verify result
+        # eg mmrepquota start with single line of unnecessary ouput
         header = what[0][:6]
         while (not expectedheader == header) and len(what) > 0:
             self.log.warning('Unexpected header start: %s. Skipping.' % header)
@@ -121,32 +121,32 @@ class GpfsOperations(PosixOperations):
         if len(what) == 0:
             self.log.raiseException('No valid header start for output: %s' % out, GpfsOperationError)
 
-        ## sanity check
+        # sanity check
         nrfields = [len(x) for x in what]
         if len(set(nrfields)) > 1:
             if nrfields[0] == max(nrfields[1:]):
-                ## description length is equal to maximum. will be padded, since there is at least one list of values that matches the length
+                # description length is equal to maximum. will be padded, since there is at least one list of values that matches the length
                 self.log.debug("Number of entries in output %s. Nr of headers %s equal max of number of values." % (nrfields, nrfields[0]))
             else:
                 self.log.error("Number of entries in output %s for what %s." % (nrfields, what))
 
-            ## sanity check
+            # sanity check
             for idx in xrange(1, len(what)):
                 if not (what[idx][0:2] == expectedheader[0:2]):
-                    self.log.raiseException("No expected start of header %s for full row %s" % (expectedheader[0:2], what[idx ]), GpfsOperationError)
+                    self.log.raiseException("No expected start of header %s for full row %s" % (expectedheader[0:2], what[idx]), GpfsOperationError)
 
-                if nrfields[0] > nrfields[idx ]:
-                    self.log.debug("Description length %s greater then %s. Adding whitespace. (names %s, row %s)" % (nrfields[0], nrfields[idx], what[0][6:], what[idx ][6:]))
+                if nrfields[0] > nrfields[idx]:
+                    self.log.debug("Description length %s greater then %s. Adding whitespace. (names %s, row %s)" % (nrfields[0], nrfields[idx], what[0][6:], what[idx][6:]))
                     what[idx].extend([''] * (nrfields[0] - nrfields[idx]))
-                elif nrfields[0] < nrfields[idx ]:
-                    self.log.raiseException("Description length %s smaller then %s. Not fixing. (names %s, row %s)" % (nrfields[0], nrfields[idx ], what[0][6:], what[idx ][6:]), GpfsOperationError)
+                elif nrfields[0] < nrfields[idx]:
+                    self.log.raiseException("Description length %s smaller then %s. Not fixing. (names %s, row %s)" % (nrfields[0], nrfields[idx], what[0][6:], what[idx][6:]), GpfsOperationError)
 
         res = {}
         try:
             for headeridx, name in enumerate(what[0][6:]):
                 res[name] = []
                 for idx in xrange(1, len(what)):
-                    res[name].append(what[idx ][6 + headeridx])
+                    res[name].append(what[idx][6 + headeridx])
         except:
             self.log.exception("Failed to regroup data %s (from output %s)" % (what, out))
             raise
@@ -161,16 +161,16 @@ class GpfsOperations(PosixOperations):
             where the key is the fieldName and the values are the corresponding value, i.e., the
         """
         info = self._executeY('mmlsfs', [device])
-        ## for v3.5 deviceName:fieldName:data:remarks:
+        # for v3.5 deviceName:fieldName:data:remarks:
 
-        ## set the gpfsdevices
+        # set the gpfsdevices
         gpfsdevices = list(set(info.get('deviceName', [])))
         if len(gpfsdevices) == 0:
             self.log.raiseException("No devices found. Returned info %s" % info, GpfsOperationError)
         else:
             self.log.debug("listAllFilesystems found devices %s" % gpfsdevices)
 
-        res = dict([(dev, {}) for dev in gpfsdevices]) ## build structure
+        res = dict([(dev, {}) for dev in gpfsdevices])  # build structure
         for dev, k, v in zip(info['deviceName'], info['fieldName'], info['data']):
             res[dev][k] = v
 
@@ -190,7 +190,7 @@ class GpfsOperations(PosixOperations):
             devices = [devices]
 
         info = self._executeY('mmrepquota', ['-n', " ".join(devices)], prefix=True)
-        ## for v3.5 filesystemName:quotaType:id:name:blockUsage:blockQuota:blockLimit:blockInDoubt:blockGrace:filesUsage:filesQuota:filesLimit:filesInDoubt:filesGrace:remarks:quota:defQuota:fid:filesetname:
+        # for v3.5 filesystemName:quotaType:id:name:blockUsage:blockQuota:blockLimit:blockInDoubt:blockGrace:filesUsage:filesQuota:filesLimit:filesInDoubt:filesGrace:remarks:quota:defQuota:fid:filesetname:
 
         datakeys = info.keys()
         datakeys.remove('filesystemName')
@@ -202,7 +202,7 @@ class GpfsOperations(PosixOperations):
         quotatypes = list(set(info.get('quotaType', [])))
         quotatypesstruct = dict([(qt, {}) for qt in quotatypes])
 
-        res = dict([(fs, quotatypesstruct) for fs in fss]) ## build structure
+        res = dict([(fs, quotatypesstruct) for fs in fss])  # build structure
 
         for idx, (fs, qt, qid) in enumerate(zip(info['filesystemName'], info['quotaType'], info['id'])):
             details = dict([(k, info[k][idx]) for k in datakeys])
@@ -224,7 +224,7 @@ class GpfsOperations(PosixOperations):
         opts = []
 
         if devices is None:
-            ## get all devices from all filesystems
+            # get all devices from all filesystems
             if self.gpfslocalfilesystems is None:
                 self.list_filesystems()
 
@@ -242,14 +242,14 @@ class GpfsOperations(PosixOperations):
             opts.append(filesetnamestxt)
 
         info = self._executeY('mmlsfileset', opts)
-        ## for v3.5 filesystemName:filesetName:id:rootInode:status:path:parentId:created:inodes:dataInKB:comment:filesetMode:afmTarget:afmState:afmMode:afmFileLookupRefreshInterval:afmFileOpenRefreshInterval:afmDirLookupRefreshInterval:afmDirOpenRefreshInterval:afmAsyncDelay:reserved:afmExpirationTimeout:afmRPO:afmLastPSnapId:inodeSpace:isInodeSpaceOwner:maxInodes:allocInodes:inodeSpaceMask:afmShowHomeSnapshots:afmNumReadThreads:afmNumReadGWs:afmReadBufferSize:afmWriteBufferSize:afmReadSparseThreshold:afmParallelReadChunkSize:afmParallelReadThreshold:snapId:
+        # for v3.5 filesystemName:filesetName:id:rootInode:status:path:parentId:created:inodes:dataInKB:comment:filesetMode:afmTarget:afmState:afmMode:afmFileLookupRefreshInterval:afmFileOpenRefreshInterval:afmDirLookupRefreshInterval:afmDirOpenRefreshInterval:afmAsyncDelay:reserved:afmExpirationTimeout:afmRPO:afmLastPSnapId:inodeSpace:isInodeSpaceOwner:maxInodes:allocInodes:inodeSpaceMask:afmShowHomeSnapshots:afmNumReadThreads:afmNumReadGWs:afmReadBufferSize:afmWriteBufferSize:afmReadSparseThreshold:afmParallelReadChunkSize:afmParallelReadThreshold:snapId:
 
         datakeys = info.keys()
         datakeys.remove('filesystemName')
         datakeys.remove('id')
 
         fss = list(set(info.get('filesystemName', [])))
-        res = dict([(fs, {}) for fs in fss]) ## build structure
+        res = dict([(fs, {}) for fs in fss])  # build structure
 
         for idx, (fs, qid) in enumerate(zip(info['filesystemName'], info['id'])):
             details = dict([(k, info[k][idx]) for k in datakeys])
@@ -270,16 +270,16 @@ class GpfsOperations(PosixOperations):
         keysM = infoM.keys()
         keysM.remove('nsdName')
 
-        ## sanity check
+        # sanity check
 
         commondomain = None
-        ## if this fails, nodes probably have shortnames
+        # if this fails, nodes probably have shortnames
         try:
-            ## - means disk offline, so no nodename
+            # - means disk offline, so no nodename
             alldomains = ['.'.join(x.split('.')[1:]) for x in infoM['IOPerformedOnNode'] if not x in ['-', 'localhost']]
             if len(set(alldomains)) > 1:
                 self.log.error("More then one domain found: %s." % alldomains)
-            commondomain = alldomains[0] ## TODO: should be most frequent one
+            commondomain = alldomains[0]  # TODO: should be most frequent one
         except:
             self.log.exception("Can't determine domainname for nodes %s" % infoM['IOPerformedOnNode'])
             commondomain = None
@@ -288,14 +288,14 @@ class GpfsOperations(PosixOperations):
             if node == 'localhost':
                 infoM['IOPerformedOnNode'][idx] = '.'.join([x for x in [shorthn, commondomain] if x is not None])
 
-        res = dict([(nsd, {}) for nsd in infoL['nsdName']]) ## build structure
+        res = dict([(nsd, {}) for nsd in infoL['nsdName']])  # build structure
         for idx, nsd in enumerate(infoL['nsdName']):
             for k in keysL:
                 res[nsd][k] = infoL[k][idx]
             for k in keysM:
                 Mk = k
                 if k in keysL:
-                    ## duplicate key !!
+                    # duplicate key !!
                     if not infoL[k][idx] == infoM[k][idx]:
                         self.log.error("nsdName %s has named value %s in both -L and -M, but have different value L=%s M=%s" % (nsd, infoL[k][idx], infoM[k][idx]))
                     Mk = "M_%s" % k
@@ -310,7 +310,7 @@ class GpfsOperations(PosixOperations):
                     key is disk, value is remaining property
         """
         if devices is None:
-            ## get all devices from all filesystems
+            # get all devices from all filesystems
             if self.gpfslocalfilesystems is None:
                 self.list_filesystems()
 
@@ -349,11 +349,12 @@ class GpfsOperations(PosixOperations):
 
         for line in out.split("\n"):
             line = re.sub(r"\s+", '', line)
-            if len(line) == 0: continue
+            if len(line) == 0:
+                continue
             items = line.split(":")
             if len(items) == 1:
-                items.append('') ## fix anomalies
-            res[items[0]] = ":".join(items[1:]) ## creationtime has : in value as well eg creationtime:ThuAug2313:04:202012
+                items.append('')  # fix anomalies
+            res[items[0]] = ":".join(items[1:])  # creationtime has : in value as well eg creationtime:ThuAug2313:04:202012
 
         return res
 
@@ -362,13 +363,13 @@ class GpfsOperations(PosixOperations):
         """
         obj = self._sanity_check(obj)
 
-        res = {'parent':None}
+        res = {'parent': None}
         res['exists'] = self.exists(obj)
 
         if res['exists']:
             realpath = obj
         else:
-            realpath = self._largestExistingPath()
+            realpath = self._largest_existing_path()
             res['parent'] = realpath
 
         fs = self._what_filesystem(obj)
@@ -436,8 +437,8 @@ class GpfsOperations(PosixOperations):
 
         # FIXME: Not sure if this is a good idea.
         if fileset_name is None:
-            ## guess the device from the pathname
-            ## subtract the device mount path from filesetpath ? (what with filesets in filesets)
+            # guess the device from the pathname
+            # subtract the device mount path from filesetpath ? (what with filesets in filesets)
             mntpt = fs[self.localfilesystemnaming.index('mountpoint')]
             if fsetpath.startswith(mntpt):
                 lastpart = fsetpath.split(os.sep)[len(mntpt.split(os.sep)):]
@@ -453,8 +454,8 @@ class GpfsOperations(PosixOperations):
             if efsetpath == fsetpath or efsetname == fileset_name:
                 self.log.raiseException("Found existing fileset %s that has same path %s or same name %s as new path %s or new name %s" % (efset, efsetpath, efsetname, fsetpath, fileset_name), GpfsOperationError)
 
-        ## create the fileset
-        ## if created, try to link it with -J to path
+        # create the fileset
+        # if created, try to link it with -J to path
         mmcrfileset_options = [foundgpfsdevice, fileset_name]
         if parent_fileset_name is None:
             mmcrfileset_options += ['--inode-space', 'new']
@@ -467,16 +468,16 @@ class GpfsOperations(PosixOperations):
                 self.log.raiseException("Parent fileset %s does not appear to exist." % parent_fileset_name, GpfsOperationError)
             mmcrfileset_options += ['--inode-space', parent_fileset_name]
 
-        (ec, out) = self._execute('mmcrfileset', mmcrfileset_options)
+        (ec, out) = self._execute('mmcrfileset', mmcrfileset_options, True)
         if ec > 0:
             self.log.raiseException("Creating fileset with name %s on device %s failed" % (fileset_name, foundgpfsdevice), GpfsOperationError)
 
-        ## link the fileset
-        ec, out = self._execute('mmlinkfileset', [foundgpfsdevice, fileset_name, '-J', fsetpath])
+        # link the fileset
+        ec, out = self._execute('mmlinkfileset', [foundgpfsdevice, fileset_name, '-J', fsetpath], True)
         if ec > 0:
             self.log.raiseException("Linking fileset with name %s on device %s to path %s failed" % (fileset_name, foundgpfsdevice, fsetpath), GpfsOperationError)
 
-        ## at the end, rescan the filesets and update the info
+        # at the end, rescan the filesets and update the info
         self.list_filesets()
 
     def set_user_quota(self, soft, user, obj=None, hard=None):
@@ -554,9 +555,9 @@ class GpfsOperations(PosixOperations):
             self.raiseException("setQuota: can't set quota on none-existing obj %s" % obj, GpfsOperationError)
 
         # FIXME: this should be some constant or such
-        typ2opt = {'user':'u',
-                   'group':'g',
-                   'fileset':'j',
+        typ2opt = {'user': 'u',
+                   'group': 'g',
+                   'fileset': 'j',
                    }
 
         opts = []
@@ -565,7 +566,7 @@ class GpfsOperations(PosixOperations):
 
         opts.append(obj)
 
-        ec, out = self._execute('tssetquota', opts)
+        ec, out = self._execute('tssetquota', opts, True)
         if ec > 0:
             self.log.raiseException("_set_grace: tssetquota with opts %s failed" % (opts), GpfsOperationError)
 
@@ -611,9 +612,9 @@ class GpfsOperations(PosixOperations):
             self.raiseException("setQuota: can't set quota on none-existing obj %s" % obj, GpfsOperationError)
 
         # FIXME: this should be some constant or such
-        typ2opt = {'user':'u',
-                   'group':'g',
-                   'fileset':'j',
+        typ2opt = {'user': 'u',
+                   'group': 'g',
+                   'fileset': 'j',
                    }
 
         soft2hard_factor = 1.05
@@ -634,7 +635,7 @@ class GpfsOperations(PosixOperations):
 
         opts.append(obj)
 
-        ec, out = self._execute('tssetquota', opts)
+        ec, out = self._execute('tssetquota', opts, True)
         if ec > 0:
             self.log.raiseException("_set_quota: tssetquota with opts %s failed" % (opts), GpfsOperationError)
 
@@ -653,5 +654,3 @@ if __name__ == '__main__':
 
     g.list_disks()
     print "disks", g.gpfsdisks
-
-
