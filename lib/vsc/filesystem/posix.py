@@ -275,7 +275,7 @@ class PosixOperations(object):
     def make_home_dir(self, obj=None, shrc=None, sshpubkeys=None):
         """Make a homedirectory"""
         obj = self._sanity_check(obj)
-        self.makeDir(obj)
+        self.make_dir(obj)
         # (re?)generate default key
         # create .ssh/authorized_keys (+default key)
         # generate ~/.bashrc / ~/.tcshrc or whatever we support
@@ -302,17 +302,17 @@ class PosixOperations(object):
         """Change permisison"""
         obj = self._sanity_check(obj)
 
-    def compareFiles(self, target, obj=None):
+    def compare_files(self, target, obj=None):
         target = self._sanity_check(target)
         obj = self._sanity_check(obj)
 
-    def removeObj(self, obj=None):
+    def remove_obj(self, obj=None):
         """Remove obj"""
         obj = self._sanity_check(obj)
         # if backup, take backup
         # if real, remove
 
-    def renameObj(self, obj=None):
+    def rename_obj(self, obj=None):
         """Rename obj"""
         obj = self._sanity_check(obj)
         # if backup, take backup
