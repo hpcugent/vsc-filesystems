@@ -290,7 +290,7 @@ class GpfsOperations(PosixOperations):
 
         for fset in filesets.values():
             if fset['filesetName'] == fileset_name:
-                return fset['fsetName']
+                return fset['filesetName']
 
         return None
 
