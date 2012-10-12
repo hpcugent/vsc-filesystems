@@ -537,7 +537,7 @@ class GpfsOperations(PosixOperations):
         """
         self._set_quota(soft, who=group, obj=obj, typ='group', hard=hard)
 
-    def set_fileset_quota(self, soft, fileset_path, hard=None):
+    def set_fileset_quota(self, soft, fileset_path, fileset_name=None, hard=None):
         """Set quota on a fileset.
 
         @type soft: integer representing the soft limit expressed in bytes
@@ -546,14 +546,15 @@ class GpfsOperations(PosixOperations):
         @type grace: integer representing the grace period expressed in days
         """
         # we need the corresponding fileset name
-        attr = self.getAttr(fileset_path)
-        if 'filesetname' in attr:
-            who = attr['filesetname']
-            self.log.info("set_fileset_quota: setting fileset to %s for obj %s" % (who, fileset_path))
-        else:
-            self.log.raiseException("set_fileset_quota: attrs for obj %s don't have filestename property (attr: %s)" % (fileset_path, attr), GpfsOperationError)
+        if fileset_name is None:
+            attr = self.getAttr(fileset_path)
+            if 'filesetname' in attr:
+                fileset_name = attr['filesetname']
+                self.log.info("set_fileset_quota: setting fileset to %s for obj %s" % (fileset_name, fileset_path))
+            else:
+                self.log.raiseException("set_fileset_quota: attrs for obj %s don't have filestename property (attr: %s)" % (fileset_path, attr), GpfsOperationError)
 
-        self._set_quota(soft, who=who, obj=fileset_path, typ='fileset', hard=hard)
+        self._set_quota(soft, who=fileset_name, obj=fileset_path, typ='fileset', hard=hard)
 
     def set_user_grace(self, obj, grace=0):
         """Set the grace period for user data.
