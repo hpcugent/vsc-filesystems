@@ -646,8 +646,8 @@ class GpfsOperations(PosixOperations):
         """
 
         obj = self._sanity_check(obj)
-        if not self.exists(obj):
-            self.raiseException("setQuota: can't set quota on none-existing obj %s" % obj, GpfsOperationError)
+        if not self.dry_run and not self.exists(obj):  # FIXME: hardcoding this here is fugly.
+            self.log.raiseException("setQuota: can't set quota on none-existing obj %s" % obj, GpfsOperationError)
 
         # FIXME: this should be some constant or such
         typ2opt = {'user': 'u',
