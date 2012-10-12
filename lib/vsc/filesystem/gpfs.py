@@ -156,7 +156,7 @@ class GpfsOperations(PosixOperations):
     def list_filesystems(self, device='all'):
         """List all filesystems.
 
-        Det self.gpfslocalfilesystems to a convenient dict structure of the returned dict
+        Set self.gpfslocalfilesystems to a convenient dict structure of the returned dict
         where the key is the deviceName, the value is a dict
             where the key is the fieldName and the values are the corresponding value, i.e., the
         """
@@ -216,7 +216,7 @@ class GpfsOperations(PosixOperations):
         @type devices: list of devices (if string: 1 device; if None: all found devices)
         @type filesetnames: report only on specific filesets (if string: 1 filesetname)
 
-            set self.gpfslocalfileset is dict with
+            set self.gpfslocalfilesets is dict with
                 key = filesystemName value is dict with
                     key = id value is dict
                         key = remaining header entries and corresponding values
@@ -256,6 +256,43 @@ class GpfsOperations(PosixOperations):
             res[fs][qid] = details
 
         self.gpfslocalfilesets = res
+
+    def get_filesystem_info(self, filesystem):
+        """Get all the relevant information for a given GPFS filesystem.
+
+        @type filesystem: string representing the name of the filesystem in GPFS
+
+        @returns: dictionary with the GPFS information
+
+        @raise GpfsOperationError: if there is no filesystem with the given name
+        """
+        self.list_filesystems()  # make sure we have the latest information
+        try:
+            return self.gpfslocalfilesystems[filesystem]
+        except KeyError, _:
+            self.log.raiseException("GPFS has no information for filesystem %s" % (filesystem), GpfsOperationError)
+
+    def get_fileset_info(self, filesystem_name, fileset_name):
+        """Get all the relevant information for a given fileset.
+
+        @type filesystem_name: string representing a gpfs filesystem
+        @type fileset_name: string representing a gpfs fileset name (not the ID)
+
+        @returns: dictionary with the fileset information or None if the fileset cannot be found
+
+        @raise GpfsOperationError: if there is no filesystem with the given name
+        """
+        self.list_filesets()
+        try:
+            filesets = self.gpfslocalfilesets[filesystem_name]
+        except:
+            self.log.raiseException("GPFS has no fileset information for filesystem %s" % (filesystem_name), GpfsOperationError)
+
+        for fset in filesets.values():
+            if fset['filesetName'] == fileset_name:
+                return fset['fsetName']
+
+        return None
 
     def _list_disk_single_device(self, device):
         """Return disk info for specific device
