@@ -315,3 +315,11 @@ class VSC:
                 'scratch': "/scratch/%s/%s/%s" % (institute, user_group_id, user_login)
             }
 
+
+class Muk(object):
+    """Defines a bunch of constants and settings for the Muk supercomputer environment."""
+
+    __metaclass__ = Singleton
+
+    def __init__(self):
+        pass
