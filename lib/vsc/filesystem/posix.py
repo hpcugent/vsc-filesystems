@@ -5,12 +5,13 @@ General POSIX filesystem interaction (sort of replacement for linux_utils)
 """
 
 
-import vsc.fancylogger as fancylogger
+import commands
+import errno
 import os
 import sys
 import subprocess
-import commands
 
+import vsc.fancylogger as fancylogger
 OS_LINUX_MOUNTS = '/proc/mounts'
 OS_LINUX_FILESYSTEMS = '/proc/filesystems'
 # be very careful to add new ones here
@@ -269,8 +270,20 @@ class PosixOperations(object):
         # do symlinks count ?
 
     def make_dir(self, obj=None):
-        """Make a directory"""
+        """Make a directory hierarchy.
+
+        @type obj: string representing a path to the final directory in the hierarchy
+
+        @raise PosixOperationError: if the directory does ot exist and cannot be created
+        """
         obj = self._sanity_check(obj)
+        try:
+            os.makedirs(obj)
+        except OSError, err:
+            if err.errno == errno.EEXIST:
+                pass
+            else:
+                self.log.raiseException("Cannot create the directory hierarchy %s" % (obj), PosixOperationError)
 
     def make_home_dir(self, obj=None, shrc=None, sshpubkeys=None):
         """Make a homedirectory"""
