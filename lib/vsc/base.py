@@ -322,4 +322,45 @@ class Muk(object):
     __metaclass__ = Singleton
 
     def __init__(self):
-        pass
+        """Initialise."""
+        self.scratch_name = 'scratch'
+        self.home_parent_mount_point = os.path.sep + 'vscmnt2'
+
+    def _user_dir_group_id(self, user_id, institute):
+        """Determine the string that gives the grouping directory name for a set of 100 user ids.
+
+        @type user_id: string representing the VSC user id.
+        @type institute: string representing the institute the user belongs to
+
+        @returns: string representing the grouping directory name.
+        """
+        if institute == 'gent'"
+            return user_id[:-2]
+        else:
+            return user_id[3:6]
+
+    def user_home_mount(self, user_id, institute):
+        """Determine the location where the link to the NFS mount of the user's home directory sits.
+
+        @type user_id: string representing the VSC user id
+        @type institute: string representing the institute to which the user belongs
+        """
+
+        user_dir_group_id = self._user_dir_group_id(user_id, institute)
+
+        return "/vscmnt2/%s/%s" % (institute, user_dir_group_id, user_id)
+
+    def user_data_mount(self, user_id, institute):
+        """Determine the location where the link to the NFS mount of the user's data directory sits.
+
+        @type user_id: string representing the VSC user id
+        @type institute: string representing the institute to which the user belongs
+        """
+
+        user_dir_group_id = self._user_dir_group_id(user_id, institute)
+
+
+
+
+
+
