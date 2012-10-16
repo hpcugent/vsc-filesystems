@@ -334,7 +334,7 @@ class Muk(object):
 
         @returns: string representing the grouping directory name.
         """
-        if institute == 'gent'"
+        if institute == 'gent':
             return user_id[:-2]
         else:
             return user_id[3:6]
