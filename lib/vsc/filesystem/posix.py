@@ -348,7 +348,7 @@ class PosixOperations(object):
         # bash
         self.log.info('Creating .bashrc and .bash_profile')
         open(os.path.join(home_dir, '.bashrc'), 'w').close()
-        fp = open(os.path.join(home_dir), '.bash_profile')
+        fp = open(os.path.join(home_dir, '.bash_profile'), 'w')
         fp.write('if [ -f ~/.bashrc ]; then\n . ~/.bashrc\nfi\n')
         fp.close()
 
