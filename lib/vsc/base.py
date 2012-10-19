@@ -48,25 +48,25 @@ class VSC:
         self.user_extra_gid_range = 10000
 
         # lists of minimum ids
-        self.user_uid_institute_map = { "vsc" : [2500000],
-                                        "brussel" : [2510000],
-                                        "antwerpen" : [2520000],
-                                        "leuven" : [2530000],
-                                        "gent" :  [2540000],
+        self.user_uid_institute_map = { "vsc": [2500000],
+                                        "brussel": [2510000],
+                                        "antwerpen": [2520000],
+                                        "leuven": [2530000],
+                                        "gent":  [2540000],
                                       }
-        self.user_extra_gid_institute_map = { "vsc" : [2600000],
-                                              "brussel" : [2610000],
-                                              "antwerpen" : [2620000],
-                                              "leuven" : [2630000],
-                                              "gent" :  [2640000],
+        self.user_extra_gid_institute_map = { "vsc": [2600000],
+                                              "brussel": [2610000],
+                                              "antwerpen": [2620000],
+                                              "leuven": [2630000],
+                                              "gent":  [2640000],
                                             }
 
-        self.defaults = {"new_user_status" : "new",
-                         "notify_user_status" : "notify",
-                         "modify_user_status" : "modify",
-                         "active_user_status" : "active",
-                         "inactive_user_status" : "inactive",
-                         "default_project_gold" : "default_project"
+        self.defaults = { "new_user_status": "new",
+                          "notify_user_status": "notify",
+                          "modify_user_status": "modify",
+                          "active_user_status": "active",
+                          "inactive_user_status": "inactive",
+                          "default_project_gold": "default_project"
                         }
 
         self.institutes = ["gent", "leuven", "brussel", "antwerpen"]
@@ -348,7 +348,7 @@ class Muk(object):
 
         user_dir_group_id = self._user_dir_group_id(user_id, institute)
 
-        return "/vscmnt2/%s/%s" % (institute, user_dir_group_id, user_id)
+        return os.path.sep + os.path.join('vscmnt2', 'user', institute, user_dir_group_id, user_id)
 
     def user_data_mount(self, user_id, institute):
         """Determine the location where the link to the NFS mount of the user's data directory sits.
@@ -359,8 +359,4 @@ class Muk(object):
 
         user_dir_group_id = self._user_dir_group_id(user_id, institute)
 
-
-
-
-
-
+        return os.path.sep + os.path.join('vscmnt2', 'data', institute, user_dir_group_id, user_id)
