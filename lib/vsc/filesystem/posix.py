@@ -100,7 +100,7 @@ class PosixOperations(object):
         # filler for reducing lots of LOC
         if obj is None:
             if self.obj is None:
-                self.log.raiseException("_sanityCheck no obj passed and self.obj not set.", PosixOperationError)
+                self.log.raiseException("_sanity_check no obj passed and self.obj not set.", PosixOperationError)
                 return
             else:
                 obj = self.obj
@@ -109,7 +109,7 @@ class PosixOperations(object):
 
         if self.forceabsolutepath:
             if not os.path.isabs(obj):  # other test: obj.startswith(os.path.sep)
-                self.log.raiseException("_sanityCheck check absolute path: obj %s is not an absolute path" % obj, PosixOperationError)
+                self.log.raiseException("_sanity_check check absolute path: obj %s is not an absolute path" % obj, PosixOperationError)
                 return
 
         # check if filesystem matches current class
@@ -125,18 +125,18 @@ class PosixOperations(object):
                 if tmpfs[0] in self.supportedfilesystems:
                     fs = tmpfs[0]
                 else:
-                    self.log.raiseException("_sanityCheck found filesystem %s for subpath %s of obj %s is not a supported filesystem (supported %s)" % (tmpfs[0], fp, obj, self.supportedfilesystems), PosixOperationError)
+                    self.log.raiseException("_sanity_check found filesystem %s for subpath %s of obj %s is not a supported filesystem (supported %s)" % (tmpfs[0], fp, obj, self.supportedfilesystems), PosixOperationError)
 
         if fs is None:
-            self.log.raiseException("_sanityCheck no valid filesystem found for obj %s" % obj, PosixOperationError)
+            self.log.raiseException("_sanity_check no valid filesystem found for obj %s" % obj, PosixOperationError)
 
         # try readlink
         if not obj == os.path.realpath(obj):
             # some part of the path is a symlink
             if self.ignorerealpathmismatch:
-                self.log.debug("_sanityCheck obj %s doesn't correspond with realpath %s" % (obj, os.path.realpath(obj)))
+                self.log.debug("_sanity_check obj %s doesn't correspond with realpath %s" % (obj, os.path.realpath(obj)))
             else:
-                self.log.raiseException("_sanityCheck obj %s doesn't correspond with realpath %s" % (obj, os.path.realpath(obj)), PosixOperationError)
+                self.log.raiseException("_sanity_check obj %s doesn't correspond with realpath %s" % (obj, os.path.realpath(obj)), PosixOperationError)
                 return
 
         return obj
@@ -154,7 +154,7 @@ class PosixOperations(object):
 
     def _exists(self, obj):
         """Based on obj, check if obj exists or not
-            called by _sanityCheck and exists  or with sanitised obj
+            called by _sanity_check and exists  or with sanitised obj
         """
         if obj is None:
             self.log.raiseException("_exists: obj is None", PosixOperationError)
@@ -255,14 +255,23 @@ class PosixOperations(object):
         """
         target = self._sanity_check(target)
         obj = self._sanity_check(obj)
-        # if target exists
-        #   if target is symlink
-        #     if force
-        #       log old target
-        #       remove
-        #   else
-        #       stop with error
-        # make symlink
+
+        if os.path.exists(target):
+            if os.path.islink(target):
+                if force:
+                    self.log.warning("Target %s is a symlink, removing" % (target))
+                    target_ = os.realpath(target)
+                    os.unlink(target)
+                    target = self._sanity_check(target_)
+        else:
+            self.log.raiseException("Target %s does not exist, cannot make symlink to it" % (target),
+                                    PosixOperationError)
+
+        self.log.info("Creating symlink from %s to %s" % (obj, target))
+        try:
+            os.symlink(obj, target)
+        except OSError, err:
+            self.log.raiseException("Cannot create symlink from %s to %s" % (obj, target), PosixOperationError)
 
     def is_dir(self, obj=None):
         """Check if it is a directory"""
@@ -333,7 +342,7 @@ class PosixOperations(object):
                 os.chown(f, self.uidNumber, self.gidNumber)
             except OSError, _:
                 self.log.raiseException("Cannot change ownership of file %s to %s:%s" %
-                                        (f, self.uidNumber, self.gidNumber), OSError)
+                                        (f, self.uidNumber, self.gidNumber), PosixOperationError)
 
     def list_quota(self, obj=None):
         """Report on quota"""
@@ -357,7 +366,8 @@ class PosixOperations(object):
         try:
             os.chown(obj, owner, group)
         except OSError, _:
-            self.log.raiseException("Cannot change ownership of object %s to %s:%s" % (obj, owner, group), OSError)
+            self.log.raiseException("Cannot change ownership of object %s to %s:%s" % (obj, owner, group),
+                                    PosixOperationError)
 
     def chmod(self, permissions, obj=None):
         """Change permissions on the object.
@@ -372,7 +382,8 @@ class PosixOperations(object):
         try:
             os.chmod(obj, permissions)
         except OSError, err:
-            self.log.raiseException("Could not change the permissions on object %s to %o" % (obj, permissions), PosixOperationError)
+            self.log.raiseException("Could not change the permissions on object %s to %o" % (obj, permissions),
+                                    PosixOperationError)
 
     def compare_files(self, target, obj=None):
         target = self._sanity_check(target)
