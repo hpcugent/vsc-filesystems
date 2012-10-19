@@ -250,8 +250,17 @@ class PosixOperations(object):
         return res
 
     def make_symlink(self, target, obj=None, force=True):
-        """Create symlink from self.obj to target
-            @type target: string representing path
+        """
+        Create symlink from obj to target, i.e., obj -> target.
+
+        Not that this method should be idempotent
+            - if the symlink exists and point to the same target, it should just remain in place,
+            - if the symlink does not exist or points somewhere else, it should be overwritten or
+              created.
+
+        @type target: string representing path
+        @type obj: string prepresenting the path of the symbolic link itself.
+        @type force: boolean, indicating if the target may be removed if it too is a symbolic link.
         """
         target = self._sanity_check(target)
         obj = self._sanity_check(obj)
@@ -267,7 +276,17 @@ class PosixOperations(object):
             self.log.raiseException("Target %s does not exist, cannot make symlink to it" % (target),
                                     PosixOperationError)
 
-        self.log.info("Creating symlink from %s to %s" % (obj, target))
+        self.log.info("Attempting to create a symlink from %s to %s" % (obj, target))
+        if self.exists(obj):
+            if not os.path.realpath(target) == os.realpath(obj):
+                try:
+                    os.unlink(obj)
+                except OSError, err:
+                    self.log.raiseException("Cannot unlink existing symlink from %s to %s" % (obj, target),
+                                            PosixOperationError)
+            else:
+                self.log.info("Symlink already exists from %s to %s" % (obj, target))
+                return  # Nothing to do, symlink already exists
         try:
             os.symlink(target, obj)
         except OSError, err:
