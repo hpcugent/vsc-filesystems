@@ -343,7 +343,7 @@ class PosixOperations(object):
         for key in ssh_public_keys:
             fp.write(key + "\n")
         fp.close()
-        self.chmod(ssh_path, 0644)
+        self.chmod(0644, ssh_path)
 
         # bash
         self.log.info('Creating .bashrc and .bash_profile')
