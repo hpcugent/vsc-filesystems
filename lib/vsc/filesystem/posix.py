@@ -339,7 +339,7 @@ class PosixOperations(object):
         self.make_dir(ssh_path)
 
         self.log.info("Placing %d ssh public keys in the authorized keys file." % (len(ssh_public_keys)))
-        fp = open(os.path.join(self.homeDirectory, '.ssh', 'authorized_keys'), 'w')
+        fp = open(os.path.join(home_dir, '.ssh', 'authorized_keys'), 'w')
         for key in ssh_public_keys:
             fp.write(key + "\n")
         fp.close()
@@ -356,12 +356,12 @@ class PosixOperations(object):
                   os.path.join(home_dir, '.ssh', 'authorized_keys'),
                   os.path.join(home_dir, '.bashrc'),
                   os.path.join(home_dir, '.bash_profile')]:
-            self.log.info("Changing ownership of %s to %s:%s" % (f, self.uidNumber, self.gidNumber))
+            self.log.info("Changing ownership of %s to %s:%s" % (f, user_id, group_id))
             try:
-                os.chown(f, self.uidNumber, self.gidNumber)
+                os.chown(f, user_id, group_id)
             except OSError, _:
                 self.log.raiseException("Cannot change ownership of file %s to %s:%s" %
-                                        (f, self.uidNumber, self.gidNumber), PosixOperationError)
+                                        (f, user_id, group_id), PosixOperationError)
 
     def list_quota(self, obj=None):
         """Report on quota"""
