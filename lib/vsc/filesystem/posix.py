@@ -269,7 +269,7 @@ class PosixOperations(object):
 
         self.log.info("Creating symlink from %s to %s" % (obj, target))
         try:
-            os.symlink(obj, target)
+            os.symlink(target, obj)
         except OSError, err:
             self.log.raiseException("Cannot create symlink from %s to %s" % (obj, target), PosixOperationError)
 
