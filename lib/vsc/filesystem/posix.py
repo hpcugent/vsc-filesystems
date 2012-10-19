@@ -278,7 +278,7 @@ class PosixOperations(object):
 
         self.log.info("Attempting to create a symlink from %s to %s" % (obj, target))
         if self.exists(obj):
-            if not os.path.realpath(target) == os.realpath(obj):
+            if not os.path.realpath(target) == os.path.realpath(obj):
                 try:
                     os.unlink(obj)
                 except OSError, err:
