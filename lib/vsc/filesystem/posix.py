@@ -285,13 +285,55 @@ class PosixOperations(object):
             else:
                 self.log.raiseException("Cannot create the directory hierarchy %s" % (obj), PosixOperationError)
 
-    def make_home_dir(self, obj=None, shrc=None, sshpubkeys=None):
+    def make_home_dir(self, obj=None):
         """Make a homedirectory"""
         obj = self._sanity_check(obj)
         self.make_dir(obj)
         # (re?)generate default key
         # create .ssh/authorized_keys (+default key)
         # generate ~/.bashrc / ~/.tcshrc or whatever we support
+
+    def populate_home_dir(self, user_id, group_id, home_dir, ssh_public_keys):
+        """Populate the home directory with the required files to allow the user to login.
+
+        - (re)generate the default key
+        - .ssh/authorized_keys (+default key)
+        - .bashrc or whatever shell we support
+
+        @type user_id: numerical user id
+        @type group_id: numerical group id
+        @type home_dir: string representing the path to the home directory (or whatever symlinks to it)
+        @type ssh_public_keys: list of strings representing the public ssh keys
+        """
+        # ssh
+        self.log.info("Populating home %s for user %s:%s" % (home_dir, user_id, group_id))
+        ssh_path = os.path.join(home_dir, '.ssh')
+        self.make_dir(ssh_path)
+
+        self.log.info("Placing %d ssh public keys in the authorized keys file." % (len(ssh_public_keys)))
+        fp = open(os.path.join(self.homeDirectory, '.ssh', 'authorized_keys'), 'w')
+        for key in ssh_public_keys:
+            fp.write(key + "\n")
+        fp.close()
+        self.chmod(ssh_path, 0644)
+
+        # bash
+        self.log.info('Creating .bashrc and .bash_profile')
+        open(os.path.join(home_dir, '.bashrc')).close()
+        fp = open(os.path.join(home_dir), '.bash_profile')
+        fp.write('if [ -f ~/.bashrc ]; then\n . ~/.bashrc\nfi\n')
+        fp.close()
+
+        for f in [os.path.join(home_dir, '.ssh'),
+                  os.path.join(home_dir, '.ssh', 'authorized_keys'),
+                  os.path.join(home_dir, '.bashrc'),
+                  os.path.join(home_dir, '.bash_profile')]:
+            self.log.info("Changing ownership of %s to %s:%s" % (f, self.uidNumber, self.gidNumber))
+            try:
+                os.chown(f, self.uidNumber, self.gidNumber)
+            except OSError, _:
+                self.log.raiseException("Cannot change ownership of file %s to %s:%s" %
+                                        (f, self.uidNumber, self.gidNumber), OSError)
 
     def list_quota(self, obj=None):
         """Report on quota"""
@@ -307,13 +349,30 @@ class PosixOperations(object):
         obj = self._sanity_check(obj)
         self.log.error("setQuota not implemented for this class %s" % self.__class__.__name__)
 
-    def chown(self, newowner, newgroup=None, obj=None):
-        """Change owner"""
+    def chown(self, owner, group=None, obj=None):
+        """Change ownership of the object"""
         obj = self._sanity_check(obj)
 
-    def chmod(self, newpermission, obj=None):
-        """Change permisison"""
+        self.log.info("Changing ownership of %s to %s:%s" % (obj, owner, group))
+        try:
+            os.chown(obj, owner, group)
+        except OSError, _:
+            self.log.raiseException("Cannot change ownership of object %s to %s:%s" % (obj, owner, group), OSError)
+
+    def chmod(self, permissions, obj=None):
+        """Change permissions on the object.
+
+        @type permissions: octal number representing the permissions (rwxrwxrwx).
+        @type obj: the object of which to checge the permissions
+        """
         obj = self._sanity_check(obj)
+
+        self.log.info("Changing access permission of %s to %o" % (obj, permissions))
+
+        try:
+            os.chmod(obj, permissions)
+        except OSError, err:
+            self.log.raiseException("Could not change the permissions on object %s to %o" % (obj, permissions), PosixOperationError)
 
     def compare_files(self, target, obj=None):
         target = self._sanity_check(target)
