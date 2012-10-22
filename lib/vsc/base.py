@@ -326,6 +326,16 @@ class Muk(object):
         self.scratch_name = 'scratch'
         self.home_parent_mount_point = os.path.sep + 'vscmnt2'
 
+        self.nfs_link_pathnames = {
+            'home': '/vscmnt2/user/home/%s',  # Should be interpolated with the institute
+            'data': '/vscmnt2/user/data/%s'
+        }
+
+        self.afm_link_pathnames = {
+            'home': '/afm/user/home/%s',
+            'data': '/afm/user/data/%s'
+        }
+
     def _user_dir_group_id(self, user_id, institute):
         """Determine the string that gives the grouping directory name for a set of 100 user ids.
 
@@ -339,16 +349,25 @@ class Muk(object):
         else:
             return user_id[3:6]
 
-    def user_home_mount(self, user_id, institute):
+    def user_nfs_home_mount(self, user_id, institute):
         """Determine the location where the link to the NFS mount of the user's home directory sits.
 
         @type user_id: string representing the VSC user id
         @type institute: string representing the institute to which the user belongs
         """
-
         user_dir_group_id = self._user_dir_group_id(user_id, institute)
 
-        return os.path.sep + os.path.join('vscmnt2', 'user', institute, user_dir_group_id, user_id)
+        return os.path.sep + os.path.join(self.nfs_link_pathnames['home'] % (institute), user_dir_group_id, user_id)
+
+    def user_afm_home_mount(self, user_id, institute):
+        """Determine the location where the AFM cache of the user's NFS home mount resides.
+
+        @type user_id: string representing the VSC user id
+        @type institute: string representing the institute to which the user belongs
+        """
+        user_dir_group_id = self._user_dir_group_id(user_id, institute)
+
+        return os.path.sep + os.path.join(self.afm_link_pathnames['home'] % (institute), user_dir_group_id, user_id)
 
     def user_data_mount(self, user_id, institute):
         """Determine the location where the link to the NFS mount of the user's data directory sits.
