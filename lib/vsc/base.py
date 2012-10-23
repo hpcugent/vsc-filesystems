@@ -324,7 +324,6 @@ class Muk(object):
     def __init__(self):
         """Initialise."""
         self.scratch_name = 'scratch'
-        self.home_parent_mount_point = os.path.sep + 'vscmnt2'
 
         self.nfs_link_pathnames = {
             'home': '/vscmnt2/user/home/%s',  # Should be interpolated with the institute
