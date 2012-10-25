@@ -4,14 +4,20 @@
 GPFS specialised interface
 """
 
-from vsc.filesystem.posix import PosixOperations, PosixOperationError
-from urllib import unquote as percentdecode
-from socket import gethostname
-
 import os
 import re
 
+from collections import namedtuple
+from urllib import unquote as percentdecode
+from socket import gethostname
+
+from vsc.filesystem.posix import PosixOperations, PosixOperationError
+from vsc.utils.missing import nub
+
 GPFS_BIN_PATH = '/usr/lpp/mmfs/bin'
+
+
+GpfsQuota = nametuple('GpfsQuota', ',name,blockUsage,blockQuota,blockLimit,blockInDoubt,blockGrace,filesUsage,filesQuota,filesLimit,filesInDoubt,filesGrace,remarks,quota,defQuota,fid,filesetname')
 
 
 class GpfsOperationError(PosixOperationError):
@@ -108,45 +114,47 @@ class GpfsOperations(PosixOperations):
         b = [[percentdecode(y) for y in  x.split(':')] for x in a]
         """
         what = [[percentdecode(y) for y in  x.strip().split(':')] for x in out.strip().split('\n')]
-
         expectedheader = [name, '', 'HEADER', 'version', 'reserved', 'reserved']
-        # verify result
-        # eg mmrepquota start with single line of unnecessary ouput
-        header = what[0][:6]
-        while (not expectedheader == header) and len(what) > 0:
-            self.log.warning('Unexpected header start: %s. Skipping.' % header)
-            what.pop(0)
-            header = what[0][:6]
+
+        # verify result and remove all items that do not match the expected output data
+        # e.g. mmrepquota start with single line of unnecessary ouput (which may be repeated for USR, GRP and FILESET)
+        for line in what:
+            if expectedheader != line[:6]:
+                self.log.warning("Removing unexpected line in output: %s" % (line))
+                what.remove(line)
 
         if len(what) == 0:
-            self.log.raiseException('No valid header start for output: %s' % out, GpfsOperationError)
+            self.log.raiseException("No valid lines for output: %s" % (out), GpfsOperationError)
 
-        # sanity check
-        nrfields = [len(x) for x in what]
-        if len(set(nrfields)) > 1:
-            if nrfields[0] == max(nrfields[1:]):
-                # description length is equal to maximum. will be padded, since there is at least one list of values that matches the length
-                self.log.debug("Number of entries in output %s. Nr of headers %s equal max of number of values." % (nrfields, nrfields[0]))
+        # sanity check: all output lines should have the same number of fields. if this is not the case, padding is
+        # added
+        field_counts = [len(x) for x in what]
+
+        # do we have multiple field counts?
+        if len(nub(field_counts)) > 1:
+            maximum_field_count = max(field_counts)
+            if field_counts[0] == maximum_field_count:
+
+                # description length is equal to maximum. Other lines will be padded, since there is at least one list
+                # of values that matches the length
+                self.log.debug("Nr of headers %s equal max of number of values." % (field_counts, field_counts[0]))
+                for (field_count, line) in zip(field_counts, what)[1:]:
+                    if maximum_field_count > field_count:
+                        self.log.debug("Description length %s greater then %s. Adding whitespace. (names %s, row %s)" %
+                                (maximal_field_count], field_count, what[0][6:], line[6:]))
+                        line.extend([''] * (maximum_field_count - field_count))
             else:
-                self.log.error("Number of entries in output %s for what %s." % (nrfields, what))
+                # for some field the description length is less than the number of fields, so prolly something is very wrong. Bailing
+                self.log.raiseException("Description length %s smaller then %s for some lines. Not fixing." %
+                        (field_counts[0], maximum_field_count))
 
-            # sanity check
-            for idx in xrange(1, len(what)):
-                if not (what[idx][0:2] == expectedheader[0:2]):
-                    self.log.raiseException("No expected start of header %s for full row %s" % (expectedheader[0:2], what[idx]), GpfsOperationError)
-
-                if nrfields[0] > nrfields[idx]:
-                    self.log.debug("Description length %s greater then %s. Adding whitespace. (names %s, row %s)" % (nrfields[0], nrfields[idx], what[0][6:], what[idx][6:]))
-                    what[idx].extend([''] * (nrfields[0] - nrfields[idx]))
-                elif nrfields[0] < nrfields[idx]:
-                    self.log.raiseException("Description length %s smaller then %s. Not fixing. (names %s, row %s)" % (nrfields[0], nrfields[idx], what[0][6:], what[idx][6:]), GpfsOperationError)
-
+        # assemble result
         res = {}
         try:
-            for headeridx, name in enumerate(what[0][6:]):
+            for index, name in enumerate(what[0][6:]):
                 res[name] = []
-                for idx in xrange(1, len(what)):
-                    res[name].append(what[idx][6 + headeridx])
+                for line in what[1:]:
+                    res[name].append(line[6 + index])
         except:
             self.log.exception("Failed to regroup data %s (from output %s)" % (what, out))
             raise
@@ -182,7 +190,28 @@ class GpfsOperations(PosixOperations):
                 dict: key = deviceName, value is
                     dict with key quotaType (USR | GRP | FILESET) value is dict with
                         key = id, value dict with
-                            key = remaining header entries and corresponding values
+                            key = remaining header entries and corresponding values as a NamedTuple
+
+        - GPFS 3.5 has the following fields in the output lines of mmrepquota (colon separated)
+            - filesystemName
+            - quotaType
+            - id
+            - name
+            - blockUsage
+            - blockQuota
+            - blockLimit
+            - blockInDoubt
+            - blockGrace
+            - filesUsage
+            - filesQuota
+            - filesLimit
+            - filesInDoubt
+            - filesGrace
+            - remarks
+            - quota
+            - defQuota
+            - fid
+            - filesetname
         """
         if devices is None:
             devices = ['-a']
@@ -190,7 +219,6 @@ class GpfsOperations(PosixOperations):
             devices = [devices]
 
         info = self._executeY('mmrepquota', ['-n', " ".join(devices)], prefix=True)
-        # for v3.5 filesystemName:quotaType:id:name:blockUsage:blockQuota:blockLimit:blockInDoubt:blockGrace:filesUsage:filesQuota:filesLimit:filesInDoubt:filesGrace:remarks:quota:defQuota:fid:filesetname:
 
         datakeys = info.keys()
         datakeys.remove('filesystemName')
@@ -206,9 +234,10 @@ class GpfsOperations(PosixOperations):
 
         for idx, (fs, qt, qid) in enumerate(zip(info['filesystemName'], info['quotaType'], info['id'])):
             details = dict([(k, info[k][idx]) for k in datakeys])
-            res[fs][qt][qid] = details
+            res[fs][qt][qid] = GpfsQuota(**details)
 
         self.gpfslocalquotas = res
+        return res
 
     def list_filesets(self, devices=None, filesetnames=None):
         """Get all the filesets for one or more specific devices
