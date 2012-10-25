@@ -17,7 +17,7 @@ from vsc.utils.missing import nub
 GPFS_BIN_PATH = '/usr/lpp/mmfs/bin'
 
 
-GpfsQuota = nametuple('GpfsQuota', ',name,blockUsage,blockQuota,blockLimit,blockInDoubt,blockGrace,filesUsage,filesQuota,filesLimit,filesInDoubt,filesGrace,remarks,quota,defQuota,fid,filesetname')
+GpfsQuota = namedtuple('GpfsQuota', ',name,blockUsage,blockQuota,blockLimit,blockInDoubt,blockGrace,filesUsage,filesQuota,filesLimit,filesInDoubt,filesGrace,remarks,quota,defQuota,fid,filesetname')
 
 
 class GpfsOperationError(PosixOperationError):
@@ -87,7 +87,7 @@ class GpfsOperations(PosixOperations):
 
     def _executeY(self, name, opts=None, prefix=False):
         """Run with -Y and parse output in dict of name:list of values
-            @type prefix: boolean, if true prefix the -Y to the options (otherwise append the option)
+           type prefix: boolean, if true prefix the -Y to the options (otherwise append the option).
         """
         if opts is None:
             opts = []
@@ -113,7 +113,7 @@ class GpfsOperations(PosixOperations):
         # it's percent encoded: first split in :, then decode
         b = [[percentdecode(y) for y in  x.split(':')] for x in a]
         """
-        what = [[percentdecode(y) for y in  x.strip().split(':')] for x in out.strip().split('\n')]
+        what = [[percentdecode(y) for y in x.strip().split(':')] for x in out.strip().split('\n')]
         expectedheader = [name, '', 'HEADER', 'version', 'reserved', 'reserved']
 
         # verify result and remove all items that do not match the expected output data
@@ -141,7 +141,7 @@ class GpfsOperations(PosixOperations):
                 for (field_count, line) in zip(field_counts, what)[1:]:
                     if maximum_field_count > field_count:
                         self.log.debug("Description length %s greater then %s. Adding whitespace. (names %s, row %s)" %
-                                (maximal_field_count], field_count, what[0][6:], line[6:]))
+                                (maximum_field_count, field_count, what[0][6:], line[6:]))
                         line.extend([''] * (maximum_field_count - field_count))
             else:
                 # for some field the description length is less than the number of fields, so prolly something is very wrong. Bailing
