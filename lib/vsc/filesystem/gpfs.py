@@ -121,9 +121,7 @@ class GpfsOperations(PosixOperations):
 
         # verify result and remove all items that do not match the expected output data
         # e.g. mmrepquota start with single line of unnecessary ouput (which may be repeated for USR, GRP and FILESET)
-        dropped = takewhile(lambda line: expectedheader != line[:6], what)
-        #retained = dropwhile(lambda line: expectedheader != line[:6], what)
-        retained = [line for line in what if not line in dropped]
+        retained = dropwhile(lambda line: expectedheader != line[:6], what)
 
         # sanity check: all output lines should have the same number of fields. if this is not the case, padding is
         # added
@@ -223,7 +221,9 @@ class GpfsOperations(PosixOperations):
         elif isinstance(devices, str):
             devices = [devices]
 
-        info = self._executeY('mmrepquota', ['-n', " ".join(devices)], prefix=True)
+        info = []
+        for device in devices:
+            info.extend(self._executeY('mmrepquota', ['-n', device], prefix=True))
 
         datakeys = info.keys()
         datakeys.remove('filesystemName')
