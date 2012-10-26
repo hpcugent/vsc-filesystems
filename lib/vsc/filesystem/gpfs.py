@@ -143,12 +143,12 @@ class GpfsOperations(PosixOperations):
                 for (field_count, line) in fields[1:]:
                     if maximum_field_count > field_count:
                         self.log.debug("Description length %s greater then %s. Adding whitespace. (names %s, row %s)" %
-                                (maximum_field_count, field_count, what[0][6:], line[6:]))
+                                (maximum_field_count, field_count, fields[0][6:], line[6:]))
                         line.extend([''] * (maximum_field_count - field_count))
             else:
                 # for some field the description length is less than the number of fields, so prolly something is very wrong. Bailing
-                self.log.raiseException("Description length %s smaller then %s for some lines. Not fixing." %
-                        (field_counts[0], maximum_field_count))
+                self.log.raiseException("Description length %s smaller then %s for some lines. Not fixing. [%s]" %
+                                        (field_counts[0], maximum_field_count, filter(lambda (l, _): l > field_counts[0], fields)))
 
         # assemble result
         res = {}
