@@ -151,10 +151,12 @@ class GpfsOperations(PosixOperations):
         # assemble result
         res = {}
         try:
-            for index, name in enumerate(what[0][6:]):
-                res[name] = []
-                for line in what[1:]:
-                    res[name].append(line[6 + index])
+            for (index, name) in enumerate(what[0][6:]):
+                # There may be empty fields for some reason
+                if name != '':
+                    res[name] = []
+                    for line in what[1:]:
+                        res[name].append(line[6 + index])
         except:
             self.log.exception("Failed to regroup data %s (from output %s)" % (what, out))
             raise
