@@ -10,7 +10,7 @@ import re
 from collections import namedtuple
 from urllib import unquote as percentdecode
 from socket import gethostname
-from itertools import dropwhile
+from itertools import takewhile
 
 from vsc.filesystem.posix import PosixOperations, PosixOperationError
 from vsc.utils.missing import nub
@@ -121,7 +121,9 @@ class GpfsOperations(PosixOperations):
 
         # verify result and remove all items that do not match the expected output data
         # e.g. mmrepquota start with single line of unnecessary ouput (which may be repeated for USR, GRP and FILESET)
-        retained = dropwhile(lambda line: expectedheader != line[:6], what)
+        dropped = takewhile(lambda line: expectedheader != line[:6], what)
+        #retained = dropwhile(lambda line: expectedheader != line[:6], what)
+        retained = [line for line in what if not line in dropped]
 
         # sanity check: all output lines should have the same number of fields. if this is not the case, padding is
         # added
