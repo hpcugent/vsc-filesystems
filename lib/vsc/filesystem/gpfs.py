@@ -10,6 +10,7 @@ import re
 from collections import namedtuple
 from urllib import unquote as percentdecode
 from socket import gethostname
+from itertools import dropwhile
 
 from vsc.filesystem.posix import PosixOperations, PosixOperationError
 from vsc.utils.missing import nub
@@ -116,21 +117,22 @@ class GpfsOperations(PosixOperations):
         what = [[percentdecode(y) for y in x.strip().split(':')] for x in out.strip().split('\n')]
         expectedheader = [name, '', 'HEADER', 'version', 'reserved', 'reserved']
 
+        print what[:3]
+
         # verify result and remove all items that do not match the expected output data
         # e.g. mmrepquota start with single line of unnecessary ouput (which may be repeated for USR, GRP and FILESET)
-        for line in what:
-            if expectedheader != line[:6]:
-                self.log.warning("Removing unexpected line in output: %s" % (line))
-                what.remove(line)
-
-        if len(what) == 0:
-            self.log.raiseException("No valid lines for output: %s" % (out), GpfsOperationError)
+        retained = dropwhile(lambda line: expectedheader != line[:6], what)
 
         # sanity check: all output lines should have the same number of fields. if this is not the case, padding is
         # added
-        field_counts = [len(x) for x in what]
+        fields = [(len(x), x) for x in retained]
+        if len(fields) == 0:
+            self.log.raiseException("No valid lines for output: %s" % (out), GpfsOperationError)
+
+        print fields[:3]
 
         # do we have multiple field counts?
+        field_counts = [i for (i, _) in fields]
         if len(nub(field_counts)) > 1:
             maximum_field_count = max(field_counts)
             if field_counts[0] == maximum_field_count:
@@ -138,7 +140,7 @@ class GpfsOperations(PosixOperations):
                 # description length is equal to maximum. Other lines will be padded, since there is at least one list
                 # of values that matches the length
                 self.log.debug("Nr of headers %s equal max of number of values." % (field_counts, field_counts[0]))
-                for (field_count, line) in zip(field_counts, what)[1:]:
+                for (field_count, line) in fields[1:]:
                     if maximum_field_count > field_count:
                         self.log.debug("Description length %s greater then %s. Adding whitespace. (names %s, row %s)" %
                                 (maximum_field_count, field_count, what[0][6:], line[6:]))
@@ -151,12 +153,13 @@ class GpfsOperations(PosixOperations):
         # assemble result
         res = {}
         try:
-            for index, name in enumerate(what[0][6:]):
-                res[name] = []
-                for line in what[1:]:
-                    res[name].append(line[6 + index])
+            for index, name in enumerate(fields[0][1][6:]):
+                if name != '':
+                    res[name] = []
+                    for (_, line) in fields[1:]:
+                        res[name].append(line[6 + index])
         except:
-            self.log.exception("Failed to regroup data %s (from output %s)" % (what, out))
+            self.log.exception("Failed to regroup data %s (from output %s)" % (fields, out))
             raise
 
         return res
