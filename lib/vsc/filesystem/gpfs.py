@@ -139,7 +139,7 @@ class GpfsOperations(PosixOperations):
 
                 # description length is equal to maximum. Other lines will be padded, since there is at least one list
                 # of values that matches the length
-                self.log.debug("Nr of headers %s equal max of number of values." % (field_counts, field_counts[0]))
+                self.log.debug("Nr of headers %s equal max of number of values %s" % (field_counts[0], maximum_field_count))
                 for (field_count, line) in fields[1:]:
                     if maximum_field_count > field_count:
                         self.log.debug("Description length %s greater then %s. Adding whitespace. (names %s, row %s)" %
@@ -186,6 +186,7 @@ class GpfsOperations(PosixOperations):
             res[dev][k] = v
 
         self.gpfslocalfilesystems = res
+        return res
 
     def list_quota(self, devices=None):
         """get quota info for all filesystems for all USR,GRP,FILESET
@@ -217,7 +218,7 @@ class GpfsOperations(PosixOperations):
             - filesetname
         """
         if devices is None:
-            devices = ['-a']
+            devices = self.list_filesystems().keys()
         elif isinstance(devices, str):
             devices = [devices]
 
