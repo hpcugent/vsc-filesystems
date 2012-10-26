@@ -222,9 +222,9 @@ class GpfsOperations(PosixOperations):
         elif isinstance(devices, str):
             devices = [devices]
 
-        info = []
+        info = {}
         for device in devices:
-            info.extend(self._executeY('mmrepquota', ['-n', device], prefix=True))
+            info.update(self._executeY('mmrepquota', ['-n', device], prefix=True))
 
         datakeys = info.keys()
         datakeys.remove('filesystemName')
