@@ -10,7 +10,7 @@ import re
 from collections import namedtuple
 from urllib import unquote as percentdecode
 from socket import gethostname
-from itertools import takewhile
+from itertools import dropwhile
 
 from vsc.filesystem.posix import PosixOperations, PosixOperationError
 from vsc.utils.missing import nub
