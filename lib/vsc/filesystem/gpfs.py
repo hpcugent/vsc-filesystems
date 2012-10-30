@@ -135,20 +135,32 @@ class GpfsOperations(PosixOperations):
         field_counts = [i for (i, _) in fields]
         if len(nub(field_counts)) > 1:
             maximum_field_count = max(field_counts)
-            if field_counts[0] == maximum_field_count:
-
-                # description length is equal to maximum. Other lines will be padded, since there is at least one list
-                # of values that matches the length
-                self.log.debug("Nr of headers %s equal max of number of values %s" % (field_counts[0], maximum_field_count))
-                for (field_count, line) in fields[1:]:
-                    if maximum_field_count > field_count:
-                        self.log.debug("Description length %s greater then %s. Adding whitespace. (names %s, row %s)" %
-                                (maximum_field_count, field_count, fields[0][6:], line[6:]))
-                        line.extend([''] * (maximum_field_count - field_count))
-            else:
-                # for some field the description length is less than the number of fields, so prolly something is very wrong. Bailing
-                self.log.raiseException("Description length %s smaller then %s for some lines. Not fixing. [%s]" %
-                                        (field_counts[0], maximum_field_count, filter(lambda (l, _): l > field_counts[0], fields)))
+            description_field_count = field_counts[0]
+            for (field_count, line) in fields[1:]:
+                if field_count == description_field_count:
+                    continue
+                elif field_count < description_field_count:
+                    self.log.debug("Description length %s greater then %s. Adding whitespace. (names %s, row %s)" %
+                                   (maximum_field_count, field_count, fields[0][6:], line[6:]))
+                    line.extend([''] * (maximum_field_count - field_count))
+                else:
+                    # for some field the description length is less than the number of fields, so prolly something is very wrong.
+                    # we will first see if we can fix this.
+                    # - GPFS 3.4 apparently has a bug where it shows a number of disks and then fails to add a newline
+                    #   before printing the remainder of the disks.
+                    # - If we can find the prefix (expectedheader nr of fields again further in the spilling, then we may
+                    #   have extra information about the same item as was provided by the first (#description) fields
+                    spilling = line[description_field_count:]
+                    equals = len(filter(lambda x: x, [(x == y) for (x, y) in zip(line[:description_field_count], spilling)]))
+                    if equals > 8:
+                        self.log.warning("Too many fields, found prefix of length %d that matches beginning of output\
+                                          line. Incorporating changes." % (len(equals)))
+                        line = line[:description_field_count]
+                        line[equals:] = ["%s;%s" % (l, n) for (l, n) in zip(line[equals:], spilling[equals:])]
+                    else:
+                        self.log.raiseException("Too many fields: %d (description has %d fields).\
+                                                 Cannot find match. Not fixing line %s" %
+                                                 (field_counts[0], description_field_count, line))
 
         # assemble result
         res = {}
