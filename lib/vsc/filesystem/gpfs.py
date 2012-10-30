@@ -151,6 +151,18 @@ class GpfsOperations(PosixOperations):
                     # - If we can find the prefix (expectedheader nr of fields again further in the spilling, then we may
                     #   have extra information about the same item as was provided by the first (#description) fields
                     spilling = line[description_field_count:]
+                    # if there's a spilling, odds are that the first field of the new line is merges at the end of the
+                    # last field, so we have to find this and add it to the spilling and remove it form the previous
+                    # line
+                    first_field = line[0]
+                    last_field = line[description_field_count-1]
+                    stripped_last_field = last_field.rstrip(first_field)
+                    if stripped_last_field == last_field:
+                        self.log.raiseException("Too many fields: %d (description has %d fields).\
+                                                 Cannot find match for the start field. Not fixing line %s" %
+                                                 (field_counts[0], description_field_count, line))
+                    line[description_field_count-1] = stripped_last_field
+                    spilling.insert(0, first_field)
                     equals = len(filter(lambda x: x, [(x == y) for (x, y) in zip(line[:description_field_count], spilling)]))
                     if equals > 8:
                         self.log.warning("Too many fields, found prefix of length %d that matches beginning of output\
@@ -161,6 +173,7 @@ class GpfsOperations(PosixOperations):
                         self.log.raiseException("Too many fields: %d (description has %d fields).\
                                                  Cannot find match. Not fixing line %s" %
                                                  (field_counts[0], description_field_count, line))
+
 
         # assemble result
         res = {}
