@@ -13,7 +13,7 @@ from socket import gethostname
 from itertools import dropwhile
 
 from vsc.filesystem.posix import PosixOperations, PosixOperationError
-from vsc.utils.missing import nub, find_sublist_index
+from vsc.utils.missing import nub, find_sublist_index, Monoid, MonoidDict
 
 GPFS_BIN_PATH = '/usr/lpp/mmfs/bin'
 
@@ -160,8 +160,6 @@ class GpfsOperations(PosixOperations):
         what = [[percentdecode(y) for y in x.strip().split(':')] for x in out.strip().split('\n')]
         expectedheader = [name, '', 'HEADER', 'version', 'reserved', 'reserved']
 
-        print what[:3]
-
         # verify result and remove all items that do not match the expected output data
         # e.g. mmrepquota start with single line of unnecessary ouput (which may be repeated for USR, GRP and FILESET)
         retained = dropwhile(lambda line: expectedheader != line[:6], what)
@@ -171,8 +169,6 @@ class GpfsOperations(PosixOperations):
         fields = [(len(x), x) for x in retained]
         if len(fields) == 0:
             self.log.raiseException("No valid lines for output: %s" % (out), GpfsOperationError)
-
-        print fields[:3]
 
         # do we have multiple field counts?
         field_counts = [i for (i, _) in fields]
@@ -265,9 +261,12 @@ class GpfsOperations(PosixOperations):
         elif isinstance(devices, str):
             devices = [devices]
 
-        info = {}
+        listm = Monoid([], lambda x: [x], lambda xs, ys: xs + ys)  # not exactly the fastest mappend for lists ...
+        info = MonoidDict(listm)
         for device in devices:
-            info.update(self._executeY('mmrepquota', ['-n', device], prefix=True))
+            res = self._executeY('mmrepquota', ['-n', device], prefix=True)
+            for (key, value) in res.items():
+                info[key] = value
 
         datakeys = info.keys()
         datakeys.remove('filesystemName')
