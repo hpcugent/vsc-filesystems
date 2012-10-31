@@ -188,7 +188,7 @@ class GpfsOperations(PosixOperations):
                     line.extend([''] * (maximum_field_count - field_count))
                 else:
                     # try to fix the line
-                    self.log.info("Line has too many fields (%d > %d), trying to fix %s" % (line, field_count, description_field_count))
+                    self.log.info("Line has too many fields (%d > %d), trying to fix %s" % (field_count, description_field_count, line))
                     fixed_lines = self.fixup_executeY_line(line, description_field_count)
                     i = fields.index((field_count, line))
                     fields[i:i + 1] = map(lambda fs: (len(fs), fs), fixed_lines)
