@@ -13,7 +13,7 @@ from socket import gethostname
 from itertools import dropwhile
 
 from vsc.filesystem.posix import PosixOperations, PosixOperationError
-from vsc.utils.missing import nub
+from vsc.utils.missing import nub, find_sublist_index
 
 GPFS_BIN_PATH = '/usr/lpp/mmfs/bin'
 
@@ -86,6 +86,43 @@ class GpfsOperations(PosixOperations):
             else:
                 fs.append(None)
 
+    def fixup_executeY_line(fields, description_count):
+        """Try to fix an erroneous output line from an executeY run.
+
+        @type fields: list
+        @type description_count: int
+
+        @param fields: the fields found in the output line.
+        @param description_count: the number of expected fields.
+
+        @return: list with the corrected lines
+
+        FIXME: This really should be done by a decent parser, this is just a dirty hack
+        """
+        expected_start_fields = fields[:6]
+        ls = fields[6:]
+        sub_ls = expected_start_fields[1:]
+
+        sub_index = find_sublist_index(ls, sub_ls)
+        if sub_index is None:
+            self.log.raiseException("Too many fields: %d (description has %d fields).\
+                                        Cannot find match for the start field. Not fixing line %s" %
+                                    (len(fields), description_count, fields))
+        else:
+            line = expected_start_fields + ls[:sub_index]
+            remainder = ls[sub_index:]
+
+            # now we need to check if the string in the first field has somehow magically merged with the previous line
+            first_field = fields[0]
+            if remainder[0] == first_field:
+                return [line, remainder]
+            elif line[-1].endswith(first_field):
+                line[-1] = line[-1].rstrip(first_field)
+                remainder.insert(0, first_field)
+                return [line, remainder]
+            else:
+                self.log.raiseException("Failed to find the initial field of the line: %s after fixup and splitting line into [%s, %s]" % (first_field, line, remainder))
+
     def _executeY(self, name, opts=None, prefix=False):
         """Run with -Y and parse output in dict of name:list of values
            type prefix: boolean, if true prefix the -Y to the options (otherwise append the option).
@@ -144,36 +181,10 @@ class GpfsOperations(PosixOperations):
                                    (maximum_field_count, field_count, fields[0][6:], line[6:]))
                     line.extend([''] * (maximum_field_count - field_count))
                 else:
-                    # for some field the description length is less than the number of fields, so prolly something is very wrong.
-                    # we will first see if we can fix this.
-                    # - GPFS 3.4 apparently has a bug where it shows a number of disks and then fails to add a newline
-                    #   before printing the remainder of the disks.
-                    # - If we can find the prefix (expectedheader nr of fields again further in the spilling, then we may
-                    #   have extra information about the same item as was provided by the first (#description) fields
-                    spilling = line[description_field_count:]
-                    # if there's a spilling, odds are that the first field of the new line is merges at the end of the
-                    # last field, so we have to find this and add it to the spilling and remove it form the previous
-                    # line
-                    first_field = line[0]
-                    last_field = line[description_field_count-1]
-                    stripped_last_field = last_field.rstrip(first_field)
-                    if stripped_last_field == last_field:
-                        self.log.raiseException("Too many fields: %d (description has %d fields).\
-                                                 Cannot find match for the start field. Not fixing line %s" %
-                                                 (field_counts[0], description_field_count, line))
-                    line[description_field_count-1] = stripped_last_field
-                    spilling.insert(0, first_field)
-                    equals = len(filter(lambda x: x, [(x == y) for (x, y) in zip(line[:description_field_count], spilling)]))
-                    if equals > 8:
-                        self.log.warning("Too many fields, found prefix of length %d that matches beginning of output\
-                                          line. Incorporating changes." % (len(equals)))
-                        line = line[:description_field_count]
-                        line[equals:] = ["%s;%s" % (l, n) for (l, n) in zip(line[equals:], spilling[equals:])]
-                    else:
-                        self.log.raiseException("Too many fields: %d (description has %d fields).\
-                                                 Cannot find match. Not fixing line %s" %
-                                                 (field_counts[0], description_field_count, line))
-
+                    # try to fix the line
+                    fixed_lines = self.fixup_executeY_line(line, field_count, description_field_count)
+                    i = fields.index((field_count, line))
+                    fields[i:i + 1] = map(lambda fs: (len(fs), fs), fixed_lines)
 
         # assemble result
         res = {}
