@@ -86,7 +86,7 @@ class GpfsOperations(PosixOperations):
             else:
                 fs.append(None)
 
-    def fixup_executeY_line(fields, description_count):
+    def fixup_executeY_line(self, fields, description_count):
         """Try to fix an erroneous output line from an executeY run.
 
         @type fields: list
