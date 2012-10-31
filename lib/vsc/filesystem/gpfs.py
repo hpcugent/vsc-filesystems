@@ -112,6 +112,11 @@ class GpfsOperations(PosixOperations):
             line = expected_start_fields + ls[:sub_index]
             remainder = ls[sub_index:]
 
+            if len(line) < description_count:
+                line.extend([''] * (description_count - len(line)))
+            else:
+                self.log.raiseException("After fixing, line still has too many fields: line (%s), original (%s)" % (line, fields))
+
             # now we need to check if the string in the first field has somehow magically merged with the previous line
             first_field = fields[0]
             if remainder[0] == first_field:
@@ -182,7 +187,7 @@ class GpfsOperations(PosixOperations):
                     line.extend([''] * (maximum_field_count - field_count))
                 else:
                     # try to fix the line
-                    fixed_lines = self.fixup_executeY_line(line, field_count, description_field_count)
+                    fixed_lines = self.fixup_executeY_line(line, description_field_count)
                     i = fields.index((field_count, line))
                     fields[i:i + 1] = map(lambda fs: (len(fs), fs), fixed_lines)
 
