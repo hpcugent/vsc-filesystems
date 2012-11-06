@@ -261,7 +261,7 @@ class GpfsOperations(PosixOperations):
         elif isinstance(devices, str):
             devices = [devices]
 
-        listm = Monoid([], lambda x: [x], lambda xs, ys: xs + ys)  # not exactly the fastest mappend for lists ...
+        listm = Monoid([], lambda x: x, lambda xs, ys: xs + ys)  # not exactly the fastest mappend for lists ...
         info = MonoidDict(listm)
         for device in devices:
             res = self._executeY('mmrepquota', ['-n', device], prefix=True)
@@ -273,7 +273,8 @@ class GpfsOperations(PosixOperations):
         datakeys.remove('quotaType')
         datakeys.remove('id')
 
-        fss = list(set(info.get('filesystemName', [])))
+        fss = nub(info.get('filesystemName', []))
+        self.log.debug("Found the following filesystem names: %s" % (fss))
 
         quotatypes = list(set(info.get('quotaType', [])))
         quotatypesstruct = dict([(qt, {}) for qt in quotatypes])
