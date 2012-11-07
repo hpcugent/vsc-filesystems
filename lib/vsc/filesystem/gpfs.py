@@ -190,13 +190,13 @@ class GpfsOperations(PosixOperations):
                     fields[i:i + 1] = map(lambda fs: (len(fs), fs), fixed_lines)
 
         # assemble result
-        res = {}
+        listm = Monoid([], lambda x: x, lambda xs, ys: xs + ys)  # not exactly the fastest mappend for lists ...
+        res = MonoidDict(listm)
         try:
             for index, name in enumerate(fields[0][1][6:]):
                 if name != '':
-                    res[name] = []
                     for (_, line) in fields[1:]:
-                        res[name].append(line[6 + index])
+                        res[name] = [line[6 + index]]
         except:
             self.log.exception("Failed to regroup data %s (from output %s)" % (fields, out))
             raise
