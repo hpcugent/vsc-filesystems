@@ -110,19 +110,19 @@ class vsc_install_scripts(install_scripts):
         self.original_outfiles = None
 
     def run(self):
-        ## old-style class
+        # old-style class
         install_scripts.run(self)
-        self.original_outfiles = self.get_outputs()[:] ## make a copy
-        self.outfiles = [] ## reset it
+        self.original_outfiles = self.get_outputs()[:]  # make a copy
+        self.outfiles = []  # reset it
         for script in self.original_outfiles:
-            ## remove suffixes for .py and .sh
+            # remove suffixes for .py and .sh
             if script.endswith(".py") or script.endswith(".sh"):
                 shutil.move(script, script[:-3])
                 script = script[:-3]
             self.outfiles.append(script)
 
 
-## authors
+# authors
 sdw = ('Stijn De Weirdt', 'stijn.deweirdt@ugent.be')
 jt = ('Jens Timmermans', 'jens.timmermans@ugent.be')
 kh = ('Kenneth Hoste', 'kenneth.hoste@ugent.be')
@@ -130,190 +130,191 @@ ag = ('Andy Georges', 'andy.georges@ugent.be')
 wdp = ('Wouter Depypere', 'wouter.depypere@ugent.be')
 lm = ('Luis Fernando Munoz Meji­as', 'luis.munoz@ugent.be')
 
-## shared target config
-SHARED_TARGET = {'url': 'http://hpcugent.github.com/VSC-tools',
-                 'download_url': 'https://github.com/hpcugent/VSC-tools',
-                 'package_dir': {'': 'lib'},
-                 'cmdclass': {'install_scripts': vsc_install_scripts,
-                              'easy_install': vsc_easy_install}
+# shared target config
+SHARED_TARGET = {
+    'url': 'http://hpcugent.github.com/VSC-tools',
+    'download_url': 'https://github.com/hpcugent/VSC-tools',
+    'package_dir': {'': 'lib'},
+    'cmdclass': {'install_scripts': vsc_install_scripts,
+                 'easy_install': vsc_easy_install
                  }
+}
 
-## meta-package for allinone target
-VSC_ALLINONE = {'name': 'python-vsc-tools',
-                'version': '0.0.1',
-                }
+# meta-package for allinone target
+VSC_ALLINONE = {
+    'name': 'python-vsc-tools',
+    'version': '0.0.1',
+}
 
 VSC_ = {
-        'name': 'vsc-',
-        'version': '',
-        'author': [ag],
-        'maintainer': [],
-        'packages': [],
-        'py_modules': [
-            ],
-        'scripts': []
-        }
+    'name': 'vsc-',
+    'version': '',
+    'author': [ag],
+    'maintainer': [],
+    'packages': [],
+    'py_modules': [
+    ],
+    'scripts': []
+}
 
 VSC_ADMINISTRATION = {
-        'name': 'vsc-administration',
-        'version': '0.1',
-        'author': [ag],
-        'maintainer': [ag],
-        #'packages': ['vsc.administration'],
-        'py_modules': [
-            'vsc.__init__',
-            'vsc.administration.group',
-            'vsc.administration.institute',
-            'vsc.administration.tools',
-            'vsc.administration.user',
-            'vsc.administration.vo',
-            ],
-        'scripts': []
-        }
+    'name': 'vsc-administration',
+    'version': '0.1',
+    'author': [ag],
+    'maintainer': [ag],
+    #'packages': ['vsc.administration'],
+    'py_modules': [
+        'vsc.__init__',
+        'vsc.administration.group',
+        'vsc.administration.institute',
+        'vsc.administration.tools',
+        'vsc.administration.user',
+        'vsc.administration.vo',
+    ],
+    'scripts': []
+}
 
 VSC_CORE = {
-        'name': 'vsc-core',
-        'version': '0.3',
-        'author': [sdw, ag],
-        'maintainer': [sdw, ag],
-        'namespace_packages': ['vsc'],
-        'py_modules': [
-            'vsc.__init__',
-            'vsc.config.base',
-            'vsc.exceptions',
-            'vsc.utils.patterns',
-            ],
-        'scripts': []
-        }
+    'name': 'vsc-core',
+    'version': '0.3',
+    'author': [sdw, ag],
+    'maintainer': [sdw, ag],
+    'namespace_packages': ['vsc', 'vsc.config'],
+    'py_modules': [
+        'vsc.__init__',
+        'vsc.config.base',
+        'vsc.exceptions',
+        'vsc.utils.patterns',
+    ],
+    'scripts': []
+}
 
 VSC_FILESYSTEMS = {
-        'name': 'vsc-filesystems',
-        'version': '0.1',
-        'author': [sdw],
-        'maintainer': [sdw],
-        'packages': ['vsc.filesystem'],
-        'namespace_packages': ['vsc'],
-        'py_modules': ['vsc.__init__',
-            'vsc.filesystem.__init__',
-            'vsc.filesystem.gpfs',
-            'vsc.filesystem.posix'],
-        'scripts': []
-        }
+    'name': 'vsc-filesystems',
+    'version': '0.1',
+    'author': [sdw],
+    'maintainer': [sdw],
+    'packages': ['vsc.filesystem'],
+    'namespace_packages': ['vsc'],
+    'py_modules': [
+        'vsc.__init__',
+        'vsc.filesystem.__init__',
+        'vsc.filesystem.gpfs',
+        'vsc.filesystem.posix'
+    ],
+    'scripts': []
+}
 
 VSC_GLOBFS = {
-        'name': 'vsc-globfs',
-        'version': '',
-        'author': [ag, sdw],
-        'maintainer': [ag, sdw],
-        'packages': ['vsc.globfs'],
-        'namespace_packages': ['vsc'],
-        'py_modules': [
-            'vsc.__init__',
-            'vsc.globfs.hpccollector',
-            'vsc.globfs.moab'
-            ],
-        'scripts': []
-        }
+    'name': 'vsc-globfs',
+    'version': '',
+    'author': [ag, sdw],
+    'maintainer': [ag, sdw],
+    'packages': ['vsc.globfs'],
+    'namespace_packages': ['vsc', 'vsc.globfs'],
+    'py_modules': [
+        'vsc.__init__',
+        'vsc.globfs.hpccollector',
+        'vsc.globfs.moab'
+    ],
+    'scripts': []
+}
 
 VSC_GPFS = {
-        'name': 'vsc-gpfs',
-        'version': '0.1.10',
-        'author': [ag],
-        'maintainer': [ag],
-        'packages': ['vsc.gpfs'],
-        'namespace_packages': ['vsc'],
-        'py_modules': [
-            'vsc.__init__',
-            'vsc.gpfs.quota.entities',
-            'vsc.gpfs.quota.fs_store',
-            'vsc.gpfs.quota.mmfs_utils',
-            'vsc.gpfs.quota.report',
-            'vsc.gpfs.utils.cache',
-            'vsc.gpfs.utils.exceptions',
-            'vsc.gpfs.utils.vo_utils',
-            ],
-        'scripts': []
-        }
+    'name': 'vsc-gpfs',
+    'version': '0.1.10',
+    'author': [ag],
+    'maintainer': [ag],
+    'packages': ['vsc.gpfs'],
+    'namespace_packages': ['vsc', 'vsc.gpfs.quota', 'vsc.gpfs.utils'],
+    'py_modules': [
+        'vsc.__init__',
+        'vsc.gpfs.quota.entities',
+        'vsc.gpfs.quota.fs_store',
+        'vsc.gpfs.quota.report',
+        'vsc.gpfs.utils.exceptions',
+        'vsc.gpfs.utils.vo_utils',
+    ],
+    'scripts': []
+}
 
 VSC_ICINGADB = {
-        'name': 'vsc-icingadb',
-        'version': '0.10',
-        'author': [wdp],
-        'maintainer': [wdp],
-        'packages': ['vsc.icingadb'],
-        'namespace_packages': ['vsc'],
-        'py_modules': [
-            'vsc.__init__',
-            '.vsc.icingadb.icingadb',
-            '.vsc.icingadb.showdb'
-            ],
-        'scripts': []
-        }
+    'name': 'vsc-icingadb',
+    'version': '0.10',
+    'author': [wdp],
+    'maintainer': [wdp],
+    'packages': ['vsc.icingadb'],
+    'namespace_packages': ['vsc', 'vsc.icingadb'],
+    'py_modules': [
+        'vsc.__init__',
+        '.vsc.icingadb.icingadb',
+        '.vsc.icingadb.showdb'
+    ],
+    'scripts': []
+}
 
 VSC_LDAP_CONFIGURATION = {
-        'name': 'vsc-ldap-configuration',
-        'version': '0.1',
-        'author': [ag],
-        'maintainer': [ag],
-        'packages': ['vsc.ldap'],
-        'namespace_packages': ['vsc', 'vsc.ldap'],
-        'py_modules': [
-            'vsc.__init__',
-            'vsc.ldap.configuration'
-            ],
-        'scripts': []
-        }
+    'name': 'vsc-ldap-configuration',
+    'version': '0.1',
+    'author': [ag],
+    'maintainer': [ag],
+    'packages': ['vsc.ldap'],
+    'namespace_packages': ['vsc', 'vsc.ldap'],
+    'py_modules': [
+        'vsc.__init__',
+        'vsc.ldap.configuration'
+    ],
+    'scripts': []
+}
 
 # FIXME: Check is this can be downloaded directly from PyPi
-VSC_LOCKFILE= {
-        'name': 'vsc-lockfile',
-        'version': '0.9.1.1',
-        'author': [ag],
-        'maintainer': [ag],
-        'packages': ['lockfile'],
-        'py_modules': [
-            'lockfile.linklockfile',
-            'lockfile.mkdirlockfile',
-            'lockfile.pidlockfile',
-            'lockfile.sqlitelockfile',
-            ],
-        'scripts': []
-        }
-
+VSC_LOCKFILE = {
+    'name': 'vsc-lockfile',
+    'version': '0.9.1.1',
+    'author': [ag],
+    'maintainer': [ag],
+    'packages': ['lockfile'],
+    'py_modules': [
+        'lockfile.linklockfile',
+        'lockfile.mkdirlockfile',
+        'lockfile.pidlockfile',
+        'lockfile.sqlitelockfile',
+    ],
+    'scripts': []
+}
 
 VSC_POSTGRES = {
-        'name': 'vsc-postgres',
-        'version': '0.1.1',
-        'author': [ag],
-        'maintainer': [],
-        'namespace_packages': ['vsc'],
-        'py_modules': [
-            'vsc.__init__',
-            'vsc.pg'
-            ],
-        'scripts': []
-        }
-
+    'name': 'vsc-postgres',
+    'version': '0.1.1',
+    'author': [ag],
+    'maintainer': [],
+    'namespace_packages': ['vsc'],
+    'py_modules': [
+        'vsc.__init__',
+        'vsc.pg'
+    ],
+    'scripts': []
+}
 
 VSC_UTILS = {
-        'name': 'vsc-utils',
-        'version': '0.10',
-        'author': [ag, sdw],
-        'maintainer': [ag, sdw],
-        'packages': ['vsc.utils'],
-        'namespace_packages': ['vsc'],
-        'py_modules': [
-            'vsc.__init__',
-            'vsc.utils.crypt',
-            'vsc.utils.filesystem',
-            'vsc.utils.fs_store',
-            'vsc.utils.mail',
-            'vsc.utils.nagios',
-            'vsc.utils.pickle_files',
-            'vsc.utils.timestamp_pid_lockfile'
-            ],
-        'scripts': []
-        }
+    'name': 'vsc-utils',
+    'version': '0.10',
+    'author': [ag, sdw],
+    'maintainer': [ag, sdw],
+    'packages': ['vsc.utils'],
+    'namespace_packages': ['vsc'],
+    'py_modules': [
+        'vsc.__init__',
+        'vsc.utils.crypt',
+        'vsc.utils.filesystem',
+        'vsc.utils.fs_store',
+        'vsc.utils.mail',
+        'vsc.utils.nagios',
+        'vsc.utils.pickle_files',
+        'vsc.utils.timestamp_pid_lockfile'
+    ],
+    'scripts': []
+}
 
 
 def get_all_targets():
@@ -329,7 +330,7 @@ def get_all_targets():
         VSC_LOCKFILE,
         VSC_POSTGRES,
         VSC_UTILS,
-        ]
+    ]
 
 ############################################################################################
 ###
@@ -337,6 +338,7 @@ def get_all_targets():
 ###
 ### BUILDING
 ###
+
 
 def parse_target(target):
     """Add some fields"""
@@ -385,7 +387,6 @@ def main(args):
 
     envname = 'VSC_TOOLS_SETUP_TARGET'
     tobuild = os.environ.get(envname, 'vsc-all')  # default all
-
 
     if args[1] == 'vsc-showall':
         print "Valid targets: %s" % " ".join(registered_names)
