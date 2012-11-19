@@ -179,7 +179,7 @@ VSC_CORE = {
         'namespace_packages': ['vsc'],
         'py_modules': [
             'vsc.__init__',
-            'vsc.base',
+            'vsc.config.base',
             'vsc.exceptions',
             'vsc.utils.patterns',
             ],
