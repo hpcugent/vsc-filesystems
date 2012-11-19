@@ -42,7 +42,6 @@ targetname can be:
     vsc-globfs
     vsc-gpfs
     vsc-icingadb
-    vsc-lockfile
     vsc-postgres
     vsc-utils
 
@@ -286,7 +285,7 @@ VSC_LOCKFILE = {
 VSC_POSTGRES = {
     'name': 'vsc-postgres',
     'version': '0.1.1',
-    'author': [ag],
+    'author': [wdp],
     'maintainer': [],
     'namespace_packages': ['vsc'],
     'py_modules': [
@@ -301,6 +300,7 @@ VSC_UTILS = {
     'version': '0.10',
     'author': [ag, sdw],
     'maintainer': [ag, sdw],
+    'install_requires': ['lockfile>=0.9.1.1']
     'packages': ['vsc.utils'],
     'namespace_packages': ['vsc'],
     'py_modules': [
@@ -308,8 +308,6 @@ VSC_UTILS = {
         'vsc.utils.crypt',
         'vsc.utils.filesystem',
         'vsc.utils.fs_store',
-        'vsc.utils.mail',
-        'vsc.utils.nagios',
         'vsc.utils.pickle_files',
         'vsc.utils.timestamp_pid_lockfile'
     ],
@@ -327,7 +325,6 @@ def get_all_targets():
         VSC_GPFS,
         VSC_ICINGADB,
         VSC_LDAP_CONFIGURATION,
-        VSC_LOCKFILE,
         VSC_POSTGRES,
         VSC_UTILS,
     ]
