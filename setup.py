@@ -252,8 +252,8 @@ VSC_ICINGADB = {
     'scripts': []
 }
 
-VSC_LDAP_CONFIGURATION = {
-    'name': 'vsc-ldap-configuration',
+VSC_LDAP_EXTENSION = {
+    'name': 'vsc-ldap-extension',
     'version': '0.1',
     'author': [ag],
     'maintainer': [ag],
@@ -261,7 +261,8 @@ VSC_LDAP_CONFIGURATION = {
     'namespace_packages': ['vsc', 'vsc.ldap'],
     'py_modules': [
         'vsc.__init__',
-        'vsc.ldap.configuration'
+        'vsc.ldap.configuration',
+        'vsc.ldap.entities'
     ],
     'scripts': []
 }
