@@ -267,22 +267,6 @@ VSC_LDAP_EXTENSION = {
     'scripts': []
 }
 
-# FIXME: Check is this can be downloaded directly from PyPi
-VSC_LOCKFILE = {
-    'name': 'vsc-lockfile',
-    'version': '0.9.1.1',
-    'author': [ag],
-    'maintainer': [ag],
-    'packages': ['lockfile'],
-    'py_modules': [
-        'lockfile.linklockfile',
-        'lockfile.mkdirlockfile',
-        'lockfile.pidlockfile',
-        'lockfile.sqlitelockfile',
-    ],
-    'scripts': []
-}
-
 VSC_POSTGRES = {
     'name': 'vsc-postgres',
     'version': '0.1.1',
@@ -301,7 +285,7 @@ VSC_UTILS = {
     'version': '0.10',
     'author': [ag, sdw],
     'maintainer': [ag, sdw],
-    'install_requires': ['lockfile>=0.9.1.1']
+    'install_requires': ['lockfile>=0.9.1.1'],
     'packages': ['vsc.utils'],
     'namespace_packages': ['vsc'],
     'py_modules': [
@@ -325,7 +309,7 @@ def get_all_targets():
         VSC_GLOBFS,
         VSC_GPFS,
         VSC_ICINGADB,
-        VSC_LDAP_CONFIGURATION,
+        VSC_LDAP_EXTENSION,
         VSC_POSTGRES,
         VSC_UTILS,
     ]
