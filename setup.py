@@ -274,7 +274,7 @@ VSC_UTILS = {
     'version': '0.10',
     'author': [ag, sdw],
     'maintainer': [ag, sdw],
-    'install_requires': ['lockfile>=0.9.1.1'],
+    'install_requires': ['lockfile>=0.9.1'],
     'packages': ['vsc.utils'],
     'namespace_packages': ['vsc'],
     'py_modules': [
