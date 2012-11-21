@@ -195,7 +195,7 @@ VSC_FILESYSTEMS = {
 
 VSC_GLOBFS = {
     'name': 'vsc-globfs',
-    'version': '',
+    'version': '0.9',
     'author': [ag, sdw],
     'maintainer': [ag, sdw],
     'packages': ['vsc.globfs'],
@@ -210,7 +210,7 @@ VSC_GLOBFS = {
 
 VSC_GPFS = {
     'name': 'vsc-gpfs',
-    'version': '0.1.10',
+    'version': '0.1',
     'author': [ag],
     'maintainer': [ag],
     'packages': ['vsc.gpfs'],
@@ -228,7 +228,7 @@ VSC_GPFS = {
 
 VSC_ICINGADB = {
     'name': 'vsc-icingadb',
-    'version': '0.10',
+    'version': '0.9',
     'author': [wdp],
     'maintainer': [wdp],
     'packages': ['vsc.icingadb'],
@@ -258,7 +258,7 @@ VSC_LDAP_EXTENSION = {
 
 VSC_POSTGRES = {
     'name': 'vsc-postgres',
-    'version': '0.1.1',
+    'version': '0.9',
     'author': [wdp],
     'maintainer': [],
     'namespace_packages': ['vsc'],
@@ -271,7 +271,7 @@ VSC_POSTGRES = {
 
 VSC_UTILS = {
     'name': 'vsc-utils',
-    'version': '0.10',
+    'version': '0.9',
     'author': [ag, sdw],
     'maintainer': [ag, sdw],
     'install_requires': ['lockfile>=0.9.1'],
