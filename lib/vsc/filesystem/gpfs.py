@@ -17,6 +17,7 @@
 GPFS specialised interface
 """
 
+import copy
 import os
 import re
 
@@ -323,7 +324,6 @@ class GpfsOperations(PosixOperations):
         else:
             if isinstance(devices, str):
                 devices = [devices]
-        opts.append(','.join(devices))
 
         if filesetnames is not None:
             if isinstance(filesetnames, str):
@@ -332,8 +332,18 @@ class GpfsOperations(PosixOperations):
             filesetnamestxt = ','.join(filesetnames)
             opts.append(filesetnamestxt)
 
-        info = self._executeY('mmlsfileset', opts)
+        self.log.debug("Looking up filesets for devices %s" % (devices))
+
+        listm = Monoid([], lambda x: x, lambda xs, ys: xs + ys)
+        info = MonoidDict(listm)
+        for device in devices:
+            opts_ = copy.deepcopy(opts)
+            opts_.insert(1, device)
+            res = self._executeY('mmlsfileset', opts_)
         # for v3.5 filesystemName:filesetName:id:rootInode:status:path:parentId:created:inodes:dataInKB:comment:filesetMode:afmTarget:afmState:afmMode:afmFileLookupRefreshInterval:afmFileOpenRefreshInterval:afmDirLookupRefreshInterval:afmDirOpenRefreshInterval:afmAsyncDelay:reserved:afmExpirationTimeout:afmRPO:afmLastPSnapId:inodeSpace:isInodeSpaceOwner:maxInodes:allocInodes:inodeSpaceMask:afmShowHomeSnapshots:afmNumReadThreads:afmNumReadGWs:afmReadBufferSize:afmWriteBufferSize:afmReadSparseThreshold:afmParallelReadChunkSize:afmParallelReadThreshold:snapId:
+            self.log.debug("list_filesets res keys = %s " % (res.keys()))
+            for (key, value) in res.items():
+                info[key] = value
 
         datakeys = info.keys()
         datakeys.remove('filesystemName')
