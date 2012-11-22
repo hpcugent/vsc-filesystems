@@ -293,7 +293,7 @@ class GpfsOperations(PosixOperations):
         quotatypes = list(set(info.get('quotaType', [])))
         quotatypesstruct = dict([(qt, {}) for qt in quotatypes])
 
-        res = dict([(fs, quotatypesstruct) for fs in fss])  # build structure
+        res = dict([(fs, copy.deepcopy(quotatypesstruct)) for fs in fss])  # build structure
 
         for idx, (fs, qt, qid) in enumerate(zip(info['filesystemName'], info['quotaType'], info['id'])):
             details = dict([(k, info[k][idx]) for k in datakeys])
@@ -357,6 +357,7 @@ class GpfsOperations(PosixOperations):
             res[fs][qid] = details
 
         self.gpfslocalfilesets = res
+        return res
 
     def get_filesystem_info(self, filesystem):
         """Get all the relevant information for a given GPFS filesystem.
