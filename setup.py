@@ -150,25 +150,23 @@ VSC_ADMINISTRATION = {
     'version': '0.1',
     'author': [ag],
     'maintainer': [ag],
-    #'packages': ['vsc.administration'],
-    'install_requires': ['vsc-ldap>=0.9', 'vsc-ldap-extensions'],
+    'packages': ['vsc.administration'],
+    'install_requires': ['vsc-ldap>=0.9', 'vsc-ldap-extensions>=0.1'],
     'py_modules': [
         'vsc.__init__',
-        'vsc.administration.group',
-        'vsc.administration.institute',
-        'vsc.administration.tools',
-        'vsc.administration.user',
-        'vsc.administration.vo',
     ],
-    'scripts': []
+    'scripts': [],
+    'bdist_rpm': {
+        'requires': ['vsc-ldap >= 0.9', 'vsc-ldap-extensions >= 0.1', 'vsc-core >= 0.1'],
+        }
 }
 
 VSC_CORE = {
     'name': 'vsc-core',
-    'version': '0.3',
+    'version': '0.1',
     'author': [sdw, ag],
     'maintainer': [sdw, ag],
-    'namespace_packages': ['vsc', 'vsc.config'],
+    'packages': ['vsc', 'vsc.config'],
     'py_modules': [
         'vsc.__init__',
         'vsc.config.base',
@@ -180,15 +178,11 @@ VSC_CORE = {
 VSC_FILESYSTEMS = {
     'name': 'vsc-filesystems',
     'version': '0.1',
-    'author': [sdw],
-    'maintainer': [sdw],
+    'author': [sdw, ag],
+    'maintainer': [sdw, ag],
     'packages': ['vsc.filesystem'],
-    'namespace_packages': ['vsc'],
     'py_modules': [
         'vsc.__init__',
-        'vsc.filesystem.__init__',
-        'vsc.filesystem.gpfs',
-        'vsc.filesystem.posix'
     ],
     'scripts': []
 }
@@ -199,11 +193,8 @@ VSC_GLOBFS = {
     'author': [ag, sdw],
     'maintainer': [ag, sdw],
     'packages': ['vsc.globfs'],
-    'namespace_packages': ['vsc', 'vsc.globfs'],
     'py_modules': [
         'vsc.__init__',
-        'vsc.globfs.hpccollector',
-        'vsc.globfs.moab'
     ],
     'scripts': []
 }
@@ -213,8 +204,7 @@ VSC_GPFS = {
     'version': '0.1',
     'author': [ag],
     'maintainer': [ag],
-    'packages': ['vsc.gpfs'],
-    'namespace_packages': ['vsc', 'vsc.gpfs.quota', 'vsc.gpfs.utils'],
+    'packages': ['vsc.gpfs', 'vsc.gpfs.quota', 'vsc.gpfs.utils'],
     'py_modules': [
         'vsc.__init__',
         'vsc.gpfs.quota.entities',
@@ -232,11 +222,8 @@ VSC_ICINGADB = {
     'author': [wdp],
     'maintainer': [wdp],
     'packages': ['vsc.icingadb'],
-    'namespace_packages': ['vsc', 'vsc.icingadb'],
     'py_modules': [
         'vsc.__init__',
-        '.vsc.icingadb.icingadb',
-        '.vsc.icingadb.showdb'
     ],
     'scripts': []
 }
@@ -247,13 +234,13 @@ VSC_LDAP_EXTENSION = {
     'author': [ag],
     'maintainer': [ag],
     'packages': ['vsc.ldap'],
-    'namespace_packages': ['vsc', 'vsc.ldap'],
     'py_modules': [
         'vsc.__init__',
-        'vsc.ldap.configuration',
-        'vsc.ldap.entities'
     ],
-    'scripts': []
+    'scripts': [],
+    'bdist_rpm': {
+        'requires': ['vsc-ldap >= 0.9']
+        }
 }
 
 VSC_POSTGRES = {
@@ -276,16 +263,13 @@ VSC_UTILS = {
     'maintainer': [ag, sdw],
     'install_requires': ['lockfile>=0.9.1'],
     'packages': ['vsc.utils'],
-    'namespace_packages': ['vsc'],
     'py_modules': [
         'vsc.__init__',
-        'vsc.utils.crypt',
-        'vsc.utils.filesystem',
-        'vsc.utils.fs_store',
-        'vsc.utils.pickle_files',
-        'vsc.utils.timestamp_pid_lockfile'
     ],
-    'scripts': []
+    'scripts': [],
+    'bdist_rpm': {
+        'requires': ['vsc-base >= 0.9', 'lockfile >= 0.9']
+        }
 }
 
 
