@@ -151,6 +151,7 @@ VSC_ADMINISTRATION = {
     'author': [ag],
     'maintainer': [ag],
     #'packages': ['vsc.administration'],
+    'install_requires': ['vsc-ldap>=0.9', 'vsc-ldap-extensions'],
     'py_modules': [
         'vsc.__init__',
         'vsc.administration.group',
@@ -172,7 +173,6 @@ VSC_CORE = {
         'vsc.__init__',
         'vsc.config.base',
         'vsc.exceptions',
-        'vsc.utils.patterns',
     ],
     'scripts': []
 }
@@ -311,6 +311,53 @@ def get_all_targets():
 ###
 
 
+def sanitize(v):
+    """Transforms v into a sensible string for use in setup.cfg."""
+    if isinstance(v, str):
+        return v
+
+    if isinstance(v, list):
+        return ",".join(v)
+
+
+def build_setup_cfg_for_bdist_rpm(target):
+    """Generates a setup.cfg on a per-target basis in case bdist_rpm
+    is asked from setup.
+
+    @type target: dict
+
+    @param target: specifies the options to be passed to setup()
+    """
+    if not 'bdist_rpm' in target:
+        try:
+            os.unlink('setup.cfg')
+        except:
+            pass
+        return
+
+    try:
+        setup_cfg = open('setup.cfg', 'w')  # and truncate
+    except (IOError, OSError), err:
+        print "Cannot create setup.cfg for target %s: " % (target['name'], err)
+        sys.exit(1)
+
+    bdist_rpm = target['bdist_rpm']
+    del target['bdist_rpm']
+
+    s = ["[bdist_rpm]"]
+    s += ["%s = %s" % (key, sanitize(value)) for (key, value) in bdist_rpm.items()]
+
+    setup_cfg.write("\n".join(s))
+    setup_cfg.close()
+
+
+def cleanup():
+    try:
+        remove_tree('build')
+    except OSError, _:
+        pass
+
+
 def parse_target(target):
     """Add some fields"""
     new_target = {}
@@ -395,15 +442,11 @@ def main(args):
         os.environ[envname] = target_name
         os.putenv(envname, target_name)
 
+        cleanup()
+        build_setup_cfg_for_bdist_rpm(target)
         x = parse_target(target)
-
-        log.info("Target information: %s" % (x))
-
-        try:
-            remove_tree('build')
-        except OSError, _:
-            pass
         setup(**x)
+        cleanup()
 
 
 if __name__ == '__main__':
