@@ -151,14 +151,14 @@ VSC_ADMINISTRATION = {
     'author': [ag],
     'maintainer': [ag],
     'packages': ['vsc.administration'],
-    'install_requires': ['vsc-ldap>=0.9', 'vsc-ldap-extensions>=0.1'],
-    'py_modules': [
-        'vsc.__init__',
-    ],
+    'namespace_packages': ['vsc'],
+    'install_requires': [
+        'vsc-base >= 0.90',
+        'vsc-ldap >= 0.90',
+        'vsc-ldap-extensions >= 0.90',
+        'vsc-core >= 0.1',
+        ],
     'scripts': [],
-    'bdist_rpm': {
-        'requires': ['vsc-ldap >= 0.9', 'vsc-ldap-extensions >= 0.1', 'vsc-core >= 0.1'],
-        }
 }
 
 VSC_CORE = {
@@ -167,8 +167,8 @@ VSC_CORE = {
     'author': [sdw, ag],
     'maintainer': [sdw, ag],
     'packages': ['vsc', 'vsc.config'],
+    'namespace_packages': ['vsc'],
     'py_modules': [
-        'vsc.__init__',
         'vsc.config.base',
         'vsc.exceptions',
     ],
@@ -181,27 +181,26 @@ VSC_FILESYSTEMS = {
     'author': [sdw, ag],
     'maintainer': [sdw, ag],
     'packages': ['vsc.filesystem'],
-    'py_modules': [
-        'vsc.__init__',
-    ],
-    'scripts': []
+    'namespace_packages': ['vsc'],
+    'install_requires': [
+        'vsc-base >= 0.90',
+        ],
+    'scripts': [],
 }
 
 VSC_GLOBFS = {
     'name': 'vsc-globfs',
-    'version': '0.9',
+    'version': '0.90',
     'author': [ag, sdw],
     'maintainer': [ag, sdw],
     'packages': ['vsc.globfs'],
-    'py_modules': [
-        'vsc.__init__',
-    ],
+    'namespace_packages': ['vsc'],
     'scripts': []
 }
 
 VSC_GPFS = {
     'name': 'vsc-gpfs',
-    'version': '0.1',
+    'version': '0.90',
     'author': [ag],
     'maintainer': [ag],
     'packages': ['vsc.gpfs', 'vsc.gpfs.quota', 'vsc.gpfs.utils'],
@@ -218,7 +217,7 @@ VSC_GPFS = {
 
 VSC_ICINGADB = {
     'name': 'vsc-icingadb',
-    'version': '0.9',
+    'version': '0.90',
     'author': [wdp],
     'maintainer': [wdp],
     'packages': ['vsc.icingadb'],
@@ -230,27 +229,25 @@ VSC_ICINGADB = {
 
 VSC_LDAP_EXTENSION = {
     'name': 'vsc-ldap-extension',
-    'version': '0.1',
+    'version': '0.90',
     'author': [ag],
     'maintainer': [ag],
     'packages': ['vsc.ldap'],
-    'py_modules': [
-        'vsc.__init__',
-    ],
+    'namespace_packages': ['vsc', 'vsc.ldap'],
+    'install_requires': [
+        'vsc-base >= 0.90',
+        'vsc-ldap >= 0.90',
+        ],
     'scripts': [],
-    'bdist_rpm': {
-        'requires': ['vsc-ldap >= 0.9']
-        }
 }
 
 VSC_POSTGRES = {
     'name': 'vsc-postgres',
-    'version': '0.9',
+    'version': '0.90',
     'author': [wdp],
     'maintainer': [],
     'namespace_packages': ['vsc'],
     'py_modules': [
-        'vsc.__init__',
         'vsc.pg'
     ],
     'scripts': []
@@ -263,12 +260,10 @@ VSC_UTILS = {
     'maintainer': [ag, sdw],
     'install_requires': ['lockfile>=0.9.1'],
     'packages': ['vsc.utils'],
-    'py_modules': [
-        'vsc.__init__',
-    ],
+    'namespace_packages': ['vsc.utils'],
     'scripts': [],
     'bdist_rpm': {
-        'requires': ['vsc-base >= 0.9', 'lockfile >= 0.9']
+        'requires': ['vsc-base >= 0.90', 'lockfile >= 0.9']
         }
     }
 
@@ -305,31 +300,24 @@ def sanitize(v):
 
 
 def build_setup_cfg_for_bdist_rpm(target):
-    """Generates a setup.cfg on a per-target basis in case bdist_rpm
-    is asked from setup.
+    """Generates a setup.cfg on a per-target basis.
+
+    Stores the 'install-requires' in the [bdist_rpm] section
 
     @type target: dict
 
     @param target: specifies the options to be passed to setup()
     """
-    if not 'bdist_rpm' in target:
-        try:
-            os.unlink('setup.cfg')
-        except:
-            pass
-        return
 
     try:
         setup_cfg = open('setup.cfg', 'w')  # and truncate
     except (IOError, OSError), err:
-        print "Cannot create setup.cfg for target %s: " % (target['name'], err)
+        print "Cannot create setup.cfg for target %s: %s" % (target['name'], err)
         sys.exit(1)
 
-    bdist_rpm = target['bdist_rpm']
-    del target['bdist_rpm']
-
     s = ["[bdist_rpm]"]
-    s += ["%s = %s" % (key, sanitize(value)) for (key, value) in bdist_rpm.items()]
+    if 'install_requires' in target:
+        s += ["requires = %s" % (sanitize(target['install_requires']))]
 
     setup_cfg.write("\n".join(s))
     setup_cfg.close()
@@ -365,13 +353,18 @@ def create_all_in_one_target(all_targets):
     all_in_one_target.update(VSC_ALLINONE)  # default
 
     for target in all_targets:
+        log.info("Looking at target %s" % (target))
         for k, v in target.items():
             if k in ['name', 'version']:
                 continue
             if isinstance(v, list):
                 all_in_one_target[k] += v
             elif isinstance(v, dict):
-                VSC_ALLINONE[k].update(v) ## this isn't really right, but we need this to set the bdist_rpm options and we're not like ever going to generate a single RPM for everything
+                if not k in all_in_one_target:
+                    all_in_one_target[k] = {}
+                log.info("key %s, value %s" % (k,v))
+                log.info("type of entry: %si -> %s" % (type(all_in_one_target[k]), all_in_one_target[k]))
+                all_in_one_target[k].update(v) ## this isn't really right, but we need this to set the bdist_rpm options and we're not like ever going to generate a single RPM for everything
             else:
                 print 'ERROR: unsupported type cfgname %s key %s value %s' % (target['name'], k, v)
                 sys.exit(1)
