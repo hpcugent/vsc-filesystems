@@ -270,7 +270,7 @@ VSC_UTILS = {
     'bdist_rpm': {
         'requires': ['vsc-base >= 0.9', 'lockfile >= 0.9']
         }
-}
+    }
 
 
 def get_all_targets():
@@ -370,6 +370,8 @@ def create_all_in_one_target(all_targets):
                 continue
             if isinstance(v, list):
                 all_in_one_target[k] += v
+            elif isinstance(v, dict):
+                VSC_ALLINONE[k].update(v) ## this isn't really right, but we need this to set the bdist_rpm options and we're not like ever going to generate a single RPM for everything
             else:
                 print 'ERROR: unsupported type cfgname %s key %s value %s' % (target['name'], k, v)
                 sys.exit(1)
