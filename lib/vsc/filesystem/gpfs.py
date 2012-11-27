@@ -3,6 +3,7 @@
 #
 # Copyright 2012 Ghent University
 # Copyright 2012 Stijn De Weirdt
+# Copyright 2012 Andy Georges
 #
 # This file is part of the tools originally by the HPC team of
 # Ghent University (http://ugent.be/hpc).
@@ -12,8 +13,6 @@
 # the Free Software Foundation v2.
 ##
 """
-20/08/2012 Stijn De Weirdt HPC UGent-VSC
-
 GPFS specialised interface
 """
 
