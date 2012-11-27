@@ -81,7 +81,7 @@ except:
 from distutils.dir_util import remove_tree
 
 ## 0 : WARN (default), 1 : INFO, 2 : DEBUG
-log.set_verbosity(2)
+#log.set_verbosity(0)
 
 
 class vsc_easy_install(easy_install):
@@ -168,7 +168,7 @@ VSC_CORE = {
     'maintainer': [sdw, ag],
     'packages': ['vsc', 'vsc.config'],
     'namespace_packages': ['vsc'],
-    'scripts': []
+    'scripts': [],
     'py_modules': [
         'vsc.config.base',
         'vsc.exceptions',
@@ -198,7 +198,7 @@ VSC_GLOBFS = {
     'maintainer': [ag, sdw],
     'packages': ['vsc.globfs'],
     'namespace_packages': ['vsc'],
-    'scripts': []
+    'scripts': [],
     'install_requires': [
         'vsc-base >= 0.90',
         ],
@@ -211,7 +211,7 @@ VSC_GPFS = {
     'maintainer': [ag],
     'packages': ['vsc.gpfs', 'vsc.gpfs.quota', 'vsc.gpfs.utils'],
     'namespace_packages': ['vsc'],
-    'scripts': []
+    'scripts': [],
     'install_requires': [
         'vsc-base >= 0.90',
         ],
@@ -226,7 +226,7 @@ VSC_ICINGADB = {
     'py_modules': [
         'vsc.__init__',
     ],
-    'scripts': []
+    'scripts': [],
     'install_requires': [
         'vsc-base >= 0.90',
         ],
@@ -254,7 +254,7 @@ VSC_POSTGRES = {
     'py_modules': [
         'vsc.pg'
     ],
-    'scripts': []
+    'scripts': [],
     'install_requires': [
         'vsc-base >= 0.90',
         ],
@@ -360,7 +360,6 @@ def create_all_in_one_target(all_targets):
     all_in_one_target.update(VSC_ALLINONE)  # default
 
     for target in all_targets:
-        log.info("Looking at target %s" % (target))
         for k, v in target.items():
             if k in ['name', 'version']:
                 continue
@@ -369,8 +368,6 @@ def create_all_in_one_target(all_targets):
             elif isinstance(v, dict):
                 if not k in all_in_one_target:
                     all_in_one_target[k] = {}
-                log.info("key %s, value %s" % (k,v))
-                log.info("type of entry: %si -> %s" % (type(all_in_one_target[k]), all_in_one_target[k]))
                 all_in_one_target[k].update(v) ## this isn't really right, but we need this to set the bdist_rpm options and we're not like ever going to generate a single RPM for everything
             else:
                 print 'ERROR: unsupported type cfgname %s key %s value %s' % (target['name'], k, v)
@@ -413,7 +410,7 @@ def main(args):
     for target in all_targets:
         target_name = target['name']
 
-        log.info("main: Checking if we should build target with name %s" % (target_name))
+        log.debug("main: Checking if we should build target with name %s" % (target_name))
         log.debug("main: tobuild = %s; target_name = %s" % (tobuild, target_name))
 
         if (tobuild is not None) and not (tobuild in ('vsc-all', 'vsc-allinone', target_name,)):
