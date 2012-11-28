@@ -157,20 +157,19 @@ VSC_ADMINISTRATION = {
         'vsc-base >= 0.90',
         'vsc-ldap >= 0.90',
         'vsc-ldap-extensions >= 0.90',
-        'vsc-core >= 0.1',
+        'vsc-core >= 0.90',
         ],
 }
 
 VSC_CORE = {
     'name': 'vsc-core',
-    'version': '0.1',
+    'version': '0.92',
     'author': [sdw, ag],
     'maintainer': [sdw, ag],
     'packages': ['vsc', 'vsc.config'],
     'namespace_packages': ['vsc'],
     'scripts': [],
     'py_modules': [
-        'vsc.config.base',
         'vsc.exceptions',
     ],
     'install_requires': [
@@ -193,11 +192,12 @@ VSC_FILESYSTEMS = {
 
 VSC_GLOBFS = {
     'name': 'vsc-globfs',
-    'version': '0.90',
+    'version': '0.92',
     'author': [ag, sdw],
     'maintainer': [ag, sdw],
     'packages': ['vsc.globfs'],
     'namespace_packages': ['vsc'],
+    'provides': ['python-vsc-packages-globfs = 0.2'],
     'scripts': [],
     'install_requires': [
         'vsc-base >= 0.90',
@@ -206,11 +206,12 @@ VSC_GLOBFS = {
 
 VSC_GPFS = {
     'name': 'vsc-gpfs',
-    'version': '0.90',
+    'version': '0.92',
     'author': [ag],
     'maintainer': [ag],
     'packages': ['vsc.gpfs', 'vsc.gpfs.quota', 'vsc.gpfs.utils'],
     'namespace_packages': ['vsc'],
+    'provides': ['python-vsc-packages-gpfs = 0.2'],
     'scripts': [],
     'install_requires': [
         'vsc-base >= 0.90',
@@ -219,13 +220,12 @@ VSC_GPFS = {
 
 VSC_ICINGADB = {
     'name': 'vsc-icingadb',
-    'version': '0.90',
+    'version': '0.92',
     'author': [wdp],
     'maintainer': [wdp],
     'packages': ['vsc.icingadb'],
-    'py_modules': [
-        'vsc.__init__',
-    ],
+    'namespace_packages': ['vsc'],
+    'provides': ['python-vsc-packages-icingadb = 0.11'],
     'scripts': [],
     'install_requires': [
         'vsc-base >= 0.90',
@@ -234,11 +234,12 @@ VSC_ICINGADB = {
 
 VSC_LDAP_EXTENSION = {
     'name': 'vsc-ldap-extension',
-    'version': '0.90',
+    'version': '0.92',
     'author': [ag],
     'maintainer': [ag],
     'packages': ['vsc.ldap'],
     'namespace_packages': ['vsc', 'vsc.ldap'],
+    'provides': ['python-vsc-packages-ldap = 0.3'],
     'scripts': [],
     'install_requires': [
         'vsc-ldap >= 0.90',
@@ -247,13 +248,14 @@ VSC_LDAP_EXTENSION = {
 
 VSC_POSTGRES = {
     'name': 'vsc-postgres',
-    'version': '0.90',
+    'version': '0.92',
     'author': [wdp],
     'maintainer': [],
     'namespace_packages': ['vsc'],
     'py_modules': [
         'vsc.pg'
     ],
+    'provides': ['python-vsc-packages-postgres = 0.2'],
     'scripts': [],
     'install_requires': [
         'vsc-base >= 0.90',
@@ -262,12 +264,13 @@ VSC_POSTGRES = {
 
 VSC_UTILS = {
     'name': 'vsc-utils',
-    'version': '0.90',
+    'version': '0.92',
     'author': [ag, sdw],
     'maintainer': [ag, sdw],
     'install_requires': ['lockfile >= 0.9.1'],
     'packages': ['vsc.utils'],
-    'namespace_packages': ['vsc.utils'],
+    'namespace_packages': ['vsc', 'vsc.utils'],
+    'provides': ['python-vsc-packages-utils = 0.11'],
     'scripts': [],
     'install_requires': [
         'vsc-base >= 0.90',
@@ -325,6 +328,10 @@ def build_setup_cfg_for_bdist_rpm(target):
     s = ["[bdist_rpm]"]
     if 'install_requires' in target:
         s += ["requires = %s" % (sanitize(target['install_requires']))]
+
+    if 'provides' in target:
+        s += ["provides = %s" % (sanitize((target['provides'])))]
+        target.pop('provides')
 
     setup_cfg.write("\n".join(s))
     setup_cfg.close()
