@@ -220,7 +220,7 @@ VSC_GPFS = {
 
 VSC_ICINGADB = {
     'name': 'vsc-icingadb',
-    'version': '0.94',
+    'version': '0.95',
     'author': [wdp],
     'maintainer': [wdp],
     'packages': ['vsc.icingadb'],
