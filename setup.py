@@ -220,7 +220,7 @@ VSC_GPFS = {
 
 VSC_ICINGADB = {
     'name': 'vsc-icingadb',
-    'version': '0.92',
+    'version': '0.93',
     'author': [wdp],
     'maintainer': [wdp],
     'packages': ['vsc.icingadb'],
@@ -229,6 +229,7 @@ VSC_ICINGADB = {
     'scripts': [],
     'install_requires': [
         'vsc-base >= 0.90',
+        'psycopg2 >= 2.0',
         ],
 }
 
