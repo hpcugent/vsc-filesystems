@@ -383,6 +383,7 @@ class GpfsOperations(PosixOperations):
 
         @raise GpfsOperationError: if there is no filesystem with the given name
         """
+	self.list_filesystems()
         self.list_filesets()
         try:
             filesets = self.gpfslocalfilesets[filesystem_name]
