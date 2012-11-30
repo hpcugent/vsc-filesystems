@@ -147,7 +147,7 @@ VSC_ = {
 
 VSC_ADMINISTRATION = {
     'name': 'vsc-administration',
-    'version': '0.1',
+    'version': '0.2',
     'author': [ag],
     'maintainer': [ag],
     'packages': ['vsc.administration'],
@@ -164,7 +164,7 @@ VSC_ADMINISTRATION = {
 
 VSC_CORE = {
     'name': 'vsc-core',
-    'version': '0.92',
+    'version': '0.93',
     'author': [sdw, ag],
     'maintainer': [sdw, ag],
     'packages': ['vsc', 'vsc.config'],
@@ -180,7 +180,7 @@ VSC_CORE = {
 
 VSC_FILESYSTEMS = {
     'name': 'vsc-filesystems',
-    'version': '0.1',
+    'version': '0.2',
     'author': [sdw, ag],
     'maintainer': [sdw, ag],
     'packages': ['vsc.filesystem'],
