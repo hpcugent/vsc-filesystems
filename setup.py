@@ -156,7 +156,7 @@ VSC_ADMINISTRATION = {
     'install_requires': [
         'vsc-base >= 0.90',
         'vsc-ldap >= 0.90',
-        'vsc-ldap-extensions >= 0.90',
+        'vsc-ldap-extension >= 0.90',
         'vsc-core >= 0.90',
         ],
 }
