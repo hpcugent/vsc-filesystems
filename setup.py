@@ -158,6 +158,7 @@ VSC_ADMINISTRATION = {
         'vsc-ldap >= 0.90',
         'vsc-ldap-extension >= 0.90',
         'vsc-core >= 0.90',
+        'vsc-packages-lockfile >= 0.9.1',
         ],
 }
 
