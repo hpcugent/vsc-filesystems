@@ -352,11 +352,13 @@ class PosixOperations(object):
         self.make_dir(ssh_path)
 
         self.log.info("Placing %d ssh public keys in the authorized keys file." % (len(ssh_public_keys)))
-        fp = open(os.path.join(home_dir, '.ssh', 'authorized_keys'), 'w')
+        authorized_keys = os.path.join(home_dir, '.ssh', 'authorized_keys')
+        fp = open(authorized_keys, 'w')
         for key in ssh_public_keys:
             fp.write(key + "\n")
         fp.close()
-        self.chmod(0644, ssh_path)
+        self.chmod(0644, authorized_keys)
+        self.chmod(0700, ssh_path)
 
         # bash
         self.log.info('Creating .bashrc and .bash_profile')
@@ -365,7 +367,8 @@ class PosixOperations(object):
         fp.write('if [ -f ~/.bashrc ]; then\n . ~/.bashrc\nfi\n')
         fp.close()
 
-        for f in [os.path.join(home_dir, '.ssh'),
+        for f in [home_dir,
+                  os.path.join(home_dir, '.ssh'),
                   os.path.join(home_dir, '.ssh', 'authorized_keys'),
                   os.path.join(home_dir, '.bashrc'),
                   os.path.join(home_dir, '.bash_profile')]:

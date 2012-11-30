@@ -42,7 +42,7 @@ class GpfsOperations(PosixOperations):
 
     def __init__(self):
         super(GpfsOperations, self).__init__()
-        self.supportedfilesystems = ['gpfs']
+        self.supportedfilesystems = ['gpfs', 'nfs']
 
         self.gpfslocalfilesystems = None  # the locally found GPFS filesystems
         self.gpfslocalquotas = None
