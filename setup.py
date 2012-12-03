@@ -176,6 +176,7 @@ VSC_CORE = {
     'install_requires': [
         'vsc-base >= 0.90'
         ],
+    'provides' : ['python-vsc-packages-exceptions = 0.93']
 }
 
 VSC_FILESYSTEMS = {
