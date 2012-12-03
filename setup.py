@@ -164,7 +164,7 @@ VSC_ADMINISTRATION = {
 
 VSC_CORE = {
     'name': 'vsc-core',
-    'version': '0.93',
+    'version': '0.94',
     'author': [sdw, ag],
     'maintainer': [sdw, ag],
     'packages': ['vsc', 'vsc.config'],
@@ -176,7 +176,7 @@ VSC_CORE = {
     'install_requires': [
         'vsc-base >= 0.90'
         ],
-    'provides' : ['python-vsc-packages-exceptions = 0.93']
+    'provides' : ['python-vsc-packages-exceptions = 0.94']
 }
 
 VSC_FILESYSTEMS = {
