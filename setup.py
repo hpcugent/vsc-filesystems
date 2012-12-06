@@ -30,7 +30,7 @@ targetname can be:
     vsc-core
     vsc-globfs
     vsc-gpfs
-    vsc-icingadb
+    vsc-monitoringdb
     vsc-postgres
     vsc-utils
 
@@ -220,20 +220,21 @@ VSC_GPFS = {
         ],
 }
 
-VSC_ICINGADB = {
-    'name': 'vsc-icingadb',
+VSC_MONITORINGDB = {
+    'name': 'vsc-monitoringdb',
     'version': '0.95',
     'author': [wdp],
     'maintainer': [wdp],
-    'packages': ['vsc.icingadb'],
+    'packages': ['vsc.monitoringdb'],
     'namespace_packages': ['vsc'],
-    'provides': ['python-vsc-packages-icingadb = 0.11'],
     'scripts': [],
     'install_requires': [
         'vsc-base >= 0.90',
         'psycopg2 >= 2.0',
+        'MySQL-python',
         ],
 }
+
 
 VSC_LDAP_EXTENSION = {
     'name': 'vsc-ldap-extension',
@@ -289,7 +290,7 @@ def get_all_targets():
         VSC_FILESYSTEMS,
         VSC_GLOBFS,
         VSC_GPFS,
-        VSC_ICINGADB,
+        VSC_MONITORINGDB,
         VSC_LDAP_EXTENSION,
         VSC_POSTGRES,
         VSC_UTILS,
