@@ -30,7 +30,7 @@ from vsc.utils.missing import nub, find_sublist_index, Monoid, MonoidDict
 from vsc.utils.patterns import Singleton
 
 GPFS_BIN_PATH = '/usr/lpp/mmfs/bin'
-
+GPFS_DEFAULT_INODE_LIMIT = '10M:50K'
 
 GpfsQuota = namedtuple('GpfsQuota', ',name,blockUsage,blockQuota,blockLimit,blockInDoubt,blockGrace,filesUsage,filesQuota,filesLimit,filesInDoubt,filesGrace,remarks,quota,defQuota,fid,filesetname')
 
@@ -601,6 +601,7 @@ class GpfsOperations(PosixOperations):
         mmcrfileset_options = [foundgpfsdevice, fileset_name]
         if parent_fileset_name is None:
             mmcrfileset_options += ['--inode-space', 'new']
+            mmcrfileset_options += ['--inode-limit', GPFS_DEFAULT_INODE_LIMIT]
         else:
             parent_fileset_exists = False
             for efsetid, efset in self.gpfslocalfilesets[foundgpfsdevice].items():
