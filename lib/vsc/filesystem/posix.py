@@ -25,6 +25,8 @@ import sys
 import subprocess
 
 import vsc.fancylogger as fancylogger
+from vsc.utils.patterns import Singleton
+
 OS_LINUX_MOUNTS = '/proc/mounts'
 OS_LINUX_FILESYSTEMS = '/proc/filesystems'
 # be very careful to add new ones here
@@ -46,6 +48,8 @@ class PosixOperations(object):
     """
     Class to create objects in filesystem, with various properties
     """
+
+    __metaclass__ = Singleton
 
     def __init__(self):
         self.log = fancylogger.getLogger(name=self.__class__.__name__)
@@ -294,7 +298,7 @@ class PosixOperations(object):
             if not os.path.realpath(target) == os.path.realpath(obj):
                 try:
                     os.unlink(obj)
-                except OSError, err:
+                except OSError, _:
                     self.log.raiseException("Cannot unlink existing symlink from %s to %s" % (obj, target),
                                             PosixOperationError)
             else:
@@ -302,7 +306,7 @@ class PosixOperations(object):
                 return  # Nothing to do, symlink already exists
         try:
             os.symlink(target, obj)
-        except OSError, err:
+        except OSError, _:
             self.log.raiseException("Cannot create symlink from %s to %s" % (obj, target), PosixOperationError)
 
     def is_dir(self, obj=None):
@@ -416,7 +420,7 @@ class PosixOperations(object):
 
         try:
             os.chmod(obj, permissions)
-        except OSError, err:
+        except OSError, _:
             self.log.raiseException("Could not change the permissions on object %s to %o" % (obj, permissions),
                                     PosixOperationError)
 
