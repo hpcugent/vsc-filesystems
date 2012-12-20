@@ -226,6 +226,10 @@ class GpfsOperations(PosixOperations):
         where the key is the deviceName, the value is a dict
             where the key is the fieldName and the values are the corresponding value, i.e., the
         """
+
+        if self.gpfslocalfilesystems:
+            return self.gpfslocalfilesystems
+
         info = self._executeY('mmlsfs', [device])
         # for v3.5 deviceName:fieldName:data:remarks:
 
@@ -386,7 +390,7 @@ class GpfsOperations(PosixOperations):
 
         @raise GpfsOperationError: if there is no filesystem with the given name
         """
-	self.list_filesystems()
+        self.list_filesystems()
         self.list_filesets()
         try:
             filesets = self.gpfslocalfilesets[filesystem_name]
@@ -559,9 +563,8 @@ class GpfsOperations(PosixOperations):
         - create fileset in existing fileset
         - create fileset with fsetpath part of symlink
         """
-        self.list_filesets()  # get all info uptodate
-
         self.list_filesystems()  # get known filesystems
+        self.list_filesets()  # get all info uptodate
 
         fsetpath = self._sanity_check(new_fileset_path)
 
