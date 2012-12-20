@@ -181,7 +181,7 @@ VSC_CORE = {
 
 VSC_FILESYSTEMS = {
     'name': 'vsc-filesystems',
-    'version': '0.2',
+    'version': '0.3',
     'author': [sdw, ag],
     'maintainer': [sdw, ag],
     'packages': ['vsc.filesystem'],
