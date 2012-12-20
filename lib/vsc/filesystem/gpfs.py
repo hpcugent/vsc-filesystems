@@ -219,7 +219,7 @@ class GpfsOperations(PosixOperations):
 
         return res
 
-    def list_filesystems(self, device='all'):
+    def list_filesystems(self, device='all', update=False):
         """List all filesystems.
 
         Set self.gpfslocalfilesystems to a convenient dict structure of the returned dict
@@ -227,7 +227,7 @@ class GpfsOperations(PosixOperations):
             where the key is the fieldName and the values are the corresponding value, i.e., the
         """
 
-        if self.gpfslocalfilesystems:
+        if not update and self.gpfslocalfilesystems:
             return self.gpfslocalfilesystems
 
         info = self._executeY('mmlsfs', [device])
