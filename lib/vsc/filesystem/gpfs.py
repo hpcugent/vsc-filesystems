@@ -27,6 +27,7 @@ from itertools import dropwhile
 
 from vsc.filesystem.posix import PosixOperations, PosixOperationError
 from vsc.utils.missing import nub, find_sublist_index, Monoid, MonoidDict
+from vsc.utils.patterns import Singleton
 
 GPFS_BIN_PATH = '/usr/lpp/mmfs/bin'
 
@@ -39,6 +40,8 @@ class GpfsOperationError(PosixOperationError):
 
 
 class GpfsOperations(PosixOperations):
+
+    __metaclass__ = Singleton
 
     def __init__(self):
         super(GpfsOperations, self).__init__()
