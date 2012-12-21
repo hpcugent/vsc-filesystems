@@ -164,7 +164,7 @@ VSC_ADMINISTRATION = {
 
 VSC_CORE = {
     'name': 'vsc-core',
-    'version': '0.94',
+    'version': '0.95',
     'author': [sdw, ag],
     'maintainer': [sdw, ag],
     'packages': ['vsc', 'vsc.config'],
