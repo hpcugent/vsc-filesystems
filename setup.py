@@ -222,7 +222,7 @@ VSC_GPFS = {
 
 VSC_MONITORINGDB = {
     'name': 'vsc-monitoringdb',
-    'version': '0.95',
+    'version': '0.96',
     'author': [wdp],
     'maintainer': [wdp],
     'packages': ['vsc.monitoringdb'],
