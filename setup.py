@@ -116,7 +116,7 @@ jt = ('Jens Timmermans', 'jens.timmermans@ugent.be')
 kh = ('Kenneth Hoste', 'kenneth.hoste@ugent.be')
 ag = ('Andy Georges', 'andy.georges@ugent.be')
 wdp = ('Wouter Depypere', 'wouter.depypere@ugent.be')
-lm = ('Luis Fernando Munoz Meji�as', 'luis.munoz@ugent.be')
+lm = ('Luis Fernando Muñoz Mejías', 'luis.munoz@ugent.be')
 
 # shared target config
 SHARED_TARGET = {
