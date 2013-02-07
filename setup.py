@@ -116,7 +116,7 @@ jt = ('Jens Timmermans', 'jens.timmermans@ugent.be')
 kh = ('Kenneth Hoste', 'kenneth.hoste@ugent.be')
 ag = ('Andy Georges', 'andy.georges@ugent.be')
 wdp = ('Wouter Depypere', 'wouter.depypere@ugent.be')
-lm = ('Luis Fernando Munoz Meji�as', 'luis.munoz@ugent.be')
+lm = ('Luis Fernando Muñoz Mejías', 'luis.munoz@ugent.be')
 
 # shared target config
 SHARED_TARGET = {
@@ -131,7 +131,7 @@ SHARED_TARGET = {
 # meta-package for allinone target
 VSC_ALLINONE = {
     'name': 'python-vsc-tools',
-    'version': '0.0.1',
+    'version': '0.0.2',
 }
 
 VSC_ = {
@@ -147,7 +147,7 @@ VSC_ = {
 
 VSC_ADMINISTRATION = {
     'name': 'vsc-administration',
-    'version': '0.2',
+    'version': '0.3',
     'author': [ag],
     'maintainer': [ag],
     'packages': ['vsc.administration'],
@@ -164,7 +164,7 @@ VSC_ADMINISTRATION = {
 
 VSC_CORE = {
     'name': 'vsc-core',
-    'version': '0.95',
+    'version': '0.96',
     'author': [sdw, ag],
     'maintainer': [sdw, ag],
     'packages': ['vsc', 'vsc.config'],
@@ -181,7 +181,7 @@ VSC_CORE = {
 
 VSC_FILESYSTEMS = {
     'name': 'vsc-filesystems',
-    'version': '0.3',
+    'version': '0.4',
     'author': [sdw, ag],
     'maintainer': [sdw, ag],
     'packages': ['vsc.filesystem'],
@@ -194,7 +194,7 @@ VSC_FILESYSTEMS = {
 
 VSC_GLOBFS = {
     'name': 'vsc-globfs',
-    'version': '0.92',
+    'version': '0.93',
     'author': [ag, sdw],
     'maintainer': [ag, sdw],
     'packages': ['vsc.globfs'],
@@ -208,7 +208,7 @@ VSC_GLOBFS = {
 
 VSC_GPFS = {
     'name': 'vsc-gpfs',
-    'version': '0.92',
+    'version': '0.93',
     'author': [ag],
     'maintainer': [ag],
     'packages': ['vsc.gpfs', 'vsc.gpfs.quota', 'vsc.gpfs.utils'],
@@ -222,7 +222,7 @@ VSC_GPFS = {
 
 VSC_MONITORINGDB = {
     'name': 'vsc-monitoringdb',
-    'version': '0.96',
+    'version': '0.97',
     'author': [wdp],
     'maintainer': [wdp],
     'packages': ['vsc.monitoringdb'],
@@ -239,7 +239,7 @@ VSC_MONITORINGDB = {
 
 VSC_LDAP_EXTENSION = {
     'name': 'vsc-ldap-extension',
-    'version': '0.92',
+    'version': '0.93',
     'author': [ag],
     'maintainer': [ag],
     'packages': ['vsc.ldap'],
@@ -253,7 +253,7 @@ VSC_LDAP_EXTENSION = {
 
 VSC_POSTGRES = {
     'name': 'vsc-postgres',
-    'version': '0.93',
+    'version': '0.94',
     'author': [wdp],
     'maintainer': [],
     'namespace_packages': ['vsc'],
@@ -270,7 +270,7 @@ VSC_POSTGRES = {
 
 VSC_UTILS = {
     'name': 'vsc-utils',
-    'version': '0.92',
+    'version': '0.93',
     'author': [ag, sdw],
     'maintainer': [ag, sdw],
     'install_requires': ['lockfile >= 0.9.1'],
