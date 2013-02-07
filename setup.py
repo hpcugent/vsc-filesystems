@@ -222,7 +222,7 @@ VSC_GPFS = {
 
 VSC_MONITORINGDB = {
     'name': 'vsc-monitoringdb',
-    'version': '0.95',
+    'version': '0.96',
     'author': [wdp],
     'maintainer': [wdp],
     'packages': ['vsc.monitoringdb'],
@@ -230,6 +230,7 @@ VSC_MONITORINGDB = {
     'scripts': [],
     'install_requires': [
         'vsc-base >= 0.90',
+        'vsc-core >= 0.90',
         'psycopg2 >= 2.0',
         'MySQL-python',
         ],
@@ -252,7 +253,7 @@ VSC_LDAP_EXTENSION = {
 
 VSC_POSTGRES = {
     'name': 'vsc-postgres',
-    'version': '0.92',
+    'version': '0.93',
     'author': [wdp],
     'maintainer': [],
     'namespace_packages': ['vsc'],
@@ -263,6 +264,7 @@ VSC_POSTGRES = {
     'scripts': [],
     'install_requires': [
         'vsc-base >= 0.90',
+        'vsc-core >= 0.90',
         ],
 }
 
