@@ -57,7 +57,7 @@ fi
 for package in $ALL_PACKAGES; do
 
   echo $package
-  python ./setup.py ${package} bdist_rpm
+  python ./setup.py bdist_rpm
   rpm_target=`ls dist/${package}*noarch.rpm`
   rpm_target_name=`basename ${rpm_target}`
 
