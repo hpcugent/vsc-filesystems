@@ -265,7 +265,6 @@ def action_target(target, setupfn=setup, extra_sdist=[]):
     x = parse_target(target)
 
     setupfn(**x)
-    cleanup()
 
 if __name__ == '__main__':
     # print all supported packages
