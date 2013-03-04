@@ -33,19 +33,25 @@ all_packages=vsc-filesystems
 edit=
 release=
 
+which rpmrebuild >& /dev/null
+if [ $? -gt 0 ]
+then
+    echo "Missing rpmrebuild"
+    exit 1
+fi
+
 while getopts er:p:h name
 do
-    case $name in
-	e) edit="-e";;
-	r) release="$OPTARG";;
-	p) all_packages="$OPTARG";;
-	h) printf "Usage: %s [-e] [-r RELEASE] [-p PACKAGE]" $0
-	    echo
-	    echo "  -e            Edit the generated spec file before rebuilding the RPM"
-	    echo "  -r [RELEASE]  Specify the RELEASE tag given to the RPM. Automagically adds .ug.noarch"
-	    echo "  -p [PACKAGE]  Specify a single PACKAGE to be built. Default builds all packages."
-	    exit 1;;
-    esac
+  case $name in
+    e) edit="-e";;
+    r) release="$OPTARG";;
+    h) printf "Usage: %s [-e] [-r RELEASE] [-p PACKAGE]" $0
+       echo
+       echo "  -e            Edit the generated spec file before rebuilding the RPM"
+       echo "  -r [RELEASE]  Specify the RELEASE tag given to the RPM. Automagically adds .ug.noarch"
+       echo "  -p [PACKAGE]  Specify a single PACKAGE to be built. Default builds all packages."
+       exit 1;;
+  esac
 done
 
 
