@@ -76,5 +76,6 @@ for package in $ALL_PACKAGES; do
              --change-spec-provides="sed -e 's/${package}/python-${package}/g'" \
              --change-spec-requires="sed -r 's/^Requires:(\s\s*)(${requirements})/Requires:\1python-\2/'" \
              --change-spec-preamble="sed -e 's/^\(Release:\s\s*\)\(.*\)\s*$/\1${release}.ug/'" \
+             --directory=./dist/
              ${edit} -n -p ${rpm_target}
 done
