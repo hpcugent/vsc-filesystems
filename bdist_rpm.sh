@@ -54,30 +54,33 @@ do
   esac
 done
 
-ALL_PACKAGES=$all_packages
 
-for package in $ALL_PACKAGES; do
-  echo "Building RPM for $package"
-  python ./setup.py  bdist_rpm
-  # get latest one (name-version syntax)
-  rpm_target=`ls -t dist/${package}-[0-9]*noarch.rpm | head -1`
-  rpm_target_name=`basename ${rpm_target}`
+package=$all_packages
+echo $package
+python ./setup.py bdist_rpm
+rpm_target=`ls dist/${package}*noarch.rpm`
+rpm_target_name=`basename ${rpm_target}`
 
+if ! [ -f "setup.cfg" ]
+then
+    echo "No setup.cfg. Refusing cowardly to continue."
+    exit 1
+fi
   # user specified requirements can be found in setup.cfg
-  requirements=`grep "requires" setup.cfg | cut -d" " -f3- | tr "," "\n" | grep -v "^python-" | tr "\n" "|" | sed -e 's/|$//'`
-  if [ -z "$requirements" ]; then
-    requirements="no-match-etc-etc-etc"
-  fi
+requirements=`grep "requires" setup.cfg | cut -d" " -f3- | tr "," "\n" | grep -vE "(^python-)|(-python$)" | tr "\n" "|" | sed -e 's/|$//'`
+if [ -z "$requirements" ]; then
+    echo "No requirements found. Refusing cowardly to continue."
+    exit 1
+fi
 
-  if [ -z "$release" ]; then
+if [ -z "$release" ]; then
     release="\\2"
-  fi
+fi
 
-  rpmrebuild --define "_rpmfilename %%{NAME}-%%{VERSION}-%%{RELEASE}.%%{ARCH}.rpm" \
-             --change-spec-preamble="sed -e 's/^Name:\(\s\s*\)\(.*\)/Name:\1python-\2/'" \
-             --change-spec-provides="sed -e 's/${package}/python-${package}/g'" \
-             --change-spec-requires="sed -r 's/^Requires:(\s\s*)(${requirements})/Requires:\1python-\2/'" \
-             --change-spec-preamble="sed -e 's/^\(Release:\s\s*\)\(.*\)\s*$/\1${release}.ug/'" \
-             ${edit} -n -p ${rpm_target}
-   echo "Finished building RPM for $package"
-done
+rpmrebuild --define "_rpmfilename %%{NAME}-%%{VERSION}-%%{RELEASE}.%%{ARCH}.rpm" \
+    --change-spec-preamble="sed -e 's/^Name:\(\s\s*\)\(.*\)/Name:\1python-\2/'" \
+    --change-spec-provides="sed -e 's/${package}/python-${package}/g'" \
+    --change-spec-requires="sed -r 's/^Requires:(\s\s*)(${requirements})/Requires:\1python-\2/'" \
+    --change-spec-preamble="sed -e 's/^\(Release:\s\s*\)\(.*\)\s*$/\1${release}.ug/'" \
+    --directory=./dist/ \
+    ${edit} -n -p ${rpm_target}
