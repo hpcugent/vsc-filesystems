@@ -210,7 +210,7 @@ class GpfsOperations(PosixOperations):
                     fields[i:i + 1] = map(lambda fs: (len(fs), fs), fixed_lines)
 
         # assemble result
-        listm = Monoid([], lambda x: x, lambda xs, ys: xs + ys)  # not exactly the fastest mappend for lists ...
+        listm = Monoid([], lambda xs, ys: xs + ys)  # not exactly the fastest mappend for lists ...
         res = MonoidDict(listm)
         try:
             for index, name in enumerate(fields[0][1][6:]):
@@ -285,12 +285,12 @@ class GpfsOperations(PosixOperations):
         elif isinstance(devices, str):
             devices = [devices]
 
-        listm = Monoid([], lambda x: x, lambda xs, ys: xs + ys)  # not exactly the fastest mappend for lists ...
+        listm = Monoid([], lambda xs, ys: xs + ys)  # not exactly the fastest mappend for lists ...
         info = MonoidDict(listm)
         for device in devices:
             res = self._executeY('mmrepquota', ['-n', device], prefix=True)
             for (key, value) in res.items():
-                info[key] = value
+                info[key] = [value]
 
         datakeys = info.keys()
         datakeys.remove('filesystemName')
@@ -344,7 +344,7 @@ class GpfsOperations(PosixOperations):
 
         self.log.debug("Looking up filesets for devices %s" % (devices))
 
-        listm = Monoid([], lambda x: x, lambda xs, ys: xs + ys)
+        listm = Monoid([], lambda xs, ys: xs + ys)
         info = MonoidDict(listm)
         for device in devices:
             opts_ = copy.deepcopy(opts)
@@ -353,7 +353,7 @@ class GpfsOperations(PosixOperations):
         # for v3.5 filesystemName:filesetName:id:rootInode:status:path:parentId:created:inodes:dataInKB:comment:filesetMode:afmTarget:afmState:afmMode:afmFileLookupRefreshInterval:afmFileOpenRefreshInterval:afmDirLookupRefreshInterval:afmDirOpenRefreshInterval:afmAsyncDelay:reserved:afmExpirationTimeout:afmRPO:afmLastPSnapId:inodeSpace:isInodeSpaceOwner:maxInodes:allocInodes:inodeSpaceMask:afmShowHomeSnapshots:afmNumReadThreads:afmNumReadGWs:afmReadBufferSize:afmWriteBufferSize:afmReadSparseThreshold:afmParallelReadChunkSize:afmParallelReadThreshold:snapId:
             self.log.debug("list_filesets res keys = %s " % (res.keys()))
             for (key, value) in res.items():
-                info[key] = value
+                info[key] = [value]
 
         datakeys = info.keys()
         datakeys.remove('filesystemName')
