@@ -43,6 +43,7 @@ from vsc.gpfs.utils.exceptions import CriticalException
 from vsc.ldap.configuration import VscConfiguration
 from vsc.ldap.utils import LdapQuery
 from vsc.utils.availability import check_high_availabity_host
+from vsc.utils.generaloption import simple_option
 from vsc.utils.nagios import NagiosReporter, NagiosResult, NAGIOS_EXIT_OK, NAGIOS_EXIT_WARNING, NAGIOS_EXIT_CRITICAL
 from vsc.utils.timestamp_pid_lockfile import TimestampedPidLockfile, LockFileReadError
 
