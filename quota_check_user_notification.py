@@ -194,6 +194,8 @@ def main(argv):
 
     options = {
         'nagios': ('print out nagion information', None, 'store_true', False, 'n'),
+        'nagios_check_filename': ('filename of where the nagios check data is stored', str, 'store', NAGIOS_CHECK_FILENAME),
+        'nagios_check_interval_threshold': ('threshold of nagios checks timing out', None, 'store', NAGIOS_CHECK_INTERVAL_THRESHOLD),
         'ha': ('high-availability master IP address', None, 'store', None),
         'dry-run': ('do not make any updates whatsoever', None, 'store_true', False),
     }
