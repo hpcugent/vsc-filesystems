@@ -42,6 +42,7 @@ from vsc.gpfs.quota.report import GpfsQuotaMailReporter
 from vsc.gpfs.utils.exceptions import CriticalException
 from vsc.ldap.configuration import VscConfiguration
 from vsc.ldap.utils import LdapQuery
+from vsc.utils.availability import check_high_availabity_host
 from vsc.utils.nagios import NagiosReporter, NagiosResult, NAGIOS_EXIT_OK, NAGIOS_EXIT_WARNING, NAGIOS_EXIT_CRITICAL
 from vsc.utils.timestamp_pid_lockfile import TimestampedPidLockfile, LockFileReadError
 
@@ -64,11 +65,6 @@ fancylogger.logToFile(QUOTA_CHECK_LOG_FILE)
 fancylogger.logToScreen(False)
 fancylogger.setLogLevelInfo()
 log = fancylogger.getLogger('gpfs_quota_checker')
-
-opt_parser = OptionParser()
-opt_parser.add_option('', '--dry-run', dest='dry_run', default=False, action='store_true', help='perform a dry run, not side effects.')
-opt_parser.add_option('-d', '--debug', dest='debug', default=False, action='store_true', help='set the log level to debug.')
-opt_parser.add_option('-n', '--nagios', dest='nagios', default=False, action='store_true', help='print out nagios information')
 
 
 def get_mmrepquota_maps(user_id_map):
@@ -195,9 +191,12 @@ def map_uids_to_names():
 
 def main(argv):
 
-    (opts, args) = opt_parser.parse_args(argv)
-    if opts.debug:
-        fancylogger.setLogLevelDebug()
+    options = {
+        'nagios': ('print out nagion information', None, 'store_true', False, 'n'),
+        'ha': ('high-availability master IP address', None, 'store', None),
+        'dry-run': ('do not make any updates whatsoever', None, 'store_true', False),
+    }
+    opts = simple_option(options)
 
     log.info('started GPFS quota check run.')
 
@@ -206,6 +205,12 @@ def main(argv):
     if opts.nagios:
         nagios_reporter.report_and_exit()
         sys.exit(0)  # not reached
+
+    if not check_high_availabity_host(opts.options.ha):
+        logger.warning("Not running on the target host in the HA setup. Stopping.")
+        nagios_reporter(NAGIOS_EXIT_WARNING,
+                        NagiosResult("Not running on the HA master."))
+        sys.exit(NAGIOS_EXIT_WARNING)
 
     lockfile = TimestampedPidLockfile(QUOTA_CHECK_LOCK_FILE)
     try:
