@@ -28,13 +28,9 @@ import sys
 import time
 
 ## FIXME: deprecated in >= 2.7
-from optparse import OptionParser
 from lockfile import LockFailed
 
-from vsc import fancylogger
-
 from vsc.exceptions import VscError
-
 from vsc.filesystem.gpfs import GpfsOperations
 from vsc.gpfs.quota.entities import QuotaUser, QuotaFileset
 from vsc.gpfs.quota.fs_store import UserFsQuotaStorage, VoFsQuotaStorage
@@ -42,7 +38,8 @@ from vsc.gpfs.quota.report import GpfsQuotaMailReporter
 from vsc.gpfs.utils.exceptions import CriticalException
 from vsc.ldap.configuration import VscConfiguration
 from vsc.ldap.utils import LdapQuery
-from vsc.utils.availability import check_high_availabity_host
+from vsc.utils import fancylogger
+from vsc.utils.availability import proceed_on_ha_service
 from vsc.utils.generaloption import simple_option
 from vsc.utils.nagios import NagiosReporter, NagiosResult, NAGIOS_EXIT_OK, NAGIOS_EXIT_WARNING, NAGIOS_EXIT_CRITICAL
 from vsc.utils.timestamp_pid_lockfile import TimestampedPidLockfile, LockFileReadError
@@ -58,14 +55,12 @@ QUOTA_CHECK_LOCK_FILE = '/var/run/gpfs_quota_checker_tpid.lock'
 
 VSC_INSTALL_USER_NAME = 'vsc40003'
 
-#debug = True
-debug = False
 
 # log setup
 fancylogger.logToFile(QUOTA_CHECK_LOG_FILE)
 fancylogger.logToScreen(False)
 fancylogger.setLogLevelInfo()
-log = fancylogger.getLogger('gpfs_quota_checker')
+logger = fancylogger.getLogger('gpfs_quota_checker')
 
 
 def get_mmrepquota_maps(user_id_map):
@@ -81,14 +76,14 @@ def get_mmrepquota_maps(user_id_map):
     fs_map = {}
     gpfs_operations = GpfsOperations()
     devices = gpfs_operations.list_filesystems().keys()
-    log.debug("Found the following GPFS filesystems: %s" % (devices))
+    logger.debug("Found the following GPFS filesystems: %s" % (devices))
 
     filesets = gpfs_operations.list_filesets()
-    log.debug("Found the following GPFS filesets: %s" % (filesets))
+    logger.debug("Found the following GPFS filesets: %s" % (filesets))
 
     quota_map = gpfs_operations.list_quota(devices)  # we provide the device list so home gets included
 
-    #log.info("Quota map = %s " % (quota_map))
+    #logger.info("Quota map = %s " % (quota_map))
 
     for device in devices:
 
@@ -96,7 +91,7 @@ def get_mmrepquota_maps(user_id_map):
         mmfs_user_quota_info = quota_map[device]['USR'].values()
 
         if mmfs_user_quota_info is None:
-            log.warning("Could not obtain user quota information for device %s" % (device))
+            logger.warning("Could not obtain user quota information for device %s" % (device))
         else:
             for quota in mmfs_user_quota_info:
                 # we get back the user IDs, not user names, since the GPFS tools
@@ -113,15 +108,15 @@ def get_mmrepquota_maps(user_id_map):
                     try:
                         user_name = pwd.getpwuid(user_id)[0]  # backup
                     except Exception, _:
-                        log.debug("Cannot obtain a user ID for uid %s" % (user_id))
+                        logger.debug("Cannot obtain a user ID for uid %s" % (user_id))
                 if user_name and user_name.startswith("vsc"):
                     _update_quota(user_map, user_name, device, quota, QuotaUser)
 
-        log.debug("Updating filesets for device %s" % (device))
+        logger.debug("Updating filesets for device %s" % (device))
         mmfs_fileset_quota_info = quota_map[device]['FILESET'].values()  # on the current Tier-2 storage, one fileset per VO
 
         if mmfs_fileset_quota_info is None:
-            log.warning("Could not obtain fileset quota information for device %s" % (device))
+            logger.warning("Could not obtain fileset quota information for device %s" % (device))
         else:
             device_filesets = filesets.get(device, [])
             for quota in mmfs_fileset_quota_info:
@@ -201,26 +196,26 @@ def main(argv):
     }
     opts = simple_option(options)
 
-    log.info('started GPFS quota check run.')
+    logger.info('started GPFS quota check run.')
 
     nagios_reporter = NagiosReporter(NAGIOS_HEADER, NAGIOS_CHECK_FILENAME, NAGIOS_CHECK_INTERVAL_THRESHOLD)
 
-    if opts.nagios:
+    if opts.options.agios:
         nagios_reporter.report_and_exit()
         sys.exit(0)  # not reached
 
-    if not check_high_availabity_host(opts.options.ha):
+    if not proceed_on_ha_service(opts.options.ha):
         logger.warning("Not running on the target host in the HA setup. Stopping.")
-        nagios_reporter(NAGIOS_EXIT_WARNING,
+        nagios_reporter.cache(NAGIOS_EXIT_WARNING,
                         NagiosResult("Not running on the HA master."))
         sys.exit(NAGIOS_EXIT_WARNING)
 
     lockfile = TimestampedPidLockfile(QUOTA_CHECK_LOCK_FILE)
     try:
-        if not opts.dry_run:
+        if not opts.options.dry_run:
             lockfile.acquire()
     except (LockFileReadError, LockFailed), err:
-        log.critical('Cannot obtain lock, bailing %s' % (err))
+        logger.critical('Cannot obtain lock, bailing %s' % (err))
         nagios_reporter.cache(NAGIOS_EXIT_CRITICAL, "CRITICAL quota check script failed to obtain lock")
         lockfile.release()
         sys.exit(2)
@@ -236,12 +231,12 @@ def main(argv):
 
         # figure out which users are crossing their softlimits
         ex_users = filter(lambda u: u.exceeds(), mm_rep_quota_map_users.values())
-        log.warning("found %s users who are exceeding their quota: %s" % (len(ex_users), [u.user_id for u in ex_users]))
+        logger.warning("found %s users who are exceeding their quota: %s" % (len(ex_users), [u.user_id for u in ex_users]))
 
         # figure out which VO's are exceeding their softlimits
         # currently, we're not using this, VO's should have plenty of space
         ex_vos = filter(lambda v: v.exceeds(), mm_rep_quota_map_vos.values())
-        log.warning("found %s VOs who are exceeding their quota: %s" % (len(ex_vos), [v.fileset_id for v in ex_vos]))
+        logger.warning("found %s VOs who are exceeding their quota: %s" % (len(ex_vos), [v.fileset_id for v in ex_vos]))
 
         # force mounting the home directories for the ghent users
         # FIXME: this works for the current setup, might be an issue if we change things.
@@ -258,22 +253,22 @@ def main(argv):
         u_storage = UserFsQuotaStorage()
         for user in mm_rep_quota_map_users.values():
             try:
-                if not opts.dry_run:
+                if not opts.options.dry_run:
                     u_storage.store_quota(user)
             except VscError, err:
-                log.error("Could not store data for user %s" % (user.user_id))
+                logger.error("Could not store data for user %s" % (user.user_id))
                 pass  # we're just moving on, trying the rest of the users. The error will have been logged anyway.
 
         v_storage = VoFsQuotaStorage()
         for vo in mm_rep_quota_map_vos.values():
             try:
-                if not opts.dry_run:
+                if not opts.options.dry_run:
                     v_storage.store_quota(vo)
             except VscError, err:
                 log.error("Could not store vo data for vo %s" % (vo.fileset_id))
                 pass  # we're just moving on, trying the rest of the VOs. The error will have been logged anyway.
 
-        if not opts.dry_run:
+        if not opts.options.dry_run:
             # Report to the users who are exceeding their quota
             LdapQuery(VscConfiguration())  # Initialise here, the mailreporter will use it.
             reporter = GpfsQuotaMailReporter(QUOTA_CHECK_REMINDER_CACHE_FILENAME)
@@ -284,14 +279,14 @@ def main(argv):
 
     except CriticalException, err:
         log.critical("critical exception caught: %s" % (err.message))
-        if not opts.dry_run:
+        if not opts.options.dry_run:
             nagios_reporter.cache(NAGIOS_EXIT_CRITICAL, NagiosResult("CRITICAL script failed - %s" % (err.message)))
-        if not opts.dry_run:
+        if not opts.options.dry_run:
             lockfile.release()
         sys.exit(1)
     except Exception, err:
         log.critical("exception caught: %s" % (err))
-        if not opts.dry_run:
+        if not opts.options.dry_run:
             lockfile.release()
         sys.exit(1)
 
@@ -299,7 +294,7 @@ def main(argv):
                                                             ex_vos,
                                                             user_count=len(mm_rep_quota_map_users.values()),
                                                             vo_count=len(mm_rep_quota_map_vos.values()))
-    if not opts.dry_run:
+    if not opts.options.dry_run:
         nagios_reporter.cache(nagios_exit_code, "%s" % (nagios_result,))
         lockfile.release()
     else:
