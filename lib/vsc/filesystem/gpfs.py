@@ -290,7 +290,7 @@ class GpfsOperations(PosixOperations):
         for device in devices:
             res = self._executeY('mmrepquota', ['-n', device], prefix=True)
             for (key, value) in res.items():
-                info[key] = [value]
+                info[key] = value
 
         datakeys = info.keys()
         datakeys.remove('filesystemName')
@@ -353,7 +353,7 @@ class GpfsOperations(PosixOperations):
         # for v3.5 filesystemName:filesetName:id:rootInode:status:path:parentId:created:inodes:dataInKB:comment:filesetMode:afmTarget:afmState:afmMode:afmFileLookupRefreshInterval:afmFileOpenRefreshInterval:afmDirLookupRefreshInterval:afmDirOpenRefreshInterval:afmAsyncDelay:reserved:afmExpirationTimeout:afmRPO:afmLastPSnapId:inodeSpace:isInodeSpaceOwner:maxInodes:allocInodes:inodeSpaceMask:afmShowHomeSnapshots:afmNumReadThreads:afmNumReadGWs:afmReadBufferSize:afmWriteBufferSize:afmReadSparseThreshold:afmParallelReadChunkSize:afmParallelReadThreshold:snapId:
             self.log.debug("list_filesets res keys = %s " % (res.keys()))
             for (key, value) in res.items():
-                info[key] = [value]
+                info[key] = value
 
         datakeys = info.keys()
         datakeys.remove('filesystemName')
