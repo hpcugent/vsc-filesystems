@@ -19,8 +19,8 @@ vsc-filesystems base distribution setup.py
 @author: Stijn De Weirdt (Ghent University)
 @author: Andy Georges (Ghent University)
 """
-import shared_setup
-from shared_setup import ag, sdw
+import vsc.install.shared_setup as shared_setup
+from vsc.install.shared_setup import ag, sdw
 
 
 def remove_bdist_rpm_source_file():
