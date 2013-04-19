@@ -686,14 +686,14 @@ class GpfsOperations(PosixOperations):
         self._set_grace(obj, 'group', grace)
 
     def set_fileset_grace(self, obj, grace=0):
-        """Set the grace period for user data.
+        """Set the grace period for fileset data.
 
         @type obj: string representing the path where the GPFS was mounted or the device itself
         @type grace: grace period expressed in seconds
         """
         self._set_grace(obj, 'fileset', grace)
 
-    def _set_grace(self, obj, typ, grace=0):
+    def _set_grace(self, obj, typ, grace=0, id=0):
         """Set the grace period for a given type of objects in GPFS.
 
         @type obj: the path or the GPFS device
@@ -712,8 +712,8 @@ class GpfsOperations(PosixOperations):
                    }
 
         opts = []
-        opts += ["-%s" % typ2opt[typ]]
-        opts += ["-t", "%sseconds" % int(grace)]
+        opts += ["-%s %s" % (typ2opt[typ], id)]
+        opts += ["-t", "%s" % int(grace)]
 
         opts.append(obj)
 
