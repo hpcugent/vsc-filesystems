@@ -20,12 +20,12 @@ import os
 import sys
 import time
 
-from vsc.filesystems.gpfs import GpfsOperations
+from vsc.filesystem.gpfs import GpfsOperations
 from vsc.utils import fancylogger
 from vsc.utils.availability import proceed_on_ha_service
 from vsc.utils.generaloption import simple_option
 from vsc.utils.lock import lock_or_bork, release_or_bork
-from vsc.utils.nagios import NagiosReporter, NagiosResult, NAGIOS_EXIT_OK, NAGIOS_EXIT_WARNING
+from vsc.utils.nagios import NagiosReporter, NagiosResult, NAGIOS_EXIT_OK, NAGIOS_EXIT_WARNING, NAGIOS_EXIT_CRITICAL
 from vsc.utils.timestamp_pid_lockfile import TimestampedPidLockfile
 
 #Constants
@@ -69,10 +69,10 @@ def main():
                         NagiosResult("Not running on the HA master."))
         sys.exit(NAGIOS_EXIT_WARNING)
 
-    lockfile = TimestampedPidLockfile(DSHOWQ_LOCK_FILE)
+    lockfile = TimestampedPidLockfile(QUOTA_LOG_LOCK_FILE)
     lock_or_bork(lockfile, nagios_reporter)
 
-    logger.info("starting dshowq run")
+    logger.info("starting quota_log run")
 
     filesystem_error = 0
     filesystem_ok = 0
@@ -85,7 +85,7 @@ def main():
         for key in quota:
             try:
                 filename = "gpfs_quota_%s_%s.gz" % (time.strftime("%Y%m%d-%H:%M"), key)
-                path = os.path.join(opt.options.location, filename)
+                path = os.path.join(opts.options.location, filename)
                 zipfile = gzip.open(path, 'wb', 9)  # Compress to the max
                 zipfile.write(json.dumps(quota[key]))
                 zipfile.close()
@@ -98,19 +98,21 @@ def main():
         error = True
 
 
-    logger.info("Finished dshowq")
+    logger.info("Finished quota_log")
 
     #FIXME: this still looks fugly
     bork_result = NagiosResult("lock release failed",
-                               fs=filesystems_ok,
-                               fs_error=filesystems_error)
+                               fs=filesystem_ok,
+                               fs_error=filesystem_error)
     release_or_bork(lockfile, nagios_reporter, bork_result)
 
-    if error:
+    logger.info("Released lock")
+
+    if not error:
         nagios_reporter.cache(NAGIOS_EXIT_OK,
                               NagiosResult("quota logged",
-                                           fs=filesystems_ok,
-                                           fs_error=filesystems_error))
+                                           fs=filesystem_ok,
+                                           fs_error=filesystem_error))
     else:
         nagios_reporter.cache(NAGIOS_EXIT_CRITICAL,
                               NagiosResult("quota not obtained",
