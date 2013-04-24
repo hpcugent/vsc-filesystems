@@ -22,6 +22,7 @@ Created Mar 8, 2012
 
 # author: Andy Georges
 
+import copy
 import os
 import pwd
 import sys
@@ -41,6 +42,7 @@ from vsc.ldap.utils import LdapQuery
 from vsc.utils import fancylogger
 from vsc.utils.availability import proceed_on_ha_service
 from vsc.utils.generaloption import simple_option
+from vsc.utils.lock import lock_or_bork, release_or_bork
 from vsc.utils.nagios import NagiosReporter, NagiosResult, NAGIOS_EXIT_OK, NAGIOS_EXIT_WARNING, NAGIOS_EXIT_CRITICAL
 from vsc.utils.timestamp_pid_lockfile import TimestampedPidLockfile, LockFileReadError
 
@@ -173,7 +175,7 @@ def nagios_analyse_data(ex_users, ex_vos, user_count, vo_count):
     else:
         pU = float(ex_u) / user_count
         pV = float(ex_v) / vo_count
-        return (NAGIOS_EXIT_WARNING, NagiosResult("quota exceeded", ex_u=ex_u, ex_v=ex_v, pU=pU, pV=pV))
+        return (NAGIOS_EXIT_OK, NagiosResult("Quota exceeded", ex_u=ex_u, ex_v=ex_v, pU=pU, pV=pV))
 
 
 def map_uids_to_names():
@@ -185,12 +187,12 @@ def map_uids_to_names():
     return d
 
 
-def main(argv):
+def main():
 
     options = {
-        'nagios': ('print out nagion information', None, 'store_true', False, 'n'),
-        'nagios_check_filename': ('filename of where the nagios check data is stored', str, 'store', NAGIOS_CHECK_FILENAME),
-        'nagios_check_interval_threshold': ('threshold of nagios checks timing out', None, 'store', NAGIOS_CHECK_INTERVAL_THRESHOLD),
+        'nagios': ('print out nagios information', None, 'store_true', False, 'n'),
+        'nagios-check-filename': ('filename of where the nagios check data is stored', str, 'store', NAGIOS_CHECK_FILENAME),
+        'nagios-check-interval-threshold': ('threshold of nagios checks timing out', None, 'store', NAGIOS_CHECK_INTERVAL_THRESHOLD),
         'ha': ('high-availability master IP address', None, 'store', None),
         'dry-run': ('do not make any updates whatsoever', None, 'store_true', False),
     }
@@ -198,7 +200,9 @@ def main(argv):
 
     logger.info('started GPFS quota check run.')
 
-    nagios_reporter = NagiosReporter(NAGIOS_HEADER, NAGIOS_CHECK_FILENAME, NAGIOS_CHECK_INTERVAL_THRESHOLD)
+    nagios_reporter = NagiosReporter(NAGIOS_HEADER,
+                                     opts.options.nagios_check_filename,
+                                     opts.options.nagios_check_interval_threshold)
 
     if opts.options.agios:
         nagios_reporter.report_and_exit()
@@ -211,14 +215,7 @@ def main(argv):
         sys.exit(NAGIOS_EXIT_WARNING)
 
     lockfile = TimestampedPidLockfile(QUOTA_CHECK_LOCK_FILE)
-    try:
-        if not opts.options.dry_run:
-            lockfile.acquire()
-    except (LockFileReadError, LockFailed), err:
-        logger.critical('Cannot obtain lock, bailing %s' % (err))
-        nagios_reporter.cache(NAGIOS_EXIT_CRITICAL, "CRITICAL quota check script failed to obtain lock")
-        lockfile.release()
-        sys.exit(2)
+    lock_or_bork(lockfile, nagios_reporter)
 
     try:
         user_id_map = map_uids_to_names()
@@ -294,11 +291,13 @@ def main(argv):
                                                             ex_vos,
                                                             user_count=len(mm_rep_quota_map_users.values()),
                                                             vo_count=len(mm_rep_quota_map_vos.values()))
-    if not opts.options.dry_run:
-        nagios_reporter.cache(nagios_exit_code, "%s" % (nagios_result,))
-        lockfile.release()
-    else:
-        log.info("Nagios exit: (%s, %s)" % (nagios_exit_code, nagios_result))
+
+    bork_result = copy.deepcopy(nagios_result)
+    bork_result.message = "lock release failed"
+    release_or_bork(lockfile, nagios_reporter, bork_result)
+
+    nagios_reporter.cache(nagios_exit_code, "%s" % (nagios_result,))
+    log.info("Nagios exit: (%s, %s)" % (nagios_exit_code, nagios_result))
 
 if __name__ == '__main__':
-    main(sys.argv)
+    main()
