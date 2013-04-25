@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 ##
 #
-# Copyright 2009-2012 Ghent University
+# Copyright 2013 Ghent University
 #
 # This file is part of the tools originally by the HPC team of
 # Ghent University (http://ugent.be/hpc).
@@ -102,6 +102,7 @@ def main():
                 logger.exception("Failed storing quota information for FS %s" % (key))
                 filesystem_error += 1
     except Exception, err:
+        logger.exception("Failure obtaining GPFS quota")
         error = True
 
     logger.info("Finished quota_log")
