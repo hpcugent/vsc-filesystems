@@ -13,7 +13,6 @@ in a zip file, named by date and filesystem.
 
 @author Andy Georges
 """
-
 import gzip
 import json
 import os
@@ -33,7 +32,7 @@ NAGIOS_CHECK_FILENAME = '/var/log/pickles/quota_log.nagios.pickle'
 NAGIOS_HEADER = 'quota_log'
 NAGIOS_CHECK_INTERVAL_THRESHOLD = (6 * 60 + 5) * 60   # 365 minutes -- little over 6 hours.
 
-QUOTA_LOG_LOCK_FILE = '/var/run/dshowq_tpid.lock'
+QUOTA_LOG_LOCK_FILE = '/var/run/quota_log.tpid.lock'
 QUOTA_LOG_ZIP_PATH = '/var/log/quota/zips'
 
 logger = fancylogger.getLogger(__name__)
@@ -42,14 +41,20 @@ fancylogger.setLogLevelInfo()
 
 
 def main():
-    # Collect all info
+    """The main."""
 
     # Note: debug option is provided by generaloption
     # Note: other settings, e.g., ofr each cluster will be obtained from the configuration file
     options = {
-        'nagios': ('print out nagion information', None, 'store_true', False, 'n'),
-        'nagios_check_filename': ('filename of where the nagios check data is stored', str, 'store', NAGIOS_CHECK_FILENAME),
-        'nagios_check_interval_threshold': ('threshold of nagios checks timing out', None, 'store', NAGIOS_CHECK_INTERVAL_THRESHOLD),
+        'nagios': ('print out nagios information', None, 'store_true', False, 'n'),
+        'nagios-check-filename': ('filename of where the nagios check data is stored',
+                                  str,
+                                  'store',
+                                  NAGIOS_CHECK_FILENAME),
+        'nagios-check-interval-threshold': ('threshold of nagios checks timing out',
+                                            None,
+                                            'store',
+                                            NAGIOS_CHECK_INTERVAL_THRESHOLD),
         'location': ('path to store the gzipped files', None, 'store', QUOTA_LOG_ZIP_PATH),
         'ha': ('high-availability master IP address', None, 'store', None),
         'dry-run': ('do not make any updates whatsoever', None, 'store_true', False),
@@ -57,7 +62,9 @@ def main():
 
     opts = simple_option(options)
 
-    nagios_reporter = NagiosReporter(NAGIOS_HEADER, NAGIOS_CHECK_FILENAME, NAGIOS_CHECK_INTERVAL_THRESHOLD)
+    nagios_reporter = NagiosReporter(NAGIOS_HEADER,
+                                     opts.options.nagios_check_filename,
+                                     opts.options.nagios_check_interval_threshold)
     if opts.options.nagios:
         logger.debug("Producing Nagios report and exiting.")
         nagios_reporter.report_and_exit()
@@ -66,7 +73,7 @@ def main():
     if not proceed_on_ha_service(opts.options.ha):
         logger.warning("Not running on the target host in the HA setup. Stopping.")
         nagios_reporter.cache(NAGIOS_EXIT_WARNING,
-                        NagiosResult("Not running on the HA master."))
+                              NagiosResult("Not running on the HA master."))
         sys.exit(NAGIOS_EXIT_WARNING)
 
     lockfile = TimestampedPidLockfile(QUOTA_LOG_LOCK_FILE)
@@ -97,10 +104,8 @@ def main():
     except Exception, err:
         error = True
 
-
     logger.info("Finished quota_log")
 
-    #FIXME: this still looks fugly
     bork_result = NagiosResult("lock release failed",
                                fs=filesystem_ok,
                                fs_error=filesystem_error)
