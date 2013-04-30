@@ -400,7 +400,7 @@ class PosixOperations(object):
                   os.path.join(home_dir, '.bash_profile')]:
             self.log.info("Changing ownership of %s to %s:%s" % (f, user_id, group_id))
             try:
-                self.chown(f, user_id, group_id)
+                self.chown(user_id, group_id, f)
             except OSError, _:
                 self.log.raiseException("Cannot change ownership of file %s to %s:%s" %
                                         (f, user_id, group_id), PosixOperationError)
