@@ -26,7 +26,7 @@ import os
 import sys
 import subprocess
 
-from vsc import fancylogger
+from vsc.utils import fancylogger
 from vsc.utils.patterns import Singleton
 
 OS_LINUX_MOUNTS = '/proc/mounts'
