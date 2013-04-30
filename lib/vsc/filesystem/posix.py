@@ -286,7 +286,9 @@ class PosixOperations(object):
 
         if os.path.exists(target):
             if os.path.islink(target):
-                if force:
+                if self.dry_run:
+                    self.log.info("Target is a symlink. Dry run, so not removing anything")
+                elif force:
                     self.log.warning("Target %s is a symlink, removing" % (target))
                     target_ = os.realpath(target)
                     os.unlink(target)
@@ -299,7 +301,10 @@ class PosixOperations(object):
         if self.exists(obj):
             if not os.path.realpath(target) == os.path.realpath(obj):
                 try:
-                    os.unlink(obj)
+                    if self.dry_run:
+                        self.log.info("Unlinking existing symlink. Dry-run so not really doing anything.")
+                    else:
+                        os.unlink(obj)
                 except OSError, _:
                     self.log.raiseException("Cannot unlink existing symlink from %s to %s" % (obj, target),
                                             PosixOperationError)
@@ -307,6 +312,8 @@ class PosixOperations(object):
                 self.log.info("Symlink already exists from %s to %s" % (obj, target))
                 return  # Nothing to do, symlink already exists
         try:
+            if self.dry_run:
+                self.log.info("Linking %s to %s. Dry-run, so not really doing anything" % (obj, target))
             os.symlink(target, obj)
         except OSError, _:
             self.log.raiseException("Cannot create symlink from %s to %s" % (obj, target), PosixOperationError)
@@ -325,7 +332,10 @@ class PosixOperations(object):
         """
         obj = self._sanity_check(obj)
         try:
-            os.makedirs(obj)
+            if self.dry_run:
+                self.log.info("Making directory %s. Dry-run, so not really doing anything." % (obj))
+            else:
+                os.makedirs(obj)
         except OSError, err:
             if err.errno == errno.EEXIST:
                 pass
@@ -359,19 +369,25 @@ class PosixOperations(object):
 
         self.log.info("Placing %d ssh public keys in the authorized keys file." % (len(ssh_public_keys)))
         authorized_keys = os.path.join(home_dir, '.ssh', 'authorized_keys')
-        fp = open(authorized_keys, 'w')
-        for key in ssh_public_keys:
-            fp.write(key + "\n")
-        fp.close()
+        if self.dry_run:
+            self.log.info("Writing ssh keys. Dry-run, so not really doing anything.")
+        else:
+            fp = open(authorized_keys, 'w')
+            for key in ssh_public_keys:
+                fp.write(key + "\n")
+            fp.close()
         self.chmod(0644, authorized_keys)
         self.chmod(0700, ssh_path)
 
         # bash
-        self.log.info('Creating .bashrc and .bash_profile')
-        open(os.path.join(home_dir, '.bashrc'), 'w').close()
-        fp = open(os.path.join(home_dir, '.bash_profile'), 'w')
-        fp.write('if [ -f ~/.bashrc ]; then\n . ~/.bashrc\nfi\n')
-        fp.close()
+        if self.dry_run:
+            self.log.info("Writing .bashrc. Dry-run, so not really doing anything.")
+        else:
+            self.log.info('Creating .bashrc and .bash_profile')
+            open(os.path.join(home_dir, '.bashrc'), 'w').close()
+            fp = open(os.path.join(home_dir, '.bash_profile'), 'w')
+            fp.write('if [ -f ~/.bashrc ]; then\n . ~/.bashrc\nfi\n')
+            fp.close()
 
         for f in [home_dir,
                   os.path.join(home_dir, '.ssh'),
@@ -380,7 +396,7 @@ class PosixOperations(object):
                   os.path.join(home_dir, '.bash_profile')]:
             self.log.info("Changing ownership of %s to %s:%s" % (f, user_id, group_id))
             try:
-                os.chown(f, user_id, group_id)
+                self.chown(f, user_id, group_id)
             except OSError, _:
                 self.log.raiseException("Cannot change ownership of file %s to %s:%s" %
                                         (f, user_id, group_id), PosixOperationError)
@@ -405,7 +421,10 @@ class PosixOperations(object):
 
         self.log.info("Changing ownership of %s to %s:%s" % (obj, owner, group))
         try:
-            os.chown(obj, owner, group)
+            if self.dry_run:
+                self.log.info("Chown on %s to %s:%s. Dry-run, so not actually changing this ownership" % (obj, owner, group))
+            else:
+                os.chown(obj, owner, group)
         except OSError, _:
             self.log.raiseException("Cannot change ownership of object %s to %s:%s" % (obj, owner, group),
                                     PosixOperationError)
@@ -421,7 +440,10 @@ class PosixOperations(object):
         self.log.info("Changing access permission of %s to %o" % (obj, permissions))
 
         try:
-            os.chmod(obj, permissions)
+            if self.dry_run:
+                self.log.info("Chmod on %s to %s. Dry-run, so not actually changing access permissions" % (obj, permissions))
+            else:
+                os.chmod(obj, permissions)
         except OSError, _:
             self.log.raiseException("Could not change the permissions on object %s to %o" % (obj, permissions),
                                     PosixOperationError)
