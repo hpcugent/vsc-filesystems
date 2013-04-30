@@ -462,6 +462,16 @@ class PosixOperations(object):
         obj = self._sanity_check(obj)
         # if backup, take backup
         # if real, remove
+        if self.dry_run:
+            self.log.info("Removing %s. Dry-run so not actually doing anything" % (obj))
+        else:
+            if os.path.isdir(obj):
+                try:
+                    os.rmdir(obj)
+                except OSError, err:
+                    self.log.exception("Cannot remove directory %s" % (obj))
+            else:
+                os.unlink(obj)
 
     def rename_obj(self, obj=None):
         """Rename obj"""
