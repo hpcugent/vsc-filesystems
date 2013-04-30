@@ -132,21 +132,21 @@ class PosixOperations(object):
                 return
 
         # check if filesystem matches current class
-        fs = None
+        filesystem = None
         pts = obj.split(os.path.sep)  # used to determine maximum number of steps to check
         for x in range(len(pts)):
             fp = os.path.sep.join(pts[::-1][x:][::-1])
-            if fs is None and self._exists(fp):
+            if filesystem is None and self._exists(fp):
                 tmpfs = self._what_filesystem(fp)
                 if tmpfs is None:
                     continue
 
                 if tmpfs[0] in self.supportedfilesystems:
-                    fs = tmpfs[0]
+                    filesystem = tmpfs[0]
                 else:
                     self.log.raiseException("_sanity_check found filesystem %s for subpath %s of obj %s is not a supported filesystem (supported %s)" % (tmpfs[0], fp, obj, self.supportedfilesystems), PosixOperationError)
 
-        if fs is None:
+        if filesystem is None:
             self.log.raiseException("_sanity_check no valid filesystem found for obj %s" % obj, PosixOperationError)
 
         # try readlink
@@ -206,6 +206,7 @@ class PosixOperations(object):
         return self._what_filesystem(obj)
 
     def _what_filesystem(self, obj):
+        """Determine which filesystem a given obj belongs to."""
         if not self._exists(obj):  # obj is sanitised
             self.log.error("_whatFilesystem: obj %s does not exist" % obj)
             return
@@ -222,9 +223,11 @@ class PosixOperations(object):
         fss = [x for x in self.localfilesystems if x[self.localfilesystemnaming.index('id')] == fsid]
 
         if len(fss) == 0:
-            self.log.raiseException("No matching filesystem found for obj %s with id %s (localfilesystems: %s)" % (obj, fsid, self.localfilesystems), PosixOperationError)
+            self.log.raiseException("No matching filesystem found for obj %s with id %s (localfilesystems: %s)" %
+                                    (obj, fsid, self.localfilesystems), PosixOperationError)
         elif len(fss) > 1:
-            self.log.raiseException("More then one matching filesystem found for obj %s with id %s (matched localfilesystems: %s)" % (obj, fsid, fss), PosixOperationError)
+            self.log.raiseException("More than one matching filesystem found for obj %s with id %s (matched localfilesystems: %s)" %
+                                    (obj, fsid, fss), PosixOperationError)
         else:
             self.log.debug("Found filesystem for obj %s: %s" % (obj, fss[0]))
             return fss[0]
@@ -248,7 +251,8 @@ class PosixOperations(object):
 
         # do we need further parsing, eg of autofs types or remove pseudo filesystems ?
         if self.ignorefilesystems:
-            self.localfilesystems = [x for x in self.localfilesystems if not x[self.localfilesystemnaming.index('type')] in OS_LINUX_IGNORE_FILESYSTEMS]
+            self.localfilesystems = [x for x in self.localfilesystems
+                                     if not x[self.localfilesystemnaming.index('type')] in OS_LINUX_IGNORE_FILESYSTEMS]
 
     def _largest_existing_path(self, obj):
         """Given obj /a/b/c/d, check which subpath exists and will determine eg filesystem type of obj.
@@ -290,7 +294,7 @@ class PosixOperations(object):
                     self.log.info("Target is a symlink. Dry run, so not removing anything")
                 elif force:
                     self.log.warning("Target %s is a symlink, removing" % (target))
-                    target_ = os.realpath(target)
+                    target_ = os.path.realpath(target)
                     os.unlink(target)
                     target = self._sanity_check(target_)
         else:
@@ -449,6 +453,7 @@ class PosixOperations(object):
                                     PosixOperationError)
 
     def compare_files(self, target, obj=None):
+        """Compare obj and target."""
         target = self._sanity_check(target)
         obj = self._sanity_check(obj)
 
