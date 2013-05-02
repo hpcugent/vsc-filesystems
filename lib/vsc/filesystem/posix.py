@@ -200,6 +200,10 @@ class PosixOperations(object):
             self.log.error("_isbrokenlink: found broken link for %s" % obj)
         return res
 
+    def is_symlink(self, obj):
+        """Check if the obj is a symbolic link"""
+        return os.path.islink(obj)
+
     def what_filesystem(self, obj=None):
         """Based on obj, determine underlying filesystem as much as possible"""
         self.obj = self._sanity_check(obj)
@@ -318,7 +322,8 @@ class PosixOperations(object):
         try:
             if self.dry_run:
                 self.log.info("Linking %s to %s. Dry-run, so not really doing anything" % (obj, target))
-            os.symlink(target, obj)
+            else:
+                os.symlink(target, obj)
         except OSError, _:
             self.log.raiseException("Cannot create symlink from %s to %s" % (obj, target), PosixOperationError)
 
@@ -377,20 +382,25 @@ class PosixOperations(object):
             self.log.info("Writing ssh keys. Dry-run, so not really doing anything.")
         else:
             fp = open(authorized_keys, 'w')
-            for key in ssh_public_keys:
-                fp.write(key + "\n")
+            write("\n".join(ssh_public_keys + ['']))
             fp.close()
         self.chmod(0644, authorized_keys)
         self.chmod(0700, ssh_path)
 
         # bash
+        bashprofile_text = [
+            'if [ -f ~/.bashrc ]; then',
+            '    . ~/.bashrc',
+            'fi',
+            ]
         if self.dry_run:
-            self.log.info("Writing .bashrc. Dry-run, so not really doing anything.")
+            self.log.info("Writing .bashrc an .bash_profile. Dry-run, so not really doing anything.")
+            self.log.info(".bash_profile will contain: %s" % ("\n".join(bashprofile_text)))
         else:
             self.log.info('Creating .bashrc and .bash_profile')
             open(os.path.join(home_dir, '.bashrc'), 'w').close()
             fp = open(os.path.join(home_dir, '.bash_profile'), 'w')
-            fp.write('if [ -f ~/.bashrc ]; then\n . ~/.bashrc\nfi\n')
+            fp.write("\n".join(bashprofile_text + [''])
             fp.close()
 
         for f in [home_dir,
