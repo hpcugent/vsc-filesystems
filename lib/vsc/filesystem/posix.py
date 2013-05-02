@@ -397,11 +397,18 @@ class PosixOperations(object):
             self.log.info("Writing .bashrc an .bash_profile. Dry-run, so not really doing anything.")
             self.log.info(".bash_profile will contain: %s" % ("\n".join(bashprofile_text)))
         else:
-            self.log.info('Creating .bashrc and .bash_profile')
-            open(os.path.join(home_dir, '.bashrc'), 'w').close()
-            fp = open(os.path.join(home_dir, '.bash_profile'), 'w')
-            fp.write("\n".join(bashprofile_text + [''])
-            fp.close()
+            if os.path.exists(os.path.join(home_dir, '.bashrc')):
+                self.log.info(".bashrc already exists for user %s. Not overwriting." % (user_id))
+            else:
+                self.log.info('Creating .bashrc and .bash_profile')
+                open(os.path.join(home_dir, '.bashrc'), 'w').close()
+
+            if os.path.exists(os.path.join(home_dir, '.bash_profile')):
+                self.log.info(".bash_profile already exists for user %s. Not overwriting." % (user_id))
+            else:
+                fp = open(os.path.join(home_dir, '.bash_profile'), 'w')
+                fp.write("\n".join(bashprofile_text + [''])
+                fp.close()
 
         for f in [home_dir,
                   os.path.join(home_dir, '.ssh'),
