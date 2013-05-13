@@ -1,15 +1,13 @@
 #!/usr/bin/env python
 ##
 #
-# Copyright 2012 Ghent University
-# Copyright 2012 Andy Georges
+# Copyright 2012-2013 Ghent University
 #
 # This file is part of the tools originally by the HPC team of
 # Ghent University (http://ugent.be/hpc).
 #
-# This is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation v2.
+# All rights reserved.
+#
 """Script to check for quota transgressions and notify the offending users.
 
 - relies on mmrepquota to get a quick estimate of user quota
@@ -19,8 +17,6 @@ Created Mar 8, 2012
 
 @author Andy Georges
 """
-
-# author: Andy Georges
 
 import copy
 import os
@@ -44,7 +40,7 @@ from vsc.utils.availability import proceed_on_ha_service
 from vsc.utils.generaloption import simple_option
 from vsc.utils.lock import lock_or_bork, release_or_bork
 from vsc.utils.nagios import NagiosReporter, NagiosResult, NAGIOS_EXIT_OK, NAGIOS_EXIT_WARNING, NAGIOS_EXIT_CRITICAL
-from vsc.utils.timestamp_pid_lockfile import TimestampedPidLockfile, LockFileReadError
+from vsc.utils.timestamp_pid_lockfile import TimestampedPidLockfile
 
 ## Constants
 NAGIOS_CHECK_FILENAME = '/var/log/pickles/gpfs_quota_checker.nagios.pickle'
@@ -204,14 +200,14 @@ def main():
                                      opts.options.nagios_check_filename,
                                      opts.options.nagios_check_interval_threshold)
 
-    if opts.options.agios:
+    if opts.options.nagios:
         nagios_reporter.report_and_exit()
         sys.exit(0)  # not reached
 
     if not proceed_on_ha_service(opts.options.ha):
         logger.warning("Not running on the target host in the HA setup. Stopping.")
         nagios_reporter.cache(NAGIOS_EXIT_WARNING,
-                        NagiosResult("Not running on the HA master."))
+                              NagiosResult("Not running on the HA master."))
         sys.exit(NAGIOS_EXIT_WARNING)
 
     lockfile = TimestampedPidLockfile(QUOTA_CHECK_LOCK_FILE)
