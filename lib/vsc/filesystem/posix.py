@@ -362,7 +362,7 @@ class PosixOperations(object):
     def populate_home_dir(self, user_id, group_id, home_dir, ssh_public_keys):
         """Populate the home directory with the required files to allow the user to login.
 
-        - (re)generate the default key
+        - (re)generate the default key (not for now, this is done upon login if the file is MIA)
         - .ssh/authorized_keys (+default key)
         - .bashrc or whatever shell we support
 
@@ -378,9 +378,17 @@ class PosixOperations(object):
 
         self.log.info("Placing %d ssh public keys in the authorized keys file." % (len(ssh_public_keys)))
         authorized_keys = os.path.join(home_dir, '.ssh', 'authorized_keys')
+        default_key = os.path.join(home_dir, '.ssh', 'id_dsa.pub')
         if self.dry_run:
             self.log.info("Writing ssh keys. Dry-run, so not really doing anything.")
         else:
+            if os.path.exists(default_key):
+                fp = open(default_key, 'r')
+                ssh_public_keys.append(fp.readline())
+                fp.close()
+                self.log.info("Default key exists, adding to authorized_keys")
+            else:
+                self.log("No default key found, not adding to authorized_keys")
             fp = open(authorized_keys, 'w')
             write("\n".join(ssh_public_keys + ['']))
             fp.close()
@@ -407,7 +415,7 @@ class PosixOperations(object):
                 self.log.info(".bash_profile already exists for user %s. Not overwriting." % (user_id))
             else:
                 fp = open(os.path.join(home_dir, '.bash_profile'), 'w')
-                fp.write("\n".join(bashprofile_text + [''])
+                fp.write("\n".join(bashprofile_text + ['']))
                 fp.close()
 
         for f in [home_dir,
