@@ -132,21 +132,21 @@ class PosixOperations(object):
                 return
 
         # check if filesystem matches current class
-        fs = None
+        filesystem = None
         pts = obj.split(os.path.sep)  # used to determine maximum number of steps to check
         for x in range(len(pts)):
             fp = os.path.sep.join(pts[::-1][x:][::-1])
-            if fs is None and self._exists(fp):
+            if filesystem is None and self._exists(fp):
                 tmpfs = self._what_filesystem(fp)
                 if tmpfs is None:
                     continue
 
                 if tmpfs[0] in self.supportedfilesystems:
-                    fs = tmpfs[0]
+                    filesystem = tmpfs[0]
                 else:
                     self.log.raiseException("_sanity_check found filesystem %s for subpath %s of obj %s is not a supported filesystem (supported %s)" % (tmpfs[0], fp, obj, self.supportedfilesystems), PosixOperationError)
 
-        if fs is None:
+        if filesystem is None:
             self.log.raiseException("_sanity_check no valid filesystem found for obj %s" % obj, PosixOperationError)
 
         # try readlink
@@ -200,12 +200,17 @@ class PosixOperations(object):
             self.log.error("_isbrokenlink: found broken link for %s" % obj)
         return res
 
+    def is_symlink(self, obj):
+        """Check if the obj is a symbolic link"""
+        return os.path.islink(obj)
+
     def what_filesystem(self, obj=None):
         """Based on obj, determine underlying filesystem as much as possible"""
         self.obj = self._sanity_check(obj)
         return self._what_filesystem(obj)
 
     def _what_filesystem(self, obj):
+        """Determine which filesystem a given obj belongs to."""
         if not self._exists(obj):  # obj is sanitised
             self.log.error("_whatFilesystem: obj %s does not exist" % obj)
             return
@@ -222,9 +227,11 @@ class PosixOperations(object):
         fss = [x for x in self.localfilesystems if x[self.localfilesystemnaming.index('id')] == fsid]
 
         if len(fss) == 0:
-            self.log.raiseException("No matching filesystem found for obj %s with id %s (localfilesystems: %s)" % (obj, fsid, self.localfilesystems), PosixOperationError)
+            self.log.raiseException("No matching filesystem found for obj %s with id %s (localfilesystems: %s)" %
+                                    (obj, fsid, self.localfilesystems), PosixOperationError)
         elif len(fss) > 1:
-            self.log.raiseException("More then one matching filesystem found for obj %s with id %s (matched localfilesystems: %s)" % (obj, fsid, fss), PosixOperationError)
+            self.log.raiseException("More than one matching filesystem found for obj %s with id %s (matched localfilesystems: %s)" %
+                                    (obj, fsid, fss), PosixOperationError)
         else:
             self.log.debug("Found filesystem for obj %s: %s" % (obj, fss[0]))
             return fss[0]
@@ -248,7 +255,8 @@ class PosixOperations(object):
 
         # do we need further parsing, eg of autofs types or remove pseudo filesystems ?
         if self.ignorefilesystems:
-            self.localfilesystems = [x for x in self.localfilesystems if not x[self.localfilesystemnaming.index('type')] in OS_LINUX_IGNORE_FILESYSTEMS]
+            self.localfilesystems = [x for x in self.localfilesystems
+                                     if not x[self.localfilesystemnaming.index('type')] in OS_LINUX_IGNORE_FILESYSTEMS]
 
     def _largest_existing_path(self, obj):
         """Given obj /a/b/c/d, check which subpath exists and will determine eg filesystem type of obj.
@@ -286,9 +294,11 @@ class PosixOperations(object):
 
         if os.path.exists(target):
             if os.path.islink(target):
-                if force:
+                if self.dry_run:
+                    self.log.info("Target is a symlink. Dry run, so not removing anything")
+                elif force:
                     self.log.warning("Target %s is a symlink, removing" % (target))
-                    target_ = os.realpath(target)
+                    target_ = os.path.realpath(target)
                     os.unlink(target)
                     target = self._sanity_check(target_)
         else:
@@ -299,7 +309,10 @@ class PosixOperations(object):
         if self.exists(obj):
             if not os.path.realpath(target) == os.path.realpath(obj):
                 try:
-                    os.unlink(obj)
+                    if self.dry_run:
+                        self.log.info("Unlinking existing symlink. Dry-run so not really doing anything.")
+                    else:
+                        os.unlink(obj)
                 except OSError, _:
                     self.log.raiseException("Cannot unlink existing symlink from %s to %s" % (obj, target),
                                             PosixOperationError)
@@ -307,7 +320,10 @@ class PosixOperations(object):
                 self.log.info("Symlink already exists from %s to %s" % (obj, target))
                 return  # Nothing to do, symlink already exists
         try:
-            os.symlink(target, obj)
+            if self.dry_run:
+                self.log.info("Linking %s to %s. Dry-run, so not really doing anything" % (obj, target))
+            else:
+                os.symlink(target, obj)
         except OSError, _:
             self.log.raiseException("Cannot create symlink from %s to %s" % (obj, target), PosixOperationError)
 
@@ -325,7 +341,10 @@ class PosixOperations(object):
         """
         obj = self._sanity_check(obj)
         try:
-            os.makedirs(obj)
+            if self.dry_run:
+                self.log.info("Making directory %s. Dry-run, so not really doing anything." % (obj))
+            else:
+                os.makedirs(obj)
         except OSError, err:
             if err.errno == errno.EEXIST:
                 pass
@@ -343,7 +362,7 @@ class PosixOperations(object):
     def populate_home_dir(self, user_id, group_id, home_dir, ssh_public_keys):
         """Populate the home directory with the required files to allow the user to login.
 
-        - (re)generate the default key
+        - (re)generate the default key (not for now, this is done upon login if the file is MIA)
         - .ssh/authorized_keys (+default key)
         - .bashrc or whatever shell we support
 
@@ -359,19 +378,45 @@ class PosixOperations(object):
 
         self.log.info("Placing %d ssh public keys in the authorized keys file." % (len(ssh_public_keys)))
         authorized_keys = os.path.join(home_dir, '.ssh', 'authorized_keys')
-        fp = open(authorized_keys, 'w')
-        for key in ssh_public_keys:
-            fp.write(key + "\n")
-        fp.close()
+        default_key = os.path.join(home_dir, '.ssh', 'id_dsa.pub')
+        if self.dry_run:
+            self.log.info("Writing ssh keys. Dry-run, so not really doing anything.")
+        else:
+            if os.path.exists(default_key):
+                fp = open(default_key, 'r')
+                ssh_public_keys.append(fp.readline())
+                fp.close()
+                self.log.info("Default key exists, adding to authorized_keys")
+            else:
+                self.log("No default key found, not adding to authorized_keys")
+            fp = open(authorized_keys, 'w')
+            write("\n".join(ssh_public_keys + ['']))
+            fp.close()
         self.chmod(0644, authorized_keys)
         self.chmod(0700, ssh_path)
 
         # bash
-        self.log.info('Creating .bashrc and .bash_profile')
-        open(os.path.join(home_dir, '.bashrc'), 'w').close()
-        fp = open(os.path.join(home_dir, '.bash_profile'), 'w')
-        fp.write('if [ -f ~/.bashrc ]; then\n . ~/.bashrc\nfi\n')
-        fp.close()
+        bashprofile_text = [
+            'if [ -f ~/.bashrc ]; then',
+            '    . ~/.bashrc',
+            'fi',
+            ]
+        if self.dry_run:
+            self.log.info("Writing .bashrc an .bash_profile. Dry-run, so not really doing anything.")
+            self.log.info(".bash_profile will contain: %s" % ("\n".join(bashprofile_text)))
+        else:
+            if os.path.exists(os.path.join(home_dir, '.bashrc')):
+                self.log.info(".bashrc already exists for user %s. Not overwriting." % (user_id))
+            else:
+                self.log.info('Creating .bashrc and .bash_profile')
+                open(os.path.join(home_dir, '.bashrc'), 'w').close()
+
+            if os.path.exists(os.path.join(home_dir, '.bash_profile')):
+                self.log.info(".bash_profile already exists for user %s. Not overwriting." % (user_id))
+            else:
+                fp = open(os.path.join(home_dir, '.bash_profile'), 'w')
+                fp.write("\n".join(bashprofile_text + ['']))
+                fp.close()
 
         for f in [home_dir,
                   os.path.join(home_dir, '.ssh'),
@@ -380,7 +425,7 @@ class PosixOperations(object):
                   os.path.join(home_dir, '.bash_profile')]:
             self.log.info("Changing ownership of %s to %s:%s" % (f, user_id, group_id))
             try:
-                os.chown(f, user_id, group_id)
+                self.chown(user_id, group_id, f)
             except OSError, _:
                 self.log.raiseException("Cannot change ownership of file %s to %s:%s" %
                                         (f, user_id, group_id), PosixOperationError)
@@ -405,7 +450,10 @@ class PosixOperations(object):
 
         self.log.info("Changing ownership of %s to %s:%s" % (obj, owner, group))
         try:
-            os.chown(obj, owner, group)
+            if self.dry_run:
+                self.log.info("Chown on %s to %s:%s. Dry-run, so not actually changing this ownership" % (obj, owner, group))
+            else:
+                os.chown(obj, owner, group)
         except OSError, _:
             self.log.raiseException("Cannot change ownership of object %s to %s:%s" % (obj, owner, group),
                                     PosixOperationError)
@@ -421,12 +469,16 @@ class PosixOperations(object):
         self.log.info("Changing access permission of %s to %o" % (obj, permissions))
 
         try:
-            os.chmod(obj, permissions)
+            if self.dry_run:
+                self.log.info("Chmod on %s to %s. Dry-run, so not actually changing access permissions" % (obj, permissions))
+            else:
+                os.chmod(obj, permissions)
         except OSError, _:
             self.log.raiseException("Could not change the permissions on object %s to %o" % (obj, permissions),
                                     PosixOperationError)
 
     def compare_files(self, target, obj=None):
+        """Compare obj and target."""
         target = self._sanity_check(target)
         obj = self._sanity_check(obj)
 
@@ -435,6 +487,16 @@ class PosixOperations(object):
         obj = self._sanity_check(obj)
         # if backup, take backup
         # if real, remove
+        if self.dry_run:
+            self.log.info("Removing %s. Dry-run so not actually doing anything" % (obj))
+        else:
+            if os.path.isdir(obj):
+                try:
+                    os.rmdir(obj)
+                except OSError, err:
+                    self.log.exception("Cannot remove directory %s" % (obj))
+            else:
+                os.unlink(obj)
 
     def rename_obj(self, obj=None):
         """Rename obj"""
