@@ -203,7 +203,7 @@ def main():
 
     try:
         user_id_map = map_uids_to_names() # is this really necessary?
-        (mm_rep_quota_map_users, mm_rep_quota_map_filesets) = get_mmrepquota_maps(user_id_map)
+        (mm_rep_quota_map_users, mm_rep_quota_map_filesets) = get_mmrepquota_maps()
 
         mm_rep_quota_map_vos = dict((id, q) for (id, q) in mm_rep_quota_map_filesets.items() if id.startswith('gvo'))
 
