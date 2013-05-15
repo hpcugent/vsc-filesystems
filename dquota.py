@@ -203,12 +203,6 @@ def main():
         nagios_reporter.report_and_exit()
         sys.exit(0)  # not reached
 
-    if not proceed_on_ha_service(opts.options.ha):
-        logger.warning("Not running on the target host in the HA setup. Stopping.")
-        nagios_reporter.cache(NAGIOS_EXIT_WARNING,
-                              NagiosResult("Not running on the HA master."))
-        sys.exit(NAGIOS_EXIT_WARNING)
-
     lockfile = TimestampedPidLockfile(QUOTA_CHECK_LOCK_FILE)
     lock_or_bork(lockfile, nagios_reporter)
 
