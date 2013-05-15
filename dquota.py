@@ -61,17 +61,21 @@ fancylogger.setLogLevelInfo()
 logger = fancylogger.getLogger('gpfs_quota_checker')
 
 
-def get_mmrepquota_maps(user_id_map):
-    """Run the mmrepquota command and parse all data into user and fileset maps.
+def get_mmrepquota_maps():
+    """Obtain the quota information and rearrange it according to users and filesets.
 
-    @type user_id_map: dictionary {uid: string}
+    This function uses vsc.filesystem.gpfs.GpfsOperations to obtain
+    quota information for all filesystems known to the storage.
 
-    @param user_id_map: mapping from numerical user IDs to user names.
+    The returned dictionaries contain all information on a per user
+    and per fileset basis across all filesystems. Users with multiple
+    quota settings across different filesets are processed correctly.
 
     Returns (user dictionary, fileset dictionary).
     """
     user_map = {}
     fs_map = {}
+
     gpfs_operations = GpfsOperations()
     devices = gpfs_operations.list_filesystems().keys()
     logger.debug("Found the following GPFS filesystems: %s" % (devices))
@@ -79,77 +83,67 @@ def get_mmrepquota_maps(user_id_map):
     filesets = gpfs_operations.list_filesets()
     logger.debug("Found the following GPFS filesets: %s" % (filesets))
 
-    quota_map = gpfs_operations.list_quota(devices)  # we provide the device list so home gets included
+    quota_map = gpfs_operations.list_quota(devices)
 
-    #logger.info("Quota map = %s " % (quota_map))
+    timestamp = int(time.time())
 
     for device in devices:
 
-        # These return a list of named tuples -- GpfsQuota
-        mmfs_user_quota_info = quota_map[device]['USR'].values()
+        # Iterate over a list of named tuples -- GpfsQuota
+        for gpfs_quota in quota_map[device]['USR'].values():
+            user_quota = user_map.get(gpfs_quota.name, QuotaUser(gpfs_quota.name))
+            fileset_name = filesets[device][gpfs_quota.filesetname]['filesetName']
+            user_map[gpfs_quota.name] = _update_quota_entity(user_quota,
+                                                             device,
+                                                             fileset_name,
+                                                             gpfs_quota,
+                                                             timestamp)
 
-        if mmfs_user_quota_info is None:
-            logger.warning("Could not obtain user quota information for device %s" % (device))
-        else:
-            for quota in mmfs_user_quota_info:
-                # we get back the user IDs, not user names, since the GPFS tools
-                # circumvent LDAP's ncd caching mechanism.
-                # the backend expects user names
-                # getpwuid should be using the ncd cache for the LDAP info,
-                # so this should not hurt the system much
-                user_id = int(quota.name)
-                user_name = None
-
-                if user_id_map and user_id_map.has_key(user_id):
-                    user_name = user_id_map[user_id]
-                else:
-                    try:
-                        user_name = pwd.getpwuid(user_id)[0]  # backup
-                    except Exception, _:
-                        logger.debug("Cannot obtain a user ID for uid %s" % (user_id))
-                if user_name and user_name.startswith("vsc"):
-                    _update_quota(user_map, user_name, device, quota, QuotaUser)
-
-        logger.debug("Updating filesets for device %s" % (device))
-        mmfs_fileset_quota_info = quota_map[device]['FILESET'].values()  # on the current Tier-2 storage, one fileset per VO
-
-        if mmfs_fileset_quota_info is None:
-            logger.warning("Could not obtain fileset quota information for device %s" % (device))
-        else:
-            device_filesets = filesets.get(device, [])
-            for quota in mmfs_fileset_quota_info:
-                # we still need to look up the fileset name
-                fileset_name = device_filesets[quota.name]['filesetName']
-                _update_quota(fs_map, fileset_name, device, quota, QuotaFileset)
+        # Iterate over a list of named tuples -- GpfsQuota
+        for gpfs_quota in quota_map[device]['FILESET'].values():
+            fileset_quota = fs_map.get(gpfs_quota.name, QuotaFileset(gpfs_quota.name))
+            fileset_name = filesets[device][gpfs_quota.filesetname]['filesetName']
+            fs_map[gpfs_quota.name] = _update_quota_entity(fileset_quota,
+                                                           device,
+                                                           fileset_name,
+                                                           gpfs_quota,
+                                                           timestamp)
 
     return (user_map, fs_map)
 
 
-def _update_quota(quota_dict, id, device, quota, default):
-    """Update the quota in the dict for the given device.
 
-    @type quota_dict: dictionary {string: QuotaEntity}
-    @type id: string
-    @type device: string
-    @type quota: GpfsQuota instance
-    @type default: QuotaEntity subclass
+GPFS_GRACE_REGEX = re.compile(r"(?P<days>\d+)days|(?P<hours>\d+hours)|(?P<expired>expired)")
 
-    @param quota_dict: quota dictionary with the entitities to be updated
-    @param id: the id of the entity
-    @param device: the device for which we are updating the information
-    @param quota: the new quota information for the given device
-    @param default: class to instantiate when the entity is not yet present in the map, e.g., QuotaUser
+def _update_quota_entity(entity, filesystem, fileset, gpfs_quota, timestamp):
     """
-    ts = int(time.time())
-    entity = quota_dict.get(id, default(id))
-    entity.update_device_quota(device,
-                               quota.blockUsage,
-                               quota.blockQuota,
-                               quota.blockLimit,
-                               quota.blockInDoubt,
-                               quota.blockGrace,
-                               ts)
-    quota_dict[id] = entity
+    Update the quota information for an entity (user or fileset).
+
+    @type entity: QuotaEntity instance
+    @type filesystem: string
+    @type fileset: string
+    @type gpfs_quota: GpfsQuota namedtuple instance
+    """
+    grace = GPFS_GRACE_REGEX.search(gpfs_quota.grace).groupdict()
+    if grace.get('days', None):
+        expired = (True, grace['days'] * 86400)
+    elif grace.get('hours', None):
+        expired = (True, grace['hours'] * 3600)
+    elif grace.get('expired', None):
+        expired = (True, 0)
+    else:
+        expired = (False, None)
+
+    entity.update(device,
+                  fileset_name,
+                  quota.blockUsage,
+                  quota.blockSoft,
+                  quota.blockHard,
+                  quota.blockDoubt,
+                  grace,
+                  timestamp)
+
+    return entity
 
 
 def nagios_analyse_data(ex_users, ex_vos, user_count, vo_count):
@@ -189,6 +183,7 @@ def main():
         'nagios': ('print out nagios information', None, 'store_true', False, 'n'),
         'nagios-check-filename': ('filename of where the nagios check data is stored', str, 'store', NAGIOS_CHECK_FILENAME),
         'nagios-check-interval-threshold': ('threshold of nagios checks timing out', None, 'store', NAGIOS_CHECK_INTERVAL_THRESHOLD),
+        'storage': ('the VSC filesystems that are checked by this script', None, 'store', None),
         'dry-run': ('do not make any updates whatsoever', None, 'store_true', False),
     }
     opts = simple_option(options)
@@ -207,7 +202,7 @@ def main():
     lock_or_bork(lockfile, nagios_reporter)
 
     try:
-        user_id_map = map_uids_to_names()
+        user_id_map = map_uids_to_names() # is this really necessary?
         (mm_rep_quota_map_users, mm_rep_quota_map_filesets) = get_mmrepquota_maps(user_id_map)
 
         mm_rep_quota_map_vos = dict((id, q) for (id, q) in mm_rep_quota_map_filesets.items() if id.startswith('gvo'))
