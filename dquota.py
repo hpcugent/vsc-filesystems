@@ -62,7 +62,7 @@ logger = fancylogger.getLogger('gpfs_quota_checker')
 
 
 def get_mmrepquota_maps(user_id_map):
-    """Run the mmrepquota command and parse all data into user and VO maps.
+    """Run the mmrepquota command and parse all data into user and fileset maps.
 
     @type user_id_map: dictionary {uid: string}
 
@@ -189,7 +189,6 @@ def main():
         'nagios': ('print out nagios information', None, 'store_true', False, 'n'),
         'nagios-check-filename': ('filename of where the nagios check data is stored', str, 'store', NAGIOS_CHECK_FILENAME),
         'nagios-check-interval-threshold': ('threshold of nagios checks timing out', None, 'store', NAGIOS_CHECK_INTERVAL_THRESHOLD),
-        'ha': ('high-availability master IP address', None, 'store', None),
         'dry-run': ('do not make any updates whatsoever', None, 'store_true', False),
     }
     opts = simple_option(options)
