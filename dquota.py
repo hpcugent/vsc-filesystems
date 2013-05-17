@@ -21,14 +21,10 @@ Script to check for quota transgressions and notify the offending users.
 """
 
 import copy
-import os
 import pwd
 import re
 import sys
 import time
-
-## FIXME: deprecated in >= 2.7
-from lockfile import LockFailed
 
 from vsc.filesystem.gpfs import GpfsOperations
 from vsc.filesystem.quota.entities import QuotaUser, QuotaFileset
@@ -50,8 +46,7 @@ QUOTA_CHECK_LOG_FILE = '/var/log/gpfs_quota_checker.log'
 QUOTA_CHECK_REMINDER_CACHE_FILENAME = '/var/log/quota/gpfs_quota_checker.report.reminderCache.pickle'
 QUOTA_CHECK_LOCK_FILE = '/var/run/gpfs_quota_checker_tpid.lock'
 
-VSC_INSTALL_USER_NAME = 'vsc40003'
-
+GPFS_GRACE_REGEX = re.compile(r"(?P<days>\d+)days|(?P<hours>\d+hours)|(?P<expired>expired)")
 
 # log setup
 fancylogger.logToFile(QUOTA_CHECK_LOG_FILE)
