@@ -69,7 +69,7 @@ class QuotaEntity(object):
         }
 
         self.quota_map.update(qdict)
-        self.exceed = self.exceed or int(used) >= int(soft)
+        self.exceed = soft != 0 and (self.exceed or int(used) > int(soft))
 
     def exceeds(self):
         """Is the soft limit exceeded for some device?"""
