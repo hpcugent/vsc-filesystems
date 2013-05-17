@@ -55,7 +55,7 @@ fancylogger.setLogLevelInfo()
 logger = fancylogger.getLogger('gpfs_quota_checker')
 
 
-def get_mmrepquota_maps(filesystem):
+def get_mmrepquota_maps(quota_map, filesystem, filesets):
     """Obtain the quota information.
 
     This function uses vsc.filesystem.gpfs.GpfsOperations to obtain
@@ -70,55 +70,44 @@ def get_mmrepquota_maps(filesystem):
     user_map = {}
     fs_map = {}
 
-    gpfs = GpfsOperations()
-    filesystems = gpfs.list_filesystems().keys()
-    logger.debug("Found the following GPFS filesystems: %s" % (filesystems))
-
-    if filesystem not in filesystems:
-        logger.error("Non-existant filesystem %s" % (filesystem))
-        return {"USR": None, "FILESET": None}
-
-    filesets = gpfs.list_filesets()
-    logger.debug("Found the following GPFS filesets: %s" % (filesets))
-
-    quota_map = gpfs.list_quota([filesystem])
     timestamp = int(time.time())
 
+    logger.info("ordering USR quota")
     # Iterate over a list of named tuples -- GpfsQuota
-    for (user, gpfs_quota) in quota_map[filesystem]['USR'].items():
+    for (user, gpfs_quota) in quota_map['USR'].items():
         user_quota = user_map.get(user, QuotaUser(user))
-        user_map[gpfs_quota.name] = _update_quota_entity(filesets,
-                                                         user_quota,
-                                                         filesystem,
-                                                         gpfs_quota,
-                                                         timestamp)
+        user_map[user] = _update_quota_entity(filesets,
+                                              user_quota,
+                                              filesystem,
+                                              gpfs_quota,
+                                              timestamp)
 
+    logger.info("ordering FILESET quota")
     # Iterate over a list of named tuples -- GpfsQuota
-    for (fileset, gpfs_quota) in quota_map[filesystem]['FILESET'].items():
-        fileset_quota = fs_map.get(gpfs_quota.name, QuotaFileset(fileset))
-        fs_map[gpfs_quota.name] = _update_quota_entity(filesets,
-                                                       fileset_quota,
-                                                       filesystem,
-                                                       gpfs_quota,
-                                                       timestamp)
+    for (fileset, gpfs_quota) in quota_map['FILESET'].items():
+        fileset_quota = fs_map.get(fileset, QuotaFileset(fileset))
+        fs_map[fileset] = _update_quota_entity(filesets,
+                                               fileset_quota,
+                                               filesystem,
+                                               gpfs_quota,
+                                               timestamp)
 
     return {"USR": user_map, "FILESET": fs_map}
 
-
-GPFS_GRACE_REGEX = re.compile(r"(?P<days>\d+)days|(?P<hours>\d+hours)|(?P<expired>expired)")
 
 def _update_quota_entity(filesets, entity, filesystem, gpfs_quotas, timestamp):
     """
     Update the quota information for an entity (user or fileset).
 
+    @type filesets: string
     @type entity: QuotaEntity instance
     @type filesystem: string
-    @type fileset: string
     @type gpfs_quota: list of GpfsQuota namedtuple instances
+    @type timestamp: a timestamp, duh. an integer
     """
 
     for quota in gpfs_quotas:
-        logger.info("gpfs_quota = %s" % (str(quota)))
+        logger.debug("gpfs_quota = %s" % (str(quota)))
         grace = GPFS_GRACE_REGEX.search(quota.blockGrace)
 
         if not grace:
@@ -133,13 +122,16 @@ def _update_quota_entity(filesets, entity, filesystem, gpfs_quotas, timestamp):
                 expired = (True, 0)
             else:
                 expired = (False, None)
-        fileset_name = filesets[filesystem][quota.filesetname]['filesetName']
+        if quota.filesetname:
+            fileset_name = filesets[filesystem][quota.filesetname]['filesetName']
+        else:
+            fileset_name = None
         entity.update(filesystem,
                       fileset_name,
-                      quota.blockUsage,
-                      quota.blockQuota,
-                      quota.blockLimit,
-                      quota.blockInDoubt,
+                      int(quota.blockUsage),
+                      int(quota.blockQuota),
+                      int(quota.blockLimit),
+                      int(quota.blockInDoubt),
                       expired,
                       timestamp)
 
@@ -203,12 +195,31 @@ def main():
 
     try:
         user_id_map = map_uids_to_names() # is this really necessary?
+        gpfs = GpfsOperations()
+        filesystems = gpfs.list_filesystems().keys()
+        logger.debug("Found the following GPFS filesystems: %s" % (filesystems))
+
+        filesets = gpfs.list_filesets()
+        logger.debug("Found the following GPFS filesets: %s" % (filesets))
+
+        quota = gpfs.list_quota()
 
         for storage in opts.options.storage:
 
             logger.info("Processing quota for storage %s" % (storage))
+            filesystem = opts.configfile_parser.get(storage, 'filesystem')
 
-            quota_map = get_mmrepquota_maps(opts.configfile_parser.get(storage, 'filesystem'))
+            if filesystem not in filesystems:
+                logger.error("Non-existant filesystem %s" % (filesystem))
+                continue
+
+            if filesystem not in quota.keys():
+                logger.error("No quota defined for storage %s [%s]" % (storage, filesystem))
+                continue
+
+            quota_storage_map = get_mmrepquota_maps(quota[filesystem], filesystem, filesets)
+
+        print "quota map = %s" % (quota_map)
 
         sys.exit(1)
 
