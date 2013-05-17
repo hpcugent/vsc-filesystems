@@ -24,12 +24,12 @@ from vsc import fancylogger
 from vsc.utils.missing import RUDict
 
 QuotaInformation = namedtuple('QuotaInformation',
-                              ['time',     # timestamp of the recording moment
-                               'used',     # used quota in KiB
-                               'soft',     # soft quota limit in KiB
-                               'hard',     # hard quota limit in KiB
-                               'doubt',    # the KiB GPFS is not sure about
-                               'expired',  # tuple (boolean, grace period expressed in seconds)
+                              ['timestamp', # timestamp of the recording moment
+                               'used',      # used quota in KiB
+                               'soft',      # soft quota limit in KiB
+                               'hard',      # hard quota limit in KiB
+                               'doubt',     # the KiB GPFS is not sure about
+                               'expired',   # tuple (boolean, grace period expressed in seconds)
                               ])
 
 
@@ -48,7 +48,7 @@ class QuotaEntity(object):
         self.exceed = False
         self.log = fancylogger.getLogger(self.__class__.__name__)
 
-    def update_device_quota(self, filesystem, fileset, used=0, soft=0, hard=0, doubt=0, expired=(False, None), timestamp=None):
+    def update(self, filesystem, fileset, used=0, soft=0, hard=0, doubt=0, expired=(False, None), timestamp=None):
         """Store the quota for a given device.
 
         The arguments to this function are turned into a recursive
