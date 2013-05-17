@@ -8,12 +8,14 @@
 #
 # All rights reserved.
 #
-"""Script to check for quota transgressions and notify the offending users.
+"""
+Script to check for quota transgressions and notify the offending users.
 
 - relies on mmrepquota to get a quick estimate of user quota
-- checks all known GPFS mounted file systems
-
-Created Mar 8, 2012
+- checks all storage systems that are listed in /etc/quota_check.conf
+- writes quota information in gzipped json files in the target directory for the
+  affected entity (user, project, vo)
+- mails a user, vo or project moderator (TODO)
 
 @author Andy Georges
 """
@@ -21,22 +23,19 @@ Created Mar 8, 2012
 import copy
 import os
 import pwd
+import re
 import sys
 import time
 
 ## FIXME: deprecated in >= 2.7
 from lockfile import LockFailed
 
-from vsc.exceptions import VscError
 from vsc.filesystem.gpfs import GpfsOperations
-from vsc.gpfs.quota.entities import QuotaUser, QuotaFileset
-from vsc.gpfs.quota.fs_store import UserFsQuotaStorage, VoFsQuotaStorage
+from vsc.filesystem.quota.entities import QuotaUser, QuotaFileset
 from vsc.gpfs.quota.report import GpfsQuotaMailReporter
-from vsc.gpfs.utils.exceptions import CriticalException
 from vsc.ldap.configuration import VscConfiguration
 from vsc.ldap.utils import LdapQuery
 from vsc.utils import fancylogger
-from vsc.utils.availability import proceed_on_ha_service
 from vsc.utils.generaloption import simple_option
 from vsc.utils.lock import lock_or_bork, release_or_bork
 from vsc.utils.nagios import NagiosReporter, NagiosResult, NAGIOS_EXIT_OK, NAGIOS_EXIT_WARNING, NAGIOS_EXIT_CRITICAL
@@ -47,7 +46,7 @@ NAGIOS_CHECK_FILENAME = '/var/log/pickles/gpfs_quota_checker.nagios.pickle'
 NAGIOS_HEADER = 'quota_check'
 NAGIOS_CHECK_INTERVAL_THRESHOLD = 30 * 60  # 30 minutes
 
-QUOTA_CHECK_LOG_FILE = '/var/log/quota/gpfs_quota_checker.log'
+QUOTA_CHECK_LOG_FILE = '/var/log/gpfs_quota_checker.log'
 QUOTA_CHECK_REMINDER_CACHE_FILENAME = '/var/log/quota/gpfs_quota_checker.report.reminderCache.pickle'
 QUOTA_CHECK_LOCK_FILE = '/var/run/gpfs_quota_checker_tpid.lock'
 
@@ -56,92 +55,98 @@ VSC_INSTALL_USER_NAME = 'vsc40003'
 
 # log setup
 fancylogger.logToFile(QUOTA_CHECK_LOG_FILE)
-fancylogger.logToScreen(False)
+fancylogger.logToScreen(True)
 fancylogger.setLogLevelInfo()
 logger = fancylogger.getLogger('gpfs_quota_checker')
 
 
-def get_mmrepquota_maps():
-    """Obtain the quota information and rearrange it according to users and filesets.
+def get_mmrepquota_maps(filesystem):
+    """Obtain the quota information.
 
     This function uses vsc.filesystem.gpfs.GpfsOperations to obtain
     quota information for all filesystems known to the storage.
 
     The returned dictionaries contain all information on a per user
-    and per fileset basis across all filesystems. Users with multiple
+    and per fileset basis for the given filesystem. Users with multiple
     quota settings across different filesets are processed correctly.
 
-    Returns (user dictionary, fileset dictionary).
+    Returns { "USR": user dictionary, "FILESET": fileset dictionary}.
     """
     user_map = {}
     fs_map = {}
 
-    gpfs_operations = GpfsOperations()
-    devices = gpfs_operations.list_filesystems().keys()
-    logger.debug("Found the following GPFS filesystems: %s" % (devices))
+    gpfs = GpfsOperations()
+    filesystems = gpfs.list_filesystems().keys()
+    logger.debug("Found the following GPFS filesystems: %s" % (filesystems))
 
-    filesets = gpfs_operations.list_filesets()
+    if filesystem not in filesystems:
+        logger.error("Non-existant filesystem %s" % (filesystem))
+        return {"USR": None, "FILESET": None}
+
+    filesets = gpfs.list_filesets()
     logger.debug("Found the following GPFS filesets: %s" % (filesets))
 
-    quota_map = gpfs_operations.list_quota(devices)
-
+    quota_map = gpfs.list_quota([filesystem])
     timestamp = int(time.time())
 
-    for device in devices:
+    # Iterate over a list of named tuples -- GpfsQuota
+    for (user, gpfs_quota) in quota_map[filesystem]['USR'].items():
+        user_quota = user_map.get(user, QuotaUser(user))
+        user_map[gpfs_quota.name] = _update_quota_entity(filesets,
+                                                         user_quota,
+                                                         filesystem,
+                                                         gpfs_quota,
+                                                         timestamp)
 
-        # Iterate over a list of named tuples -- GpfsQuota
-        for gpfs_quota in quota_map[device]['USR'].values():
-            user_quota = user_map.get(gpfs_quota.name, QuotaUser(gpfs_quota.name))
-            fileset_name = filesets[device][gpfs_quota.filesetname]['filesetName']
-            user_map[gpfs_quota.name] = _update_quota_entity(user_quota,
-                                                             device,
-                                                             fileset_name,
-                                                             gpfs_quota,
-                                                             timestamp)
+    # Iterate over a list of named tuples -- GpfsQuota
+    for (fileset, gpfs_quota) in quota_map[filesystem]['FILESET'].items():
+        fileset_quota = fs_map.get(gpfs_quota.name, QuotaFileset(fileset))
+        fs_map[gpfs_quota.name] = _update_quota_entity(filesets,
+                                                       fileset_quota,
+                                                       filesystem,
+                                                       gpfs_quota,
+                                                       timestamp)
 
-        # Iterate over a list of named tuples -- GpfsQuota
-        for gpfs_quota in quota_map[device]['FILESET'].values():
-            fileset_quota = fs_map.get(gpfs_quota.name, QuotaFileset(gpfs_quota.name))
-            fileset_name = filesets[device][gpfs_quota.filesetname]['filesetName']
-            fs_map[gpfs_quota.name] = _update_quota_entity(fileset_quota,
-                                                           device,
-                                                           fileset_name,
-                                                           gpfs_quota,
-                                                           timestamp)
-
-    return (user_map, fs_map)
-
+    return {"USR": user_map, "FILESET": fs_map}
 
 
 GPFS_GRACE_REGEX = re.compile(r"(?P<days>\d+)days|(?P<hours>\d+hours)|(?P<expired>expired)")
 
-def _update_quota_entity(entity, filesystem, fileset, gpfs_quota, timestamp):
+def _update_quota_entity(filesets, entity, filesystem, gpfs_quotas, timestamp):
     """
     Update the quota information for an entity (user or fileset).
 
     @type entity: QuotaEntity instance
     @type filesystem: string
     @type fileset: string
-    @type gpfs_quota: GpfsQuota namedtuple instance
+    @type gpfs_quota: list of GpfsQuota namedtuple instances
     """
-    grace = GPFS_GRACE_REGEX.search(gpfs_quota.grace).groupdict()
-    if grace.get('days', None):
-        expired = (True, grace['days'] * 86400)
-    elif grace.get('hours', None):
-        expired = (True, grace['hours'] * 3600)
-    elif grace.get('expired', None):
-        expired = (True, 0)
-    else:
-        expired = (False, None)
 
-    entity.update(device,
-                  fileset_name,
-                  quota.blockUsage,
-                  quota.blockSoft,
-                  quota.blockHard,
-                  quota.blockDoubt,
-                  grace,
-                  timestamp)
+    for quota in gpfs_quotas:
+        logger.info("gpfs_quota = %s" % (str(quota)))
+        grace = GPFS_GRACE_REGEX.search(quota.blockGrace)
+
+        if not grace:
+            expired = (False, None)
+        else:
+            grace = grace.groupdict()
+            if grace.get('days', None):
+                expired = (True, grace['days'] * 86400)
+            elif grace.get('hours', None):
+                expired = (True, grace['hours'] * 3600)
+            elif grace.get('expired', None):
+                expired = (True, 0)
+            else:
+                expired = (False, None)
+        fileset_name = filesets[filesystem][quota.filesetname]['filesetName']
+        entity.update(filesystem,
+                      fileset_name,
+                      quota.blockUsage,
+                      quota.blockQuota,
+                      quota.blockLimit,
+                      quota.blockInDoubt,
+                      expired,
+                      timestamp)
 
     return entity
 
@@ -183,7 +188,7 @@ def main():
         'nagios': ('print out nagios information', None, 'store_true', False, 'n'),
         'nagios-check-filename': ('filename of where the nagios check data is stored', str, 'store', NAGIOS_CHECK_FILENAME),
         'nagios-check-interval-threshold': ('threshold of nagios checks timing out', None, 'store', NAGIOS_CHECK_INTERVAL_THRESHOLD),
-        'storage': ('the VSC filesystems that are checked by this script', None, 'store', None),
+        'storage': ('the VSC filesystems that are checked by this script', None, 'extend', []),
         'dry-run': ('do not make any updates whatsoever', None, 'store_true', False),
     }
     opts = simple_option(options)
@@ -203,12 +208,14 @@ def main():
 
     try:
         user_id_map = map_uids_to_names() # is this really necessary?
-        (mm_rep_quota_map_users, mm_rep_quota_map_filesets) = get_mmrepquota_maps()
 
-        mm_rep_quota_map_vos = dict((id, q) for (id, q) in mm_rep_quota_map_filesets.items() if id.startswith('gvo'))
+        for storage in opts.options.storage:
 
-        if not mm_rep_quota_map_users or not mm_rep_quota_map_vos:
-            raise CriticalException('no usable data was found in the mmrepquota output')
+            logger.info("Processing quota for storage %s" % (storage))
+
+            quota_map = get_mmrepquota_maps(opts.configfile_parser.get(storage, 'filesystem'))
+
+        sys.exit(1)
 
         # figure out which users are crossing their softlimits
         ex_users = filter(lambda u: u.exceeds(), mm_rep_quota_map_users.values())
@@ -218,17 +225,6 @@ def main():
         # currently, we're not using this, VO's should have plenty of space
         ex_vos = filter(lambda v: v.exceeds(), mm_rep_quota_map_vos.values())
         logger.warning("found %s VOs who are exceeding their quota: %s" % (len(ex_vos), [v.fileset_id for v in ex_vos]))
-
-        # force mounting the home directories for the ghent users
-        # FIXME: this works for the current setup, might be an issue if we change things.
-        #        see ticket #987
-        vsc_install_user_home = None
-        try:
-            vsc_install_user_home = pwd.getpwnam(VSC_INSTALL_USER_NAME)[5]
-            cmd = "sudo -u %s stat %s" % (VSC_INSTALL_USER_NAME, vsc_install_user_home)
-            os.system(cmd)
-        except Exception, err:
-            raise CriticalException('Cannot stat the VSC install user (%s) home at (%s).' % (VSC_INSTALL_USER_NAME, vsc_install_user_home))
 
         # FIXME: cache the storage quota information (test for exceeding users)
         u_storage = UserFsQuotaStorage()
@@ -258,15 +254,15 @@ def main():
             log.info("Done reporting users.")
             reporter.close()
 
-    except CriticalException, err:
-        log.critical("critical exception caught: %s" % (err.message))
+    except Exception, err:
+        logger.exception("critical exception caught: %s" % (err))
         if not opts.options.dry_run:
             nagios_reporter.cache(NAGIOS_EXIT_CRITICAL, NagiosResult("CRITICAL script failed - %s" % (err.message)))
         if not opts.options.dry_run:
             lockfile.release()
         sys.exit(1)
     except Exception, err:
-        log.critical("exception caught: %s" % (err))
+        logger.exception("exception caught: %s" % (err))
         if not opts.options.dry_run:
             lockfile.release()
         sys.exit(1)
