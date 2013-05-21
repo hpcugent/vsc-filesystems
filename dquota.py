@@ -158,7 +158,7 @@ def process_fileset_quota(gpfs, storage, filesystem, quota_map):
         # TODO: This should somehow be some atomic operation.
         cache = FileCache(filename)
         cache.update(key="quota", data=quota, threshold=0)
-        cache.update(key="storage", data=storage,threshold=0)
+        cache.update(key="storage", data=storage, threshold=0)
         cache.close()
 
         gpfs.chmod(0640, filename)
