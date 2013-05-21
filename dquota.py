@@ -21,6 +21,7 @@ Script to check for quota transgressions and notify the offending users.
 """
 
 import copy
+import os
 import pwd
 import re
 import sys
@@ -32,6 +33,7 @@ from vsc.gpfs.quota.report import GpfsQuotaMailReporter
 from vsc.ldap.configuration import VscConfiguration
 from vsc.ldap.utils import LdapQuery
 from vsc.utils import fancylogger
+from vsc.utils.cache import FileCache
 from vsc.utils.generaloption import simple_option
 from vsc.utils.lock import lock_or_bork, release_or_bork
 from vsc.utils.nagios import NagiosReporter, NagiosResult, NAGIOS_EXIT_OK, NAGIOS_EXIT_WARNING, NAGIOS_EXIT_CRITICAL
@@ -138,6 +140,31 @@ def _update_quota_entity(filesets, entity, filesystem, gpfs_quotas, timestamp):
     return entity
 
 
+def process_fileset_quota(gpfs, storage, filesystem, quota_map):
+    """Store the quota information in the filesets.
+    """
+
+    filesets = gpfs.list_filesets()
+
+    logger.info("filesets = %s" % (filesets))
+
+    for (fileset, quota) in quota_map.items():
+        logger.debug("%s %s" % (filesets[filesystem][fileset]['filesetName'], quota))
+
+        path = filesets[filesystem][fileset]['path']
+        filename = os.path.join(path, ".quota_fileset.json.gz")
+        path_stat = os.stat(path)
+
+        # TODO: This should somehow be some atomic operation.
+        cache = FileCache(filename)
+        cache.update(key="quota", data=quota, threshold=0)
+        cache.update(key="storage", data=storage,threshold=0)
+        cache.close()
+
+        gpfs.chmod(0640, filename)
+        gpfs.chown(path_stat.st_uid, path_stat.st_gid, filename)
+
+
 def nagios_analyse_data(ex_users, ex_vos, user_count, vo_count):
     """Analyse the data blobs we gathered and build a summary for nagios.
 
@@ -219,7 +246,8 @@ def main():
 
             quota_storage_map = get_mmrepquota_maps(quota[filesystem], filesystem, filesets)
 
-        print "quota map = %s" % (quota_map)
+            process_fileset_quota(gpfs, storage, filesystem, quota_storage_map['FILESET'])
+
 
         sys.exit(1)
 
