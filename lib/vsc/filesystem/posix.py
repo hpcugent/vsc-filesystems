@@ -388,7 +388,7 @@ class PosixOperations(object):
                 fp.close()
                 self.log.info("Default key exists, adding to authorized_keys")
             else:
-                self.log("No default key found, not adding to authorized_keys")
+                self.log.info("No default key found, not adding to authorized_keys")
             fp = open(authorized_keys, 'w')
             write("\n".join(ssh_public_keys + ['']))
             fp.close()
