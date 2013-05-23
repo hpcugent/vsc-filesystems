@@ -27,6 +27,7 @@ import re
 import sys
 import time
 
+from vsc.administration.user import VscUser
 from vsc.filesystem.gpfs import GpfsOperations
 from vsc.filesystem.quota.entities import QuotaUser, QuotaFileset
 from vsc.gpfs.quota.report import GpfsQuotaMailReporter
@@ -40,7 +41,7 @@ from vsc.utils.nagios import NagiosReporter, NagiosResult, NAGIOS_EXIT_OK, NAGIO
 from vsc.utils.timestamp_pid_lockfile import TimestampedPidLockfile
 
 ## Constants
-NAGIOS_CHECK_FILENAME = '/var/log/pickles/gpfs_quota_checker.nagios.pickle'
+NAGIOS_CHECK_FILENAME = '/var/log/pickles/dquota.nagios.json.gz'
 NAGIOS_HEADER = 'quota_check'
 NAGIOS_CHECK_INTERVAL_THRESHOLD = 30 * 60  # 30 minutes
 
@@ -149,7 +150,7 @@ def process_fileset_quota(gpfs, storage, filesystem, quota_map):
     logger.info("filesets = %s" % (filesets))
 
     for (fileset, quota) in quota_map.items():
-        logger.debug("%s %s" % (filesets[filesystem][fileset]['filesetName'], quota))
+        logger.debug("Fileset %s quota: %s" % (filesets[filesystem][fileset]['filesetName'], quota))
 
         path = filesets[filesystem][fileset]['path']
         filename = os.path.join(path, ".quota_fileset.json.gz")
@@ -163,6 +164,37 @@ def process_fileset_quota(gpfs, storage, filesystem, quota_map):
 
         gpfs.chmod(0640, filename)
         gpfs.chown(path_stat.st_uid, path_stat.st_gid, filename)
+
+        logger.info("Stored fileset %s quota for storage %s at %s" % (fileset, storage, filename))
+
+
+def process_user_quota(gpfs, storage, filesystem, quota_map, user_map):
+    """Store the information in the user directories.
+    """
+    for (user_id, quota) in quota_map.items():
+
+        user_name = user_map.get(int(user_id), None)
+
+        logger.debug("Checking quota for user %s with ID %s" % (user_name, user_id))
+
+        if user_name and user_name.startswith('vsc4'):
+            user = VscUser(user_name)
+            logger.debug("User %s quota: %s" % (user, quota))
+
+            path = user._get_path(storage)
+            path_stat = os.stat(path)
+            filename = os.path.join(path, ".quota_user.json.gz")
+
+            cache = FileCache(filename)
+            cache.update(key="quota", data=quota, threshold=0)
+            cache.update(key="storage", data=storage, threshold=0)
+            cache.close()
+
+            gpfs.chmod(0640, filename)
+            gpfs.chown(path_stat.st_uid, path_stat.st_uid, filename)
+
+            logger.info("Stored user %s quota for storage %s at %s" % (user_name, storage, filename))
+
 
 
 def nagios_analyse_data(ex_users, ex_vos, user_count, vo_count):
@@ -197,6 +229,7 @@ def map_uids_to_names():
 
 
 def main():
+    """Main script"""
 
     options = {
         'nagios': ('print out nagios information', None, 'store_true', False, 'n'),
@@ -222,6 +255,7 @@ def main():
 
     try:
         user_id_map = map_uids_to_names() # is this really necessary?
+        LdapQuery(VscConfiguration())
         gpfs = GpfsOperations()
         filesystems = gpfs.list_filesystems().keys()
         logger.debug("Found the following GPFS filesystems: %s" % (filesystems))
@@ -247,6 +281,7 @@ def main():
             quota_storage_map = get_mmrepquota_maps(quota[filesystem], filesystem, filesets)
 
             process_fileset_quota(gpfs, storage, filesystem, quota_storage_map['FILESET'])
+            process_user_quota(gpfs, storage, filesystem, quota_storage_map['USR'], user_id_map)
 
 
         sys.exit(1)
