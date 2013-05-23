@@ -783,8 +783,8 @@ class GpfsOperations(PosixOperations):
             self.raiseException("setQuota: can't set hard limit %s lower then soft limit %s" % (hard, soft), GpfsOperationError)
 
         opts += ["-%s" % typ2opt[typ], who]
-        opts += ["-s", "%sm" % int(soft // 1024 ** 2)]  # round to MB
-        opts += ["-h", "%sm" % int(hard // 1024 ** 2)]  # round to MB
+        opts += ["-s", "%sm" % int(soft / 1024 ** 2)]  # round to MB
+        opts += ["-h", "%sm" % int(hard / 1024 ** 2)]  # round to MB
 
         opts.append(obj)
 
