@@ -20,8 +20,6 @@ devices an entity (user, vo, ...) uses on the VSC storage.
 """
 from collections import namedtuple
 
-from vsc import fancylogger
-from vsc.utils.missing import RUDict
 
 QuotaInformation = namedtuple('QuotaInformation',
                               ['timestamp', # timestamp of the recording moment
@@ -42,33 +40,29 @@ class QuotaEntity(object):
         - string fileset (name as known to GPFS)
             - QuotaInformation
     """
-    def __init__(self):
+    def __init__(self, storage, filesystem):
         """ Initialiser """
-        self.quota_map = RUDict()
+        self.storage = storage
+        self.filesystem = filesystem
+        self.quota_map = {}
         self.exceed = False
-        self.log = fancylogger.getLogger(self.__class__.__name__)
 
-    def update(self, filesystem, fileset, used=0, soft=0, hard=0, doubt=0, expired=(False, None), timestamp=None):
+    def update(self, fileset, used=0, soft=0, hard=0, doubt=0, expired=(False, None), timestamp=None):
         """Store the quota for a given device.
 
         The arguments to this function are turned into a recursive
         dictionary that can easily be added to the existing information.
         """
 
-        qdict = {
-            filesystem: {
-                fileset : QuotaInformation(
-                    timestamp=timestamp,
-                    used=used,
-                    soft=soft,
-                    hard=hard,
-                    doubt=doubt,
-                    expired=expired
-                )
-            }
-        }
+        self.quota_map[fileset] = QuotaInformation(
+            timestamp=timestamp,
+            used=used,
+            soft=soft,
+            hard=hard,
+            doubt=doubt,
+            expired=expired
+        )
 
-        self.quota_map.update(qdict)
         self.exceed = soft != 0 and (self.exceed or int(used) > int(soft))
 
     def exceeds(self):
@@ -76,39 +70,50 @@ class QuotaEntity(object):
         return self.exceed
 
     def __str__(self):
-        return "[exceed: %s] %s" % (self.exceed, self.quota_map)
-
-    def __repr__(self):
-        return self.__str__()
-
-    def __getstate__(self):
-        d = self.__dict__.copy()
-        if d.has_key('log'):
-            del d['log']
-        return d
+        return "%s: %s" % (self.storage, self.quota_map)
 
 
 class QuotaUser(QuotaEntity):
     """Definition of a user with his associated quota."""
-    def __init__(self, user_id):
-        super(QuotaUser, self).__init__()
+    def __init__(self, storage, filesystem, user_id):
+        super(QuotaUser, self).__init__(storage, filesystem)
         self.user_id = user_id
 
     def key(self):
         return self.user_id
 
     def __str__(self):
-        return "User <%s> has quota %s" % (self.user_id, super(QuotaUser, self).__str__())
+        """Returns the quota information as a string."""
+        result = []
+        for (fileset, quota_info) in self.quota_map.items():
+            if fileset.startswith("gvo"):
+                suffix = "_VO"
+            elif fileset.startswith("gp"):
+                suffix = "_PROJECT"
+            else:
+                suffix = ''
 
-    def __repr__(self):
-        # FIXME: this does not seem like a good idea for a representation
-        return self.__str__()
+            if quota_info.soft > 0:
+                percentage = int(100.0 * quota_info.used / quota_info.soft)
+            else:
+                percentage = 0
+            s = "%s%s: used %dMiB (%d%%) quota %dMiB" % (self.storage,
+                                                         suffix,
+                                                         quota_info.used/1024,
+                                                         percentage,
+                                                         quota_info.soft/1024)
+            if self.exceed:
+                s += " grace: %d hours" % (quota_info.expired[1]/3600)
+
+            result.append(s)
+
+        return "\n".join(result)
 
 
 class QuotaFileset(QuotaEntity):
     """Definition of a Fileset with its associated quota."""
-    def __init__(self, fileset_id):
-        super(QuotaFileset, self).__init__()
+    def __init__(self, storage, filesystem, fileset_id):
+        super(QuotaFileset, self).__init__(storage, filesystem)
         self.fileset_id = fileset_id
 
     def key(self):
@@ -116,10 +121,6 @@ class QuotaFileset(QuotaEntity):
 
     def __str__(self):
         return "VO <%s> has quota %s" % (self.fileset_id, super(QuotaFileset, self).__str__())
-
-    def __repr__(self):
-        # FIXME: this does not seem like a good idea for a representation
-        return self.__str__()
 
 
 class QuotaGroup(QuotaEntity):
