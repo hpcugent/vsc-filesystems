@@ -238,7 +238,7 @@ class GpfsOperations(PosixOperations):
         # for v3.5 deviceName:fieldName:data:remarks:
 
         # set the gpfsdevices
-        gpfsdevices = list(set(info.get('deviceName', [])))
+        gpfsdevices = nub(info.get('deviceName', []))
         if len(gpfsdevices) == 0:
             self.log.raiseException("No devices found. Returned info %s" % info, GpfsOperationError)
         else:
@@ -279,6 +279,8 @@ class GpfsOperations(PosixOperations):
             - defQuota
             - fid
             - filesetname
+
+        - GPFS 3.5 also is able to list multiple e.g., USR lines in different filesets.
         """
         if devices is None:
             devices = self.list_filesystems().keys()
@@ -300,14 +302,14 @@ class GpfsOperations(PosixOperations):
         fss = nub(info.get('filesystemName', []))
         self.log.debug("Found the following filesystem names: %s" % (fss))
 
-        quotatypes = list(set(info.get('quotaType', [])))
-        quotatypesstruct = dict([(qt, {}) for qt in quotatypes])
+        quotatypes = nub(info.get('quotaType', []))
+        quotatypesstruct = dict([(qt, MonoidDict(Monoid([], lambda xs, ys: xs + ys))) for qt in quotatypes])
 
         res = dict([(fs, copy.deepcopy(quotatypesstruct)) for fs in fss])  # build structure
 
         for idx, (fs, qt, qid) in enumerate(zip(info['filesystemName'], info['quotaType'], info['id'])):
             details = dict([(k, info[k][idx]) for k in datakeys])
-            res[fs][qt][qid] = GpfsQuota(**details)
+            res[fs][qt][qid] = [GpfsQuota(**details)]
 
         self.gpfslocalquotas = res
         return res
@@ -359,7 +361,7 @@ class GpfsOperations(PosixOperations):
         datakeys.remove('filesystemName')
         datakeys.remove('id')
 
-        fss = list(set(info.get('filesystemName', [])))
+        fss = nub(info.get('filesystemName', []))
         res = dict([(fs, {}) for fs in fss])  # build structure
 
         for idx, (fs, qid) in enumerate(zip(info['filesystemName'], info['id'])):
@@ -781,8 +783,8 @@ class GpfsOperations(PosixOperations):
             self.raiseException("setQuota: can't set hard limit %s lower then soft limit %s" % (hard, soft), GpfsOperationError)
 
         opts += ["-%s" % typ2opt[typ], who]
-        opts += ["-s", "%sm" % int(soft // 1024 ** 2)]  # round to MB
-        opts += ["-h", "%sm" % int(hard // 1024 ** 2)]  # round to MB
+        opts += ["-s", "%sm" % int(soft / 1024 ** 2)]  # round to MB
+        opts += ["-h", "%sm" % int(hard / 1024 ** 2)]  # round to MB
 
         opts.append(obj)
 
