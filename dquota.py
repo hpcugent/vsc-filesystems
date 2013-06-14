@@ -27,6 +27,8 @@ import re
 import sys
 import time
 
+from string import Template
+
 from vsc.administration.user import VscUser
 from vsc.filesystem.gpfs import GpfsOperations
 from vsc.filesystem.quota.entities import QuotaUser, QuotaFileset
@@ -37,7 +39,7 @@ from vsc.utils import fancylogger
 from vsc.utils.cache import FileCache
 from vsc.utils.generaloption import simple_option
 from vsc.utils.lock import lock_or_bork, release_or_bork
-from vsc.utils.nagios import NagiosReporter, NagiosResult, NAGIOS_EXIT_OK, NAGIOS_EXIT_WARNING, NAGIOS_EXIT_CRITICAL
+from vsc.utils.nagios import NagiosReporter, NagiosResult, NAGIOS_EXIT_OK, NAGIOS_EXIT_CRITICAL
 from vsc.utils.timestamp_pid_lockfile import TimestampedPidLockfile
 
 ## Constants
@@ -58,7 +60,35 @@ fancylogger.setLogLevelInfo()
 logger = fancylogger.getLogger('gpfs_quota_checker')
 
 
-def get_mmrepquota_maps(quota_map, filesystem, filesets):
+QUOTA_EXCEEDED_MAIL_TEXT_TEMPLATE = Template('\n'.join([
+    'Dear $user_name',
+    '',
+    '',
+    'We have noticed that you have exceeded your quota on the VSC storage,',
+    'more in particular: $storage'
+    'As you may know, this may have a significant impact on the jobs you',
+    'can run on the various clusters.',
+    '',
+    'Please run "show_quota.py" regularly to check your storage and clean',
+    'up any files you no longer require.',
+    '',
+    'Should you need more storage, you can use your VO data storage.',
+    'If you are not a member of a VO, please consider joining one or request',
+    'a VO to be created for your research group.',
+    ''
+    'Also, it is recommended to clear scratch storage and move data you wish',
+    'to keep to $$VSC_DATA. Scratch space should remain temporary storage for',
+    'running jobs as it is accessible faster than both $$VSC_HOME and $$VSC_DATA.',
+    '',
+    'At this point $time, your personal usage is the following:',
+    '$quota_info',
+    '',
+    'Kind regards,',
+    'The UGent HPC team',
+    ]))
+
+
+def get_mmrepquota_maps(quota_map, storage, filesystem, filesets):
     """Obtain the quota information.
 
     This function uses vsc.filesystem.gpfs.GpfsOperations to obtain
@@ -78,17 +108,17 @@ def get_mmrepquota_maps(quota_map, filesystem, filesets):
     logger.info("ordering USR quota")
     # Iterate over a list of named tuples -- GpfsQuota
     for (user, gpfs_quota) in quota_map['USR'].items():
-        user_quota = user_map.get(user, QuotaUser(user))
+        user_quota = user_map.get(user, QuotaUser(storage, filesystem, user))
         user_map[user] = _update_quota_entity(filesets,
                                               user_quota,
-                                              filesystem,
+                                               filesystem,
                                               gpfs_quota,
                                               timestamp)
 
     logger.info("ordering FILESET quota")
     # Iterate over a list of named tuples -- GpfsQuota
     for (fileset, gpfs_quota) in quota_map['FILESET'].items():
-        fileset_quota = fs_map.get(fileset, QuotaFileset(fileset))
+        fileset_quota = fs_map.get(fileset, QuotaFileset(storage, filesystem, fileset))
         fs_map[fileset] = _update_quota_entity(filesets,
                                                fileset_quota,
                                                filesystem,
@@ -129,8 +159,7 @@ def _update_quota_entity(filesets, entity, filesystem, gpfs_quotas, timestamp):
             fileset_name = filesets[filesystem][quota.filesetname]['filesetName']
         else:
             fileset_name = None
-        entity.update(filesystem,
-                      fileset_name,
+        entity.update(fileset_name,
                       int(quota.blockUsage),
                       int(quota.blockQuota),
                       int(quota.blockLimit),
@@ -146,6 +175,7 @@ def process_fileset_quota(gpfs, storage, filesystem, quota_map):
     """
 
     filesets = gpfs.list_filesets()
+    exceeding_filesets = []
 
     logger.info("filesets = %s" % (filesets))
 
@@ -167,17 +197,25 @@ def process_fileset_quota(gpfs, storage, filesystem, quota_map):
 
         logger.info("Stored fileset %s quota for storage %s at %s" % (fileset, storage, filename))
 
+        #if quota.exceeds():
+        if True:
+            exceeding_filesets.append((fileset, quota))
+
+    return exceeding_filesets
+
 
 def process_user_quota(gpfs, storage, filesystem, quota_map, user_map):
     """Store the information in the user directories.
     """
+    exceeding_users = []
+
     for (user_id, quota) in quota_map.items():
 
         user_name = user_map.get(int(user_id), None)
 
         logger.debug("Checking quota for user %s with ID %s" % (user_name, user_id))
 
-        if user_name and user_name.startswith('vsc4'):
+        if user_name and user_name.startswith('vsc'):
             user = VscUser(user_name)
             logger.debug("User %s quota: %s" % (user, quota))
 
@@ -190,11 +228,17 @@ def process_user_quota(gpfs, storage, filesystem, quota_map, user_map):
             cache.update(key="storage", data=storage, threshold=0)
             cache.close()
 
+            gpfs.ignorerealpathmismatch = True
             gpfs.chmod(0640, filename)
             gpfs.chown(path_stat.st_uid, path_stat.st_uid, filename)
+            gpfs.ignorerealpathmismatch = False
 
             logger.info("Stored user %s quota for storage %s at %s" % (user_name, storage, filename))
 
+            if quota.exceeds():
+                exceeding_users.append((user, quota))
+
+    return exceeding_users
 
 
 def nagios_analyse_data(ex_users, ex_vos, user_count, vo_count):
@@ -217,6 +261,72 @@ def nagios_analyse_data(ex_users, ex_vos, user_count, vo_count):
         pU = float(ex_u) / user_count
         pV = float(ex_v) / vo_count
         return (NAGIOS_EXIT_OK, NagiosResult("Quota exceeded", ex_u=ex_u, ex_v=ex_v, pU=pU, pV=pV))
+
+
+def format_quota(storage, quota, target):
+    """Turn the quota information into a nice string.
+
+    VSC_DATA_VO: used n MiB (x%) quota m MiB
+    """
+    pass
+
+
+def notify(storage, item, quota, dry_run=False):
+    """Send out the notification"""
+    if item.startswith("gvo"):
+        vo = VscLdapGroup(item)
+        for recipient in [VscLdapUser(m) for m in vo.moderator]:
+            user_name = recipient.gecos
+            storage = "The %s VO storage on %s" % (item, storage)
+            quota_string = "%s" % (quota)
+
+            logger.info("notification recipient %s" % (recipient))
+            logger.info("notification storage %s" % (storage))
+            logger.info("notification quota_string %s" % (quota_string))
+
+    elif item.startswith("gpr"):
+        pass
+    elif item.startswith("vsc"):
+        pass
+
+
+def notify_exceeding_items(gpfs, storage, filesystem, exceeding_items, target, dry_run=False):
+    """Send out notification to the fileset owners.
+
+    - if the fileset belongs to a VO: the VO moderator
+    - if the fileset belongs to a project: the project moderator
+    - if the fileset belongs to a user: the user
+
+    The information is cached. The mail is sent in the following cases:
+        - the excession is new
+        - the excession occurred more than 7 days ago and stayed in the cache. In this case, the cache is updated as
+          to avoid sending outdated mails repeatedly.
+    """
+    cache_path = os.path.join(gpfs.list_filesystems()[filesystem]['defaultMountPoint'], ".quota_%s_cache.json.gz" % (target))
+    cache = FileCache(cache_path, True)  # we retain the old data
+
+    logger.info("Processing %d exceeding items" % (len(exceeding_items)))
+
+    for (item, quota) in exceeding_items:
+        updated = cache.update(item, quota, 7 * 86400)
+        logger.info("Cache entry for %s was updated: %s" % (item, updated))
+        if updated:
+            notify(storage, item, quota, dry_run)
+
+    cache.close()
+
+
+def notify_exceeding_filesets(**kwargs):
+
+    logger.info("HERE SUCKER!")
+
+    kwargs['target'] = 'filesets'
+    notify_exceeding_items(**kwargs)
+
+
+def notify_exceeding_users(**kwargs):
+    kwargs['target'] = 'users'
+    notify_exceeding_items(**kwargs)
 
 
 def map_uids_to_names():
@@ -278,50 +388,30 @@ def main():
                 logger.error("No quota defined for storage %s [%s]" % (storage, filesystem))
                 continue
 
-            quota_storage_map = get_mmrepquota_maps(quota[filesystem], filesystem, filesets)
+            quota_storage_map = get_mmrepquota_maps(quota[filesystem], storage,filesystem, filesets)
 
-            process_fileset_quota(gpfs, storage, filesystem, quota_storage_map['FILESET'])
-            process_user_quota(gpfs, storage, filesystem, quota_storage_map['USR'], user_id_map)
+            exceeding_filesets = process_fileset_quota(gpfs, storage, filesystem, quota_storage_map['FILESET'])
+            exceeding_users = process_user_quota(gpfs, storage, filesystem, quota_storage_map['USR'], user_id_map)
 
+            logger.warning("storage %s found %d filesets that are exceeding their quota: %s" % (storage,
+                                                                                                len(exceeding_filesets),
+                                                                                                exceeding_filesets))
+            logger.warning("storage %s found %d users who are exceeding their quota: %s" % (storage,
+                                                                                            len(exceeding_users),
+                                                                                            exceeding_users))
+
+            notify_exceeding_filesets(gpfs=gpfs,
+                                      storage=storage,
+                                      filesystem=filesystem,
+                                      exceeding_items=exceeding_filesets,
+                                      dry_run=opts.options.dry_run)
+            notify_exceeding_users(gpfs=gpfs,
+                                   storage=storage,
+                                   filesystem=filesystem,
+                                   exceeding_items=exceeding_users,
+                                   dry_run=opts.options.dry_run)
 
         sys.exit(1)
-
-        # figure out which users are crossing their softlimits
-        ex_users = filter(lambda u: u.exceeds(), mm_rep_quota_map_users.values())
-        logger.warning("found %s users who are exceeding their quota: %s" % (len(ex_users), [u.user_id for u in ex_users]))
-
-        # figure out which VO's are exceeding their softlimits
-        # currently, we're not using this, VO's should have plenty of space
-        ex_vos = filter(lambda v: v.exceeds(), mm_rep_quota_map_vos.values())
-        logger.warning("found %s VOs who are exceeding their quota: %s" % (len(ex_vos), [v.fileset_id for v in ex_vos]))
-
-        # FIXME: cache the storage quota information (test for exceeding users)
-        u_storage = UserFsQuotaStorage()
-        for user in mm_rep_quota_map_users.values():
-            try:
-                if not opts.options.dry_run:
-                    u_storage.store_quota(user)
-            except VscError, err:
-                logger.error("Could not store data for user %s" % (user.user_id))
-                pass  # we're just moving on, trying the rest of the users. The error will have been logged anyway.
-
-        v_storage = VoFsQuotaStorage()
-        for vo in mm_rep_quota_map_vos.values():
-            try:
-                if not opts.options.dry_run:
-                    v_storage.store_quota(vo)
-            except VscError, err:
-                log.error("Could not store vo data for vo %s" % (vo.fileset_id))
-                pass  # we're just moving on, trying the rest of the VOs. The error will have been logged anyway.
-
-        if not opts.options.dry_run:
-            # Report to the users who are exceeding their quota
-            LdapQuery(VscConfiguration())  # Initialise here, the mailreporter will use it.
-            reporter = GpfsQuotaMailReporter(QUOTA_CHECK_REMINDER_CACHE_FILENAME)
-            for user in ex_users:
-                reporter.report_user(user)
-            log.info("Done reporting users.")
-            reporter.close()
 
     except Exception, err:
         logger.exception("critical exception caught: %s" % (err))
