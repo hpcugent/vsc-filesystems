@@ -414,6 +414,7 @@ class PosixOperations(object):
             if os.path.exists(os.path.join(home_dir, '.bash_profile')):
                 self.log.info(".bash_profile already exists for user %s. Not overwriting." % (user_id))
             else:
+                self.log.info(".bash_profile not found for user %s. Writing default." % (user_id))
                 fp = open(os.path.join(home_dir, '.bash_profile'), 'w')
                 fp.write("\n".join(bashprofile_text + ['']))
                 fp.close()
