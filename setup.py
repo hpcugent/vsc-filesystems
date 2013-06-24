@@ -45,7 +45,8 @@ PACKAGE = {
     'scripts': ['bin/quota_log.py',
                 'bin/dquota.py'],
     'install_requires': [
-        'vsc-base >= 0.90',
+        'vsc-base >= 1.6',
+        'vsc-utils >= 1.3',
     ],
 }
 
