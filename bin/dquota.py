@@ -148,9 +148,9 @@ def _update_quota_entity(filesets, entity, filesystem, gpfs_quotas, timestamp):
         else:
             grace = grace.groupdict()
             if grace.get('days', None):
-                expired = (True, grace['days'] * 86400)
+                expired = (True, int(grace['days']) * 86400)
             elif grace.get('hours', None):
-                expired = (True, grace['hours'] * 3600)
+                expired = (True, int(grace['hours']) * 3600)
             elif grace.get('expired', None):
                 expired = (True, 0)
             else:
@@ -249,7 +249,7 @@ def process_user_quota(storage, gpfs, storage, filesystem, quota_map, user_map):
             logger.info("Stored user %s quota for storage %s at %s" % (user_name, storage, filename))
 
             if quota.exceeds():
-                exceeding_users.append((user, quota))
+                exceeding_users.append((user_id, quota))
 
     return exceeding_users
 
