@@ -30,9 +30,9 @@ import time
 from string import Template
 
 from vsc.administration.user import VscUser
+from vsc.config.base import VscStorage
 from vsc.filesystem.gpfs import GpfsOperations
 from vsc.filesystem.quota.entities import QuotaUser, QuotaFileset
-from vsc.gpfs.quota.report import GpfsQuotaMailReporter
 from vsc.ldap.configuration import VscConfiguration
 from vsc.ldap.utils import LdapQuery
 from vsc.utils import fancylogger
@@ -170,7 +170,7 @@ def _update_quota_entity(filesets, entity, filesystem, gpfs_quotas, timestamp):
     return entity
 
 
-def process_fileset_quota(gpfs, storage, filesystem, quota_map):
+def process_fileset_quota(storage, gpfs, storage, filesystem, quota_map):
     """Store the quota information in the filesets.
     """
 
@@ -204,10 +204,12 @@ def process_fileset_quota(gpfs, storage, filesystem, quota_map):
     return exceeding_filesets
 
 
-def process_user_quota(gpfs, storage, filesystem, quota_map, user_map):
+def process_user_quota(storage, gpfs, storage, filesystem, quota_map, user_map):
     """Store the information in the user directories.
     """
     exceeding_users = []
+    login_mount_point = storage[storage_name].login_mount_point
+    gpfs_mount_point = storage[storage_name].gpfs_mount_point
 
     for (user_id, quota) in quota_map.items():
 
@@ -220,6 +222,16 @@ def process_user_quota(gpfs, storage, filesystem, quota_map, user_map):
             logger.debug("User %s quota: %s" % (user, quota))
 
             path = user._get_path(storage)
+
+            # FIXME: We need some better way to address this
+            if gpfs.is_symlink(path):
+                if path.startswith(login_mount_point):
+                    path.replace(login_mount_point, gpfs_mount_point, 1)
+                    logger.info("Found a symlinked path to the login mount point %s. Replaced with %s" %
+                                (login_mount_point, gpfs_mount_point))
+
+
+
             path_stat = os.stat(path)
             filename = os.path.join(path, ".quota_user.json.gz")
 
@@ -367,6 +379,9 @@ def main():
         user_id_map = map_uids_to_names() # is this really necessary?
         LdapQuery(VscConfiguration())
         gpfs = GpfsOperations()
+
+        storage = VscStorage()
+
         filesystems = gpfs.list_filesystems().keys()
         logger.debug("Found the following GPFS filesystems: %s" % (filesystems))
 
@@ -375,38 +390,43 @@ def main():
 
         quota = gpfs.list_quota()
 
-        for storage in opts.options.storage:
+        for storage_name in opts.options.storage:
 
-            logger.info("Processing quota for storage %s" % (storage))
-            filesystem = opts.configfile_parser.get(storage, 'filesystem')
+            logger.info("Processing quota for storage_name %s" % (storage_name))
+            filesystem = opts.configfile_parser.get(storage_name, 'filesystem')
 
             if filesystem not in filesystems:
                 logger.error("Non-existant filesystem %s" % (filesystem))
                 continue
 
             if filesystem not in quota.keys():
-                logger.error("No quota defined for storage %s [%s]" % (storage, filesystem))
+                logger.error("No quota defined for storage_name %s [%s]" % (storage_name, filesystem))
                 continue
 
-            quota_storage_map = get_mmrepquota_maps(quota[filesystem], storage,filesystem, filesets)
+            quota_storage_map = get_mmrepquota_maps(quota[filesystem], storage_name,filesystem, filesets)
 
-            exceeding_filesets = process_fileset_quota(gpfs, storage, filesystem, quota_storage_map['FILESET'])
-            exceeding_users = process_user_quota(gpfs, storage, filesystem, quota_storage_map['USR'], user_id_map)
+            exceeding_filesets = process_fileset_quota(storage, gpfs, storage_name, filesystem, quota_storage_map['FILESET'])
+            exceeding_users = process_user_quota(storage, gpfs, storage_name, filesystem, quota_storage_map['USR'], user_id_map)
 
-            logger.warning("storage %s found %d filesets that are exceeding their quota: %s" % (storage,
-                                                                                                len(exceeding_filesets),
-                                                                                                exceeding_filesets))
-            logger.warning("storage %s found %d users who are exceeding their quota: %s" % (storage,
-                                                                                            len(exceeding_users),
-                                                                                            exceeding_users))
+            logger.warning("storage_name %s found %d filesets that are exceeding their quota" % (storage_name,
+                                                                                            len(exceeding_filesets)))
+            for (e_fileset, e_quota) in exceeding_filesets:
+                logger.warning("%s has quota %s" % (e_fileset, str(e_quota)))
+
+            logger.warning("storage_name %s found %d users who are exceeding their quota" % (storage_name,
+                                                                                            len(exceeding_users)))
+            for (e_user_id, e_quota) in exceeding_users:
+                logger.warning("%s has quota %s" % (e_user_id, str(e_quota)))
+
+
 
             notify_exceeding_filesets(gpfs=gpfs,
-                                      storage=storage,
+                                      storage=storage_name,
                                       filesystem=filesystem,
                                       exceeding_items=exceeding_filesets,
                                       dry_run=opts.options.dry_run)
             notify_exceeding_users(gpfs=gpfs,
-                                   storage=storage,
+                                   storage=storage_name,
                                    filesystem=filesystem,
                                    exceeding_items=exceeding_users,
                                    dry_run=opts.options.dry_run)
