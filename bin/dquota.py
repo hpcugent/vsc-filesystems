@@ -105,17 +105,17 @@ def get_mmrepquota_maps(quota_map, storage, filesystem, filesets):
 
     timestamp = int(time.time())
 
-    logger.info("ordering USR quota")
+    logger.info("ordering USR quota for storage %s" % (storage))
     # Iterate over a list of named tuples -- GpfsQuota
     for (user, gpfs_quota) in quota_map['USR'].items():
         user_quota = user_map.get(user, QuotaUser(storage, filesystem, user))
         user_map[user] = _update_quota_entity(filesets,
                                               user_quota,
-                                               filesystem,
+                                              filesystem,
                                               gpfs_quota,
                                               timestamp)
 
-    logger.info("ordering FILESET quota")
+    logger.info("ordering FILESET quota for storage %s" % (storage))
     # Iterate over a list of named tuples -- GpfsQuota
     for (fileset, gpfs_quota) in quota_map['FILESET'].items():
         fileset_quota = fs_map.get(fileset, QuotaFileset(storage, filesystem, fileset))
@@ -159,6 +159,7 @@ def _update_quota_entity(filesets, entity, filesystem, gpfs_quotas, timestamp):
             fileset_name = filesets[filesystem][quota.filesetname]['filesetName']
         else:
             fileset_name = None
+        logger.debug("The fileset name is %s" % (fileset_name))
         entity.update(fileset_name,
                       int(quota.blockUsage),
                       int(quota.blockQuota),
@@ -329,14 +330,14 @@ def notify_exceeding_items(gpfs, storage, filesystem, exceeding_items, target, d
 
 
 def notify_exceeding_filesets(**kwargs):
-
-    logger.info("HERE SUCKER!")
+    """Notification for filesets that have exceeded their quota."""
 
     kwargs['target'] = 'filesets'
     notify_exceeding_items(**kwargs)
 
 
 def notify_exceeding_users(**kwargs):
+    """Notification for users who have exceeded their quota."""
     kwargs['target'] = 'users'
     notify_exceeding_items(**kwargs)
 
