@@ -171,7 +171,7 @@ def _update_quota_entity(filesets, entity, filesystem, gpfs_quotas, timestamp):
     return entity
 
 
-def process_fileset_quota(storage, gpfs, storage, filesystem, quota_map):
+def process_fileset_quota(storage, gpfs, storage_name, filesystem, quota_map):
     """Store the quota information in the filesets.
     """
 
@@ -205,7 +205,7 @@ def process_fileset_quota(storage, gpfs, storage, filesystem, quota_map):
     return exceeding_filesets
 
 
-def process_user_quota(storage, gpfs, storage, filesystem, quota_map, user_map):
+def process_user_quota(storage, gpfs, storage_name, filesystem, quota_map, user_map):
     """Store the information in the user directories.
     """
     exceeding_users = []
