@@ -226,15 +226,16 @@ def process_user_quota(storage, gpfs, storage, filesystem, quota_map, user_map):
 
             # FIXME: We need some better way to address this
             if gpfs.is_symlink(path):
-                if path.startswith(login_mount_point):
-                    path.replace(login_mount_point, gpfs_mount_point, 1)
-                    logger.info("Found a symlinked path to the login mount point %s. Replaced with %s" %
-                                (login_mount_point, gpfs_mount_point))
+                target = os.path.realpath(path)
+                if target.startswith(login_mount_point):
+                    new_path = target.replace(login_mount_point, gpfs_mount_point, 1)
+                    logger.info("Found a symlinked path %s to the nfs mount point %s. Replaced with %s" %
+                                (path, login_mount_point, gpfs_mount_point))
+            else:
+                new_path = path
 
-
-
-            path_stat = os.stat(path)
-            filename = os.path.join(path, ".quota_user.json.gz")
+            path_stat = os.stat(new_path)
+            filename = os.path.join(new_path, ".quota_user.json.gz")
 
             cache = FileCache(filename)
             cache.update(key="quota", data=quota, threshold=0)
