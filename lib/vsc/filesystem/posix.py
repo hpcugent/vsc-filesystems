@@ -342,12 +342,14 @@ class PosixOperations(object):
         obj = self._sanity_check(obj)
         try:
             if self.dry_run:
-                self.log.info("Making directory %s. Dry-run, so not really doing anything." % (obj))
+                self.log.info("Making directory %s. Dry-run, so not really doing anything. Pretending it did succeed though. Returning True." % (obj))
+                return True
             else:
                 os.makedirs(obj)
+                return True
         except OSError, err:
             if err.errno == errno.EEXIST:
-                pass
+                return False
             else:
                 self.log.raiseException("Cannot create the directory hierarchy %s" % (obj), PosixOperationError)
 
