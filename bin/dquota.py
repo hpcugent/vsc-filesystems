@@ -355,8 +355,6 @@ def main():
                         NagiosResult("Not running on the HA master."))
         sys.exit(NAGIOS_EXIT_WARNING)
 
-
-
     if opts.options.nagios:
         nagios_reporter.report_and_exit()
         sys.exit(0)  # not reached
@@ -368,7 +366,6 @@ def main():
         user_id_map = map_uids_to_names() # is this really necessary?
         LdapQuery(VscConfiguration())
         gpfs = GpfsOperations()
-
         storage = VscStorage()
 
         filesystems = gpfs.list_filesystems().keys()
