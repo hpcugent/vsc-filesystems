@@ -36,10 +36,11 @@ from vsc.filesystem.quota.entities import QuotaUser, QuotaFileset
 from vsc.ldap.configuration import VscConfiguration
 from vsc.ldap.utils import LdapQuery
 from vsc.utils import fancylogger
+from vsc.utils.availability import proceed_on_ha_service
 from vsc.utils.cache import FileCache
 from vsc.utils.generaloption import simple_option
 from vsc.utils.lock import lock_or_bork, release_or_bork
-from vsc.utils.nagios import NagiosReporter, NagiosResult, NAGIOS_EXIT_OK, NAGIOS_EXIT_CRITICAL
+from vsc.utils.nagios import NagiosReporter, NagiosResult, NAGIOS_EXIT_OK, NAGIOS_EXIT_CRITICAL, NAGIOS_EXIT_WARNING
 from vsc.utils.timestamp_pid_lockfile import TimestampedPidLockfile
 
 ## Constants
@@ -255,28 +256,6 @@ def process_user_quota(storage, gpfs, storage_name, filesystem, quota_map, user_
     return exceeding_users
 
 
-def nagios_analyse_data(ex_users, ex_vos, user_count, vo_count):
-    """Analyse the data blobs we gathered and build a summary for nagios.
-
-    @type ex_users: [ quota.entities.User ]
-    @type ex_vos: [ quota.entities.VO ]
-    @type user_count: int
-    @type vo_count: int
-
-    Returns a tuple with two elements:
-        - the exit code to be provided when the script runs as a nagios check
-        - the message to be printed when the script runs as a nagios check
-    """
-    ex_u = len(ex_users)
-    ex_v = len(ex_vos)
-    if ex_u == 0 and ex_v == 0:
-        return (NAGIOS_EXIT_OK, NagiosResult("No quota exceeded", ex_u=0, ex_v=0, pU=0, pV=0))
-    else:
-        pU = float(ex_u) / user_count
-        pV = float(ex_v) / vo_count
-        return (NAGIOS_EXIT_OK, NagiosResult("Quota exceeded", ex_u=ex_u, ex_v=ex_v, pU=pU, pV=pV))
-
-
 def format_quota(storage, quota, target):
     """Turn the quota information into a nice string.
 
@@ -370,6 +349,14 @@ def main():
                                      opts.options.nagios_check_filename,
                                      opts.options.nagios_check_interval_threshold)
 
+    if not proceed_on_ha_service(opts.options.ha):
+        logger.warning("Not running on the target host in the HA setup. Stopping.")
+        nagios_reporter.cache(NAGIOS_EXIT_WARNING,
+                        NagiosResult("Not running on the HA master."))
+        sys.exit(NAGIOS_EXIT_WARNING)
+
+
+
     if opts.options.nagios:
         nagios_reporter.report_and_exit()
         sys.exit(0)  # not reached
@@ -391,6 +378,8 @@ def main():
         logger.debug("Found the following GPFS filesets: %s" % (filesets))
 
         quota = gpfs.list_quota()
+        exceeding_filesets = {}
+        exceeding_users = {}
 
         for storage_name in opts.options.storage:
 
@@ -407,8 +396,8 @@ def main():
 
             quota_storage_map = get_mmrepquota_maps(quota[filesystem], storage_name,filesystem, filesets)
 
-            exceeding_filesets = process_fileset_quota(storage, gpfs, storage_name, filesystem, quota_storage_map['FILESET'])
-            exceeding_users = process_user_quota(storage, gpfs, storage_name, filesystem, quota_storage_map['USR'], user_id_map)
+            exceeding_filesets[storage_name] = process_fileset_quota(storage, gpfs, storage_name, filesystem, quota_storage_map['FILESET'])
+            exceeding_users[storage_name] = process_user_quota(storage, gpfs, storage_name, filesystem, quota_storage_map['USR'], user_id_map)
 
             logger.warning("storage_name %s found %d filesets that are exceeding their quota" % (storage_name,
                                                                                             len(exceeding_filesets)))
@@ -420,8 +409,6 @@ def main():
             for (e_user_id, e_quota) in exceeding_users:
                 logger.warning("%s has quota %s" % (e_user_id, str(e_quota)))
 
-
-
             notify_exceeding_filesets(gpfs=gpfs,
                                       storage=storage_name,
                                       filesystem=filesystem,
@@ -432,8 +419,6 @@ def main():
                                    filesystem=filesystem,
                                    exceeding_items=exceeding_users,
                                    dry_run=opts.options.dry_run)
-
-        sys.exit(1)
 
     except Exception, err:
         logger.exception("critical exception caught: %s" % (err))
@@ -448,16 +433,18 @@ def main():
             lockfile.release()
         sys.exit(1)
 
-    (nagios_exit_code, nagios_result) = nagios_analyse_data(ex_users,
-                                                            ex_vos,
-                                                            user_count=len(mm_rep_quota_map_users.values()),
-                                                            vo_count=len(mm_rep_quota_map_vos.values()))
+    nagios_result = NagiosResult("quota check completed",
+                                 exU=reduce(lambda acc, k: acc + len(exceeding_users[k]), opts.options.storage, 0),
+                                 exU_warning=10,
+                                 exU_critical=20,
+                                 exF=reduce(lambda acc, k: acc + len(exceeding_filesets[k]), opts.options.storage, 0),
+                                 )
 
     bork_result = copy.deepcopy(nagios_result)
     bork_result.message = "lock release failed"
     release_or_bork(lockfile, nagios_reporter, bork_result)
 
-    nagios_reporter.cache(nagios_exit_code, "%s" % (nagios_result,))
+    nagios_reporter.cache(NAGIOS_EXIT_OK, nagios_result)
     log.info("Nagios exit: (%s, %s)" % (nagios_exit_code, nagios_result))
 
 if __name__ == '__main__':
