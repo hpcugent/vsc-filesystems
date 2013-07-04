@@ -393,8 +393,17 @@ def main():
 
             quota_storage_map = get_mmrepquota_maps(quota[filesystem], storage_name,filesystem, filesets)
 
-            exceeding_filesets[storage_name] = process_fileset_quota(storage, gpfs, storage_name, filesystem, quota_storage_map['FILESET'])
-            exceeding_users[storage_name] = process_user_quota(storage, gpfs, storage_name, filesystem, quota_storage_map['USR'], user_id_map)
+            exceeding_filesets[storage_name] = process_fileset_quota(storage,
+                                                                     gpfs,
+                                                                     storage_name,
+                                                                     filesystem,
+                                                                     quota_storage_map['FILESET'])
+            exceeding_users[storage_name] = process_user_quota(storage,
+                                                               gpfs,
+                                                               storage_name,
+                                                               filesystem,
+                                                               quota_storage_map['USR'],
+                                                               user_id_map)
 
             logger.warning("storage_name %s found %d filesets that are exceeding their quota" % (storage_name,
                                                                                             len(exceeding_filesets)))
@@ -430,11 +439,15 @@ def main():
             lockfile.release()
         sys.exit(1)
 
+    exceeding_users_count = reduce(lambda acc, k: acc + len(exceeding_users[k]), opts.options.storage, 0),
+    exceeding_filesets_count = reduce(lambda acc, k: acc + len(exceeding_filesets[k]), opts.options.storage, 0),
     nagios_result = NagiosResult("quota check completed",
-                                 exU=reduce(lambda acc, k: acc + len(exceeding_users[k]), opts.options.storage, 0),
+                                 exU=exceeding_users_count,
                                  exU_warning=10,
                                  exU_critical=20,
-                                 exF=reduce(lambda acc, k: acc + len(exceeding_filesets[k]), opts.options.storage, 0),
+                                 exF=exceeding_filesets_count,
+                                 exF_warning=1,
+                                 exF_critical=2,
                                  )
 
     bork_result = copy.deepcopy(nagios_result)
