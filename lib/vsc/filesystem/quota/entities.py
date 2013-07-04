@@ -120,7 +120,7 @@ class QuotaFileset(QuotaEntity):
         return self.fileset_id
 
     def __str__(self):
-        return "VO <%s> has quota %s" % (self.fileset_id, super(QuotaFileset, self).__str__())
+        return "Fileset <%s> has quota %s" % (self.fileset_id, super(QuotaFileset, self).__str__())
 
 
 class QuotaGroup(QuotaEntity):
