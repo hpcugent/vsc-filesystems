@@ -226,6 +226,9 @@ def process_user_quota(storage, gpfs, storage_name, filesystem, quota_map, user_
             path = user._get_path(storage)
 
             # FIXME: We need some better way to address this
+            # Right now, we replace the nfs mount prefix which the symlink points to
+            # with the gpfs mount point. this is a workaround until we resolve the
+            # symlink problem once we take new default scratch into production
             if gpfs.is_symlink(path):
                 target = os.path.realpath(path)
                 if target.startswith(login_mount_point):
