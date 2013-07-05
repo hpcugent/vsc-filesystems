@@ -343,6 +343,7 @@ def main():
         'nagios-check-interval-threshold': ('threshold of nagios checks timing out', None, 'store', NAGIOS_CHECK_INTERVAL_THRESHOLD),
         'storage': ('the VSC filesystems that are checked by this script', None, 'extend', []),
         'dry-run': ('do not make any updates whatsoever', None, 'store_true', False),
+        'ha': ('high-availability master IP address', None, 'store', None),
     }
     opts = simple_option(options)
 
