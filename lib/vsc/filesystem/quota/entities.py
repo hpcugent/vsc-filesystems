@@ -63,7 +63,7 @@ class QuotaEntity(object):
             expired=expired
         )
 
-        self.exceed = soft != 0 and (self.exceed or int(used) > int(soft))
+        self.exceed = self.exceed or expired[0]
 
     def exceeds(self):
         """Is the soft limit exceeded for some device?"""
@@ -102,7 +102,7 @@ class QuotaUser(QuotaEntity):
                                                          quota_info.used/1024,
                                                          percentage,
                                                          quota_info.soft/1024)
-            if self.exceed:
+            if quota_info.expired[0]:
                 s += " grace: %d hours" % (quota_info.expired[1]/3600)
 
             result.append(s)
