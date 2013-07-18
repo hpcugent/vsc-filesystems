@@ -86,9 +86,9 @@ class QuotaUser(QuotaEntity):
         """Returns the quota information as a string."""
         result = []
         for (fileset, quota_info) in self.quota_map.items():
-            if fileset.startswith("gvo"):
+            if fileset and fileset.startswith("gvo"):
                 suffix = "_VO"
-            elif fileset.startswith("gp"):
+            elif fileset and fileset.startswith("gp"):
                 suffix = "_PROJECT"
             else:
                 suffix = ''
