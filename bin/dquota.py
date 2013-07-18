@@ -44,7 +44,7 @@ from vsc.utils.nagios import NagiosReporter, NagiosResult, NAGIOS_EXIT_OK, NAGIO
 from vsc.utils.timestamp_pid_lockfile import TimestampedPidLockfile
 
 ## Constants
-NAGIOS_CHECK_FILENAME = '/var/log/pickles/dquota.nagios.json.gz'
+NAGIOS_CHECK_FILENAME = '/var/cache/dquota.nagios.json.gz'
 NAGIOS_HEADER = 'quota_check'
 NAGIOS_CHECK_INTERVAL_THRESHOLD = 30 * 60  # 30 minutes
 
@@ -81,7 +81,7 @@ QUOTA_EXCEEDED_MAIL_TEXT_TEMPLATE = Template('\n'.join([
     'to keep to $$VSC_DATA. Scratch space should remain temporary storage for',
     'running jobs as it is accessible faster than both $$VSC_HOME and $$VSC_DATA.',
     '',
-    'At this point $time, your personal usage is the following:',
+    'At this point on $time, your personal usage is the following:',
     '$quota_info',
     '',
     'Kind regards,',
@@ -191,7 +191,7 @@ def process_fileset_quota(storage, gpfs, storage_name, filesystem, quota_map):
         # TODO: This should somehow be some atomic operation.
         cache = FileCache(filename)
         cache.update(key="quota", data=quota, threshold=0)
-        cache.update(key="storage", data=storage, threshold=0)
+        cache.update(key="storage_name", data=storage_name, threshold=0)
         cache.close()
 
         gpfs.chmod(0640, filename)
@@ -217,13 +217,12 @@ def process_user_quota(storage, gpfs, storage_name, filesystem, quota_map, user_
 
         user_name = user_map.get(int(user_id), None)
 
-        logger.debug("Checking quota for user %s with ID %s" % (user_name, user_id))
-
         if user_name and user_name.startswith('vsc'):
             user = VscUser(user_name)
+            logger.debug("Checking quota for user %s with ID %s" % (user_name, user_id))
             logger.debug("User %s quota: %s" % (user, quota))
 
-            path = user._get_path(storage)
+            path = user._get_path(storage_name)
 
             # FIXME: We need some better way to address this
             # Right now, we replace the nfs mount prefix which the symlink points to
@@ -243,7 +242,7 @@ def process_user_quota(storage, gpfs, storage_name, filesystem, quota_map, user_
 
             cache = FileCache(filename)
             cache.update(key="quota", data=quota, threshold=0)
-            cache.update(key="storage", data=storage, threshold=0)
+            cache.update(key="storage_name", data=storage_name, threshold=0)
             cache.close()
 
             gpfs.ignorerealpathmismatch = True
@@ -251,20 +250,12 @@ def process_user_quota(storage, gpfs, storage_name, filesystem, quota_map, user_
             gpfs.chown(path_stat.st_uid, path_stat.st_uid, filename)
             gpfs.ignorerealpathmismatch = False
 
-            logger.info("Stored user %s quota for storage %s at %s" % (user_name, storage, filename))
+            logger.info("Stored user %s quota for storage %s at %s" % (user_name, storage_name, filename))
 
             if quota.exceeds():
                 exceeding_users.append((user_id, quota))
 
     return exceeding_users
-
-
-def format_quota(storage, quota, target):
-    """Turn the quota information into a nice string.
-
-    VSC_DATA_VO: used n MiB (x%) quota m MiB
-    """
-    pass
 
 
 def notify(storage, item, quota, dry_run=False):
@@ -298,6 +289,7 @@ def notify_exceeding_items(gpfs, storage, filesystem, exceeding_items, target, d
         - the excession occurred more than 7 days ago and stayed in the cache. In this case, the cache is updated as
           to avoid sending outdated mails repeatedly.
     """
+
     cache_path = os.path.join(gpfs.list_filesystems()[filesystem]['defaultMountPoint'], ".quota_%s_cache.json.gz" % (target))
     cache = FileCache(cache_path, True)  # we retain the old data
 
@@ -343,6 +335,7 @@ def main():
         'nagios-check-interval-threshold': ('threshold of nagios checks timing out', None, 'store', NAGIOS_CHECK_INTERVAL_THRESHOLD),
         'storage': ('the VSC filesystems that are checked by this script', None, 'extend', []),
         'dry-run': ('do not make any updates whatsoever', None, 'store_true', False),
+        'ha': ('high-availability master IP address', None, 'store', None),
     }
     opts = simple_option(options)
 
@@ -384,7 +377,7 @@ def main():
         for storage_name in opts.options.storage:
 
             logger.info("Processing quota for storage_name %s" % (storage_name))
-            filesystem = opts.configfile_parser.get(storage_name, 'filesystem')
+            filesystem = storage[storage_name].filesystem
 
             if filesystem not in filesystems:
                 logger.error("Non-existant filesystem %s" % (filesystem))
@@ -410,23 +403,23 @@ def main():
 
             logger.warning("storage_name %s found %d filesets that are exceeding their quota" % (storage_name,
                                                                                             len(exceeding_filesets)))
-            for (e_fileset, e_quota) in exceeding_filesets:
+            for (e_fileset, e_quota) in exceeding_filesets[storage_name]:
                 logger.warning("%s has quota %s" % (e_fileset, str(e_quota)))
 
             logger.warning("storage_name %s found %d users who are exceeding their quota" % (storage_name,
                                                                                             len(exceeding_users)))
-            for (e_user_id, e_quota) in exceeding_users:
+            for (e_user_id, e_quota) in exceeding_users[storage_name]:
                 logger.warning("%s has quota %s" % (e_user_id, str(e_quota)))
 
             notify_exceeding_filesets(gpfs=gpfs,
                                       storage=storage_name,
                                       filesystem=filesystem,
-                                      exceeding_items=exceeding_filesets,
+                                      exceeding_items=exceeding_filesets[storage_name],
                                       dry_run=opts.options.dry_run)
             notify_exceeding_users(gpfs=gpfs,
                                    storage=storage_name,
                                    filesystem=filesystem,
-                                   exceeding_items=exceeding_users,
+                                   exceeding_items=exceeding_users[storage_name],
                                    dry_run=opts.options.dry_run)
 
     except Exception, err:
@@ -458,7 +451,7 @@ def main():
     release_or_bork(lockfile, nagios_reporter, bork_result)
 
     nagios_reporter.cache(NAGIOS_EXIT_OK, nagios_result)
-    log.info("Nagios exit: (%s, %s)" % (nagios_exit_code, nagios_result))
+    logger.info("dquota run completed")
 
 if __name__ == '__main__':
     main()
