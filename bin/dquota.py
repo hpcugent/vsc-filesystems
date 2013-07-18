@@ -44,7 +44,7 @@ from vsc.utils.nagios import NagiosReporter, NagiosResult, NAGIOS_EXIT_OK, NAGIO
 from vsc.utils.timestamp_pid_lockfile import TimestampedPidLockfile
 
 ## Constants
-NAGIOS_CHECK_FILENAME = '/var/log/pickles/dquota.nagios.json.gz'
+NAGIOS_CHECK_FILENAME = '/var/cache/dquota.nagios.json.gz'
 NAGIOS_HEADER = 'quota_check'
 NAGIOS_CHECK_INTERVAL_THRESHOLD = 30 * 60  # 30 minutes
 
