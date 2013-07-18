@@ -454,7 +454,7 @@ def main():
     release_or_bork(lockfile, nagios_reporter, bork_result)
 
     nagios_reporter.cache(NAGIOS_EXIT_OK, nagios_result)
-    logger.info("Nagios exit: (%s, %s)" % (nagios_exit_code, nagios_result))
+    logger.info("dquota run completed")
 
 if __name__ == '__main__':
     main()
