@@ -66,7 +66,6 @@ class QuotaEntity(object):
 
         self.exceed = self.exceed or expired[0]
 
-
     def exceeds(self):
         """Is the soft limit exceeded for some device?"""
         return self.exceed

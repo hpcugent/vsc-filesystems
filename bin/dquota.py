@@ -44,7 +44,7 @@ from vsc.utils.nagios import NagiosReporter, NagiosResult, NAGIOS_EXIT_OK, NAGIO
 from vsc.utils.timestamp_pid_lockfile import TimestampedPidLockfile
 
 # Constants
-NAGIOS_CHECK_FILENAME = '/var/log/pickles/dquota.nagios.json.gz'
+NAGIOS_CHECK_FILENAME = '/var/cache/dquota.nagios.json.gz'
 NAGIOS_HEADER = 'quota_check'
 NAGIOS_CHECK_INTERVAL_THRESHOLD = 30 * 60  # 30 minutes
 
@@ -406,7 +406,7 @@ def main():
                                                                quota_storage_map['USR'],
                                                                user_id_map)
 
-            if len(exceeding_filesets[storage_name]) > 0:
+            if exceeding_filesets[storage_name]:
                 logger.warning("storage_name %s found %d filesets that are exceeding their quota" % (storage_name,
                                                                                                 len(exceeding_filesets)))
                 for (e_fileset, e_quota) in exceeding_filesets[storage_name]:
@@ -420,7 +420,7 @@ def main():
                                       exceeding_items=exceeding_filesets[storage_name],
                                       dry_run=opts.options.dry_run)
 
-            if len(exceeding_users[storage_name]) > 0:
+            if exceeding_users[storage_name]:
                 logger.warning("storage_name %s found %d users who are exceeding their quota" % (storage_name,
                                                                                                 len(exceeding_users)))
                 for (e_user_id, e_quota) in exceeding_users[storage_name]:
