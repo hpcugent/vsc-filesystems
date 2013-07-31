@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: latin-1 -*-
-##
+# #
 # Copyright 2009-2013 Ghent University
 #
 # This file is part of vsc-filesystems,
@@ -12,7 +12,7 @@
 #
 # All rights reserved.
 #
-##
+# #
 """
 General POSIX filesystem interaction (sort of replacement for linux_utils)
 
@@ -54,7 +54,7 @@ class PosixOperations(object):
     __metaclass__ = Singleton
 
     def __init__(self):
-        self.log = fancylogger.getLogger(name=self.__class__.__name__)
+        self.log = fancylogger.getLogger(name=self.__class__.__name__, fname=False)
 
         self.obj = None  # base object (file or directory or whatever)
 

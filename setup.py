@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: latin-1 -*-
-##
+# #
 # Copyright 2009-2013 Ghent University
 #
 # This file is part of vsc-filesystems,
@@ -12,7 +12,7 @@
 #
 # All rights reserved.
 #
-##
+# #
 """
 vsc-filesystems base distribution setup.py
 
@@ -37,10 +37,10 @@ shared_setup.SHARED_TARGET.update({
 
 PACKAGE = {
     'name': 'vsc-filesystems',
-    'version': '0.11',
+    'version': '0.12',
     'author': [sdw, ag],
     'maintainer': [sdw, ag],
-    'packages': ['vsc', 'vsc.filesystem','vsc.filesystem.quota'],
+    'packages': ['vsc', 'vsc.filesystem', 'vsc.filesystem.quota'],
     'namespace_packages': ['vsc'],
     'scripts': ['bin/quota_log.py',
                 'bin/dquota.py'],
