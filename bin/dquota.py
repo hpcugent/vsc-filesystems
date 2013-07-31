@@ -32,7 +32,7 @@ from string import Template
 from vsc.administration.user import VscUser
 from vsc.config.base import VscStorage
 from vsc.filesystem.gpfs import GpfsOperations
-from vsc.filesystem.quota.entities import QuotaUser, QuotaFileset
+from vsc.filesystem.quota.entities import QuotaUser
 from vsc.ldap.configuration import VscConfiguration
 from vsc.ldap.utils import LdapQuery
 from vsc.utils import fancylogger
@@ -165,7 +165,8 @@ def _update_quota_entity(filesets, entity, filesystem, gpfs_quotas, timestamp):
             fileset_name = filesets[filesystem][quota.filesetname]['filesetName']
         else:
             fileset_name = None
-        logger.debug("The fileset name is %s" % (fileset_name))
+        logger.debug(("The fileset name is %s (filesystem %s);"
+                      " blockgrace %s to expired %s") % (fileset_name, filesystem, quota.blockGrace, expired))
         entity.update(fileset_name,
                       int(quota.blockUsage),
                       int(quota.blockQuota),
@@ -406,21 +407,28 @@ def main():
                                                                quota_storage_map['USR'],
                                                                user_id_map)
 
-            logger.warning("storage_name %s found %d filesets that are exceeding their quota" % (storage_name,
-                                                                                            len(exceeding_filesets)))
-            for (e_fileset, e_quota) in exceeding_filesets[storage_name]:
-                logger.warning("%s has quota %s" % (e_fileset, str(e_quota)))
-
-            logger.warning("storage_name %s found %d users who are exceeding their quota" % (storage_name,
-                                                                                            len(exceeding_users)))
-            for (e_user_id, e_quota) in exceeding_users[storage_name]:
-                logger.warning("%s has quota %s" % (e_user_id, str(e_quota)))
+            if len(exceeding_filesets[storage_name]) > 0:
+                logger.warning("storage_name %s found %d filesets that are exceeding their quota" % (storage_name,
+                                                                                                len(exceeding_filesets)))
+                for (e_fileset, e_quota) in exceeding_filesets[storage_name]:
+                    logger.warning("%s has quota %s" % (e_fileset, str(e_quota)))
+            else:
+                logger.debug("storage_name %s found no filesets that are exceeding their quota" % storage_name)
 
             notify_exceeding_filesets(gpfs=gpfs,
                                       storage=storage_name,
                                       filesystem=filesystem,
                                       exceeding_items=exceeding_filesets[storage_name],
                                       dry_run=opts.options.dry_run)
+
+            if len(exceeding_users[storage_name]) > 0:
+                logger.warning("storage_name %s found %d users who are exceeding their quota" % (storage_name,
+                                                                                                len(exceeding_users)))
+                for (e_user_id, e_quota) in exceeding_users[storage_name]:
+                    logger.warning("%s has quota %s" % (e_user_id, str(e_quota)))
+            else:
+                logger.debug("storage_name %s found no users who are exceeding their quota" % storage_name)
+
             notify_exceeding_users(gpfs=gpfs,
                                    storage=storage_name,
                                    filesystem=filesystem,
