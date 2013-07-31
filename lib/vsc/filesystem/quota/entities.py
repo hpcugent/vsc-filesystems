@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: latin-1 -*-
-##
+# #
 # Copyright 2013-2013 Ghent University
 #
 # This file is part of vsc-gpfs,
@@ -12,7 +12,7 @@
 #
 # All rights reserved.
 #
-##
+# #
 """Various classes that can represent quota information for the various
 devices an entity (user, vo, ...) uses on the VSC storage.
 
@@ -22,12 +22,12 @@ from collections import namedtuple
 
 
 QuotaInformation = namedtuple('QuotaInformation',
-                              ['timestamp', # timestamp of the recording moment
-                               'used',      # used quota in KiB
-                               'soft',      # soft quota limit in KiB
-                               'hard',      # hard quota limit in KiB
-                               'doubt',     # the KiB GPFS is not sure about
-                               'expired',   # tuple (boolean, grace period expressed in seconds)
+                              ['timestamp',  # timestamp of the recording moment
+                               'used',  # used quota in KiB
+                               'soft',  # soft quota limit in KiB
+                               'hard',  # hard quota limit in KiB
+                               'doubt',  # the KiB GPFS is not sure about
+                               'expired',  # tuple (boolean, grace period expressed in seconds)
                               ])
 
 
@@ -45,6 +45,7 @@ class QuotaEntity(object):
         self.storage = storage
         self.filesystem = filesystem
         self.quota_map = {}
+        self.exceed_map = {}
         self.exceed = False
 
     def update(self, fileset, used=0, soft=0, hard=0, doubt=0, expired=(False, None), timestamp=None):
@@ -64,6 +65,7 @@ class QuotaEntity(object):
         )
 
         self.exceed = self.exceed or expired[0]
+
 
     def exceeds(self):
         """Is the soft limit exceeded for some device?"""
@@ -99,11 +101,11 @@ class QuotaUser(QuotaEntity):
                 percentage = 0
             s = "%s%s: used %dMiB (%d%%) quota %dMiB" % (self.storage,
                                                          suffix,
-                                                         quota_info.used/1024,
+                                                         quota_info.used / 1024,
                                                          percentage,
-                                                         quota_info.soft/1024)
+                                                         quota_info.soft / 1024)
             if quota_info.expired[0]:
-                s += " grace: %d hours" % (quota_info.expired[1]/3600)
+                s += " grace: %d hours" % (quota_info.expired[1] / 3600)
 
             result.append(s)
 
