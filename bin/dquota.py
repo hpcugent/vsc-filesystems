@@ -205,8 +205,7 @@ def process_fileset_quota(storage, gpfs, storage_name, filesystem, quota_map):
 
         logger.info("Stored fileset %s quota for storage %s at %s" % (fileset, storage, filename))
 
-        # if quota.exceeds():
-        if True:
+        if quota.exceeds():
             exceeding_filesets.append((fileset, quota))
 
     return exceeding_filesets
