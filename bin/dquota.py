@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-##
+# #
 #
 # Copyright 2012-2013 Ghent University
 #
@@ -43,7 +43,7 @@ from vsc.utils.lock import lock_or_bork, release_or_bork
 from vsc.utils.nagios import NagiosReporter, NagiosResult, NAGIOS_EXIT_OK, NAGIOS_EXIT_CRITICAL, NAGIOS_EXIT_WARNING
 from vsc.utils.timestamp_pid_lockfile import TimestampedPidLockfile
 
-## Constants
+# Constants
 NAGIOS_CHECK_FILENAME = '/var/cache/dquota.nagios.json.gz'
 NAGIOS_HEADER = 'quota_check'
 NAGIOS_CHECK_INTERVAL_THRESHOLD = 30 * 60  # 30 minutes
@@ -52,7 +52,8 @@ QUOTA_CHECK_LOG_FILE = '/var/log/gpfs_quota_checker.log'
 QUOTA_CHECK_REMINDER_CACHE_FILENAME = '/var/log/quota/gpfs_quota_checker.report.reminderCache.pickle'
 QUOTA_CHECK_LOCK_FILE = '/var/run/gpfs_quota_checker_tpid.lock'
 
-GPFS_GRACE_REGEX = re.compile(r"(?P<days>\d+)days|(?P<hours>\d+hours)|(?P<expired>expired)")
+GPFS_GRACE_REGEX = re.compile(r"(?P<days>\d+)\s*days|(?P<hours>\d+)\s*hours|(?P<expired>expired)")
+GPFS_NOGRACE_REGEX = re.compile(r"none", re.I)
 
 # log setup
 fancylogger.logToFile(QUOTA_CHECK_LOG_FILE)
@@ -143,10 +144,11 @@ def _update_quota_entity(filesets, entity, filesystem, gpfs_quotas, timestamp):
     for quota in gpfs_quotas:
         logger.debug("gpfs_quota = %s" % (str(quota)))
         grace = GPFS_GRACE_REGEX.search(quota.blockGrace)
+        nograce = GPFS_NOGRACE_REGEX.search(quota.blockGrace)
 
-        if not grace:
+        if nograce:
             expired = (False, None)
-        else:
+        elif grace:
             grace = grace.groupdict()
             if grace.get('days', None):
                 expired = (True, int(grace['days']) * 86400)
@@ -155,12 +157,17 @@ def _update_quota_entity(filesets, entity, filesystem, gpfs_quotas, timestamp):
             elif grace.get('expired', None):
                 expired = (True, 0)
             else:
-                expired = (False, None)
+                self.log.raiseException("Unprocessed grace groupdict %s (from string %s)." %
+                                        (grace, quota.blockGrace))
+        else:
+            self.log.raiseException("Unknown grace string %s." % quota.blockGrace)
+
         if quota.filesetname:
             fileset_name = filesets[filesystem][quota.filesetname]['filesetName']
         else:
             fileset_name = None
-        logger.debug("The fileset name is %s" % (fileset_name))
+        logger.debug("The fileset name is %s (filesystem %s); blockgrace %s to expired %s" %
+                     (fileset_name, filesystem, quota.blockGrace, expired))
         entity.update(fileset_name,
                       int(quota.blockUsage),
                       int(quota.blockQuota),
@@ -199,8 +206,7 @@ def process_fileset_quota(storage, gpfs, storage_name, filesystem, quota_map):
 
         logger.info("Stored fileset %s quota for storage %s at %s" % (fileset, storage, filename))
 
-        #if quota.exceeds():
-        if True:
+        if quota.exceeds():
             exceeding_filesets.append((fileset, quota))
 
     return exceeding_filesets
@@ -359,7 +365,7 @@ def main():
     lock_or_bork(lockfile, nagios_reporter)
 
     try:
-        user_id_map = map_uids_to_names() # is this really necessary?
+        user_id_map = map_uids_to_names()  # is this really necessary?
         LdapQuery(VscConfiguration())
         gpfs = GpfsOperations()
         storage = VscStorage()
@@ -387,7 +393,7 @@ def main():
                 logger.error("No quota defined for storage_name %s [%s]" % (storage_name, filesystem))
                 continue
 
-            quota_storage_map = get_mmrepquota_maps(quota[filesystem], storage_name,filesystem, filesets)
+            quota_storage_map = get_mmrepquota_maps(quota[filesystem], storage_name, filesystem, filesets)
 
             exceeding_filesets[storage_name] = process_fileset_quota(storage,
                                                                      gpfs,
@@ -401,21 +407,28 @@ def main():
                                                                quota_storage_map['USR'],
                                                                user_id_map)
 
-            logger.warning("storage_name %s found %d filesets that are exceeding their quota" % (storage_name,
-                                                                                            len(exceeding_filesets)))
-            for (e_fileset, e_quota) in exceeding_filesets[storage_name]:
-                logger.warning("%s has quota %s" % (e_fileset, str(e_quota)))
-
-            logger.warning("storage_name %s found %d users who are exceeding their quota" % (storage_name,
-                                                                                            len(exceeding_users)))
-            for (e_user_id, e_quota) in exceeding_users[storage_name]:
-                logger.warning("%s has quota %s" % (e_user_id, str(e_quota)))
+            if exceeding_filesets[storage_name]:
+                logger.warning("storage_name %s found %d filesets that are exceeding their quota" % (storage_name,
+                                                                                                len(exceeding_filesets)))
+                for (e_fileset, e_quota) in exceeding_filesets[storage_name]:
+                    logger.warning("%s has quota %s" % (e_fileset, str(e_quota)))
+            else:
+                logger.debug("storage_name %s found no filesets that are exceeding their quota" % storage_name)
 
             notify_exceeding_filesets(gpfs=gpfs,
                                       storage=storage_name,
                                       filesystem=filesystem,
                                       exceeding_items=exceeding_filesets[storage_name],
                                       dry_run=opts.options.dry_run)
+
+            if exceeding_users[storage_name]:
+                logger.warning("storage_name %s found %d users who are exceeding their quota" % (storage_name,
+                                                                                                len(exceeding_users)))
+                for (e_user_id, e_quota) in exceeding_users[storage_name]:
+                    logger.warning("%s has quota %s" % (e_user_id, str(e_quota)))
+            else:
+                logger.debug("storage_name %s found no users who are exceeding their quota" % storage_name)
+
             notify_exceeding_users(gpfs=gpfs,
                                    storage=storage_name,
                                    filesystem=filesystem,
