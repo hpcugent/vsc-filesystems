@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: latin-1 -*-
-##
+# #
 # Copyright 2009-2013 Ghent University
 #
 # This file is part of vsc-filesystems,
@@ -12,7 +12,7 @@
 #
 # All rights reserved.
 #
-##
+# #
 """
 GPFS specialised interface
 
@@ -309,6 +309,9 @@ class GpfsOperations(PosixOperations):
 
         for idx, (fs, qt, qid) in enumerate(zip(info['filesystemName'], info['quotaType'], info['id'])):
             details = dict([(k, info[k][idx]) for k in datakeys])
+            if qt == 'FILESET':
+                # GPFS fileset quota have empty filesetName field
+                details['filesetname'] = details['name']
             res[fs][qt][qid] = [GpfsQuota(**details)]
 
         self.gpfslocalquotas = res
