@@ -157,7 +157,8 @@ def _update_quota_entity(filesets, entity, filesystem, gpfs_quotas, timestamp):
             elif grace.get('expired', None):
                 expired = (True, 0)
             else:
-                self.log.raiseException("Unprocessed grace groupdict %s (from string %s)." % (grace, quota.blockGrace))
+                self.log.raiseException("Unprocessed grace groupdict %s (from string %s)." %
+                                        (grace, quota.blockGrace))
         else:
             self.log.raiseException("Unknown grace string %s." % quota.blockGrace)
 
@@ -165,8 +166,8 @@ def _update_quota_entity(filesets, entity, filesystem, gpfs_quotas, timestamp):
             fileset_name = filesets[filesystem][quota.filesetname]['filesetName']
         else:
             fileset_name = None
-        logger.debug(("The fileset name is %s (filesystem %s);"
-                      " blockgrace %s to expired %s") % (fileset_name, filesystem, quota.blockGrace, expired))
+        logger.debug("The fileset name is %s (filesystem %s); blockgrace %s to expired %s" %
+                     (fileset_name, filesystem, quota.blockGrace, expired))
         entity.update(fileset_name,
                       int(quota.blockUsage),
                       int(quota.blockQuota),
