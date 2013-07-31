@@ -32,7 +32,7 @@ from string import Template
 from vsc.administration.user import VscUser
 from vsc.config.base import VscStorage
 from vsc.filesystem.gpfs import GpfsOperations
-from vsc.filesystem.quota.entities import QuotaUser
+from vsc.filesystem.quota.entities import QuotaUser, QuotaFileset
 from vsc.ldap.configuration import VscConfiguration
 from vsc.ldap.utils import LdapQuery
 from vsc.utils import fancylogger
