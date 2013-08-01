@@ -73,7 +73,8 @@ class GpfsOperations(PosixOperations):
             if isinstance(opts, (tuple, list,)):
                 cmd += list(opts)
             else:
-                self.log.raiseException("_execute: please use a list or tuple for options: cmd %s opts %s" % (cmdname, opts), GpfsOperationError)
+                self.log.raiseException("_execute: please use a list or tuple for options: cmd %s opts %s" %
+                                        (cmdname, opts), GpfsOperationError)
 
         ec, out = super(GpfsOperations, self)._execute(cmd, changes)
 
@@ -99,10 +100,15 @@ class GpfsOperations(PosixOperations):
                             fs.append(gpfsdevice)
                         else:
                             fs.append(None)
-                            self.log.raiseException("While trying to resolve GPFS device from localfilesystem device fs %s found gpfsdevice %s that is not in gpfslocalfilesystems %s" % (fs, gpfsdevice, self.gpfslocalfilesystems.keys()), GpfsOperationError)
+                            self.log.raiseException(("While trying to resolve GPFS device from localfilesystem device"
+                                                     " fs %s found gpfsdevice %s that is not in "
+                                                     "gpfslocalfilesystems %s") %
+                                                    (fs, gpfsdevice, self.gpfslocalfilesystems.keys()),
+                                                    GpfsOperationError)
                     else:
                         fs.append(None)
-                        self.log.raiseException("Something went wrong trying to resolve GPFS device from localfilesystem device: fs %s" % fs, GpfsOperationError)
+                        self.log.raiseException(("Something went wrong trying to resolve GPFS device from "
+                                                 "localfilesystem device: fs %s") % fs, GpfsOperationError)
             else:
                 fs.append(None)
 
@@ -134,7 +140,8 @@ class GpfsOperations(PosixOperations):
             remainder = ls[sub_index:]
 
             if len(line) > description_count:
-                self.log.raiseException("After fixing, line still has too many fields: line (%s), original (%s)" % (line, fields))
+                self.log.raiseException("After fixing, line still has too many fields: line (%s), original (%s)" %
+                                        (line, fields))
 
             # now we need to check if the string in the first field has somehow magically merged with the previous line
             first_field = fields[0]
@@ -147,7 +154,8 @@ class GpfsOperations(PosixOperations):
                 remainder.insert(0, first_field)
                 return [line, remainder]
             else:
-                self.log.raiseException("Failed to find the initial field of the line: %s after fixup and splitting line into [%s, %s]" % (first_field, line, remainder))
+                self.log.raiseException(("Failed to find the initial field of the line: %s after fixup and "
+                                         "splitting line into [%s, %s]") % (first_field, line, remainder))
 
     def _executeY(self, name, opts=None, prefix=False):
         """Run with -Y and parse output in dict of name:list of values
@@ -204,7 +212,8 @@ class GpfsOperations(PosixOperations):
                     line.extend([''] * (maximum_field_count - field_count))
                 else:
                     # try to fix the line
-                    self.log.info("Line has too many fields (%d > %d), trying to fix %s" % (field_count, description_field_count, line))
+                    self.log.info("Line has too many fields (%d > %d), trying to fix %s" %
+                                  (field_count, description_field_count, line))
                     fixed_lines = self.fixup_executeY_line(line, description_field_count)
                     i = fields.index((field_count, line))
                     fields[i:i + 1] = map(lambda fs: (len(fs), fs), fixed_lines)
@@ -218,8 +227,7 @@ class GpfsOperations(PosixOperations):
                     for (_, line) in fields[1:]:
                         res[name] = [line[6 + index]]
         except:
-            self.log.exception("Failed to regroup data %s (from output %s)" % (fields, out))
-            raise
+            self.log.raiseException("Failed to regroup data %s (from output %s)" % (fields, out))
 
         return res
 
@@ -355,7 +363,7 @@ class GpfsOperations(PosixOperations):
             opts_ = copy.deepcopy(opts)
             opts_.insert(1, device)
             res = self._executeY('mmlsfileset', opts_)
-        # for v3.5 filesystemName:filesetName:id:rootInode:status:path:parentId:created:inodes:dataInKB:comment:filesetMode:afmTarget:afmState:afmMode:afmFileLookupRefreshInterval:afmFileOpenRefreshInterval:afmDirLookupRefreshInterval:afmDirOpenRefreshInterval:afmAsyncDelay:reserved:afmExpirationTimeout:afmRPO:afmLastPSnapId:inodeSpace:isInodeSpaceOwner:maxInodes:allocInodes:inodeSpaceMask:afmShowHomeSnapshots:afmNumReadThreads:afmNumReadGWs:afmReadBufferSize:afmWriteBufferSize:afmReadSparseThreshold:afmParallelReadChunkSize:afmParallelReadThreshold:snapId:
+            # for v3.5 filesystemName:filesetName:id:rootInode:status:path:parentId:created:inodes:dataInKB:comment:filesetMode:afmTarget:afmState:afmMode:afmFileLookupRefreshInterval:afmFileOpenRefreshInterval:afmDirLookupRefreshInterval:afmDirOpenRefreshInterval:afmAsyncDelay:reserved:afmExpirationTimeout:afmRPO:afmLastPSnapId:inodeSpace:isInodeSpaceOwner:maxInodes:allocInodes:inodeSpaceMask:afmShowHomeSnapshots:afmNumReadThreads:afmNumReadGWs:afmReadBufferSize:afmWriteBufferSize:afmReadSparseThreshold:afmParallelReadChunkSize:afmParallelReadThreshold:snapId:
             self.log.debug("list_filesets res keys = %s " % (res.keys()))
             for (key, value) in res.items():
                 info[key] = value
@@ -404,7 +412,8 @@ class GpfsOperations(PosixOperations):
         try:
             filesets = self.gpfslocalfilesets[filesystem_name]
         except:
-            self.log.raiseException("GPFS has no fileset information for filesystem %s" % (filesystem_name), GpfsOperationError)
+            self.log.raiseException("GPFS has no fileset information for filesystem %s" %
+                                    (filesystem_name), GpfsOperationError)
 
         for fset in filesets.values():
             if fset['filesetName'] == fileset_name:
@@ -452,7 +461,8 @@ class GpfsOperations(PosixOperations):
                 if k in keysL:
                     # duplicate key !!
                     if not infoL[k][idx] == infoM[k][idx]:
-                        self.log.error("nsdName %s has named value %s in both -L and -M, but have different value L=%s M=%s" % (nsd, infoL[k][idx], infoM[k][idx]))
+                        self.log.error(("nsdName %s has named value %s in both -L and -M, but have different value"
+                                        " L=%s M=%s") % (nsd, infoL[k][idx], infoM[k][idx]))
                     Mk = "M_%s" % k
                 res[nsd][Mk] = infoM[k][idx]
 
@@ -579,12 +589,14 @@ class GpfsOperations(PosixOperations):
 
         # does the path exist ?
         if self.exists(fsetpath):
-            self.log.raiseException("makeFileset for new_fileset_path %s returned sane fsetpath %s, but it already exists." % (new_fileset_path, fsetpath), GpfsOperationError)
+            self.log.raiseException(("makeFileset for new_fileset_path %s returned sane fsetpath %s,"
+                                     " but it already exists.") % (new_fileset_path, fsetpath), GpfsOperationError)
 
         # choose unique name
         parentfsetpath = os.path.dirname(fsetpath)
         if not self.exists(parentfsetpath):
-            self.log.raiseException("parent dir %s of fsetpath %s does not exist. Not going to create it automatically." % (parentfsetpath, fsetpath), GpfsOperationError)
+            self.log.raiseException(("parent dir %s of fsetpath %s does not exist. Not going to create it "
+                                     "automatically.") % (parentfsetpath, fsetpath), GpfsOperationError)
 
         fs = self.what_filesystem(parentfsetpath)
         foundgpfsdevice = fs[self.localfilesystemnaming.index('gpfsdevice')]
@@ -599,14 +611,17 @@ class GpfsOperations(PosixOperations):
                 fileset_name = "_".join(lastpart)
             else:
                 fileset_name = os.path.basedir(fsetpath)
-                self.log.error("fsetpath %s doesn't start with mntpt %s. using basedir %s" % (fsetpath, mntpt, fileset_name))
+                self.log.error("fsetpath %s doesn't start with mntpt %s. using basedir %s" %
+                               (fsetpath, mntpt, fileset_name))
 
         # bail if there is a fileset with the same name or the same link location, i.e., path
         for efsetid, efset in self.gpfslocalfilesets[foundgpfsdevice].items():
             efsetpath = efset.get('path', None)
             efsetname = efset.get('filesetName', None)
             if efsetpath == fsetpath or efsetname == fileset_name:
-                self.log.raiseException("Found existing fileset %s that has same path %s or same name %s as new path %s or new name %s" % (efset, efsetpath, efsetname, fsetpath, fileset_name), GpfsOperationError)
+                self.log.raiseException(("Found existing fileset %s that has same path %s or same name %s as new "
+                                         "path %s or new name %s") %
+                                        (efset, efsetpath, efsetname, fsetpath, fileset_name), GpfsOperationError)
 
         # create the fileset
         # if created, try to link it with -J to path
@@ -620,17 +635,20 @@ class GpfsOperations(PosixOperations):
                 if parent_fileset_name and parent_fileset_name == efset.get('filesetName', None):
                     parent_fileset_exists = True
             if not parent_fileset_exists:
-                self.log.raiseException("Parent fileset %s does not appear to exist." % parent_fileset_name, GpfsOperationError)
+                self.log.raiseException("Parent fileset %s does not appear to exist." %
+                                        parent_fileset_name, GpfsOperationError)
             mmcrfileset_options += ['--inode-space', parent_fileset_name]
 
         (ec, out) = self._execute('mmcrfileset', mmcrfileset_options, True)
         if ec > 0:
-            self.log.raiseException("Creating fileset with name %s on device %s failed" % (fileset_name, foundgpfsdevice), GpfsOperationError)
+            self.log.raiseException("Creating fileset with name %s on device %s failed (out: %s)" %
+                                    (fileset_name, foundgpfsdevice, out), GpfsOperationError)
 
         # link the fileset
         ec, out = self._execute('mmlinkfileset', [foundgpfsdevice, fileset_name, '-J', fsetpath], True)
         if ec > 0:
-            self.log.raiseException("Linking fileset with name %s on device %s to path %s failed" % (fileset_name, foundgpfsdevice, fsetpath), GpfsOperationError)
+            self.log.raiseException("Linking fileset with name %s on device %s to path %s failed (out: %s)" %
+                                    (fileset_name, foundgpfsdevice, fsetpath, out), GpfsOperationError)
 
         # at the end, rescan the filesets and update the info
         self.list_filesets()
@@ -670,7 +688,8 @@ class GpfsOperations(PosixOperations):
                 fileset_name = attr['filesetname']
                 self.log.info("set_fileset_quota: setting fileset to %s for obj %s" % (fileset_name, fileset_path))
             else:
-                self.log.raiseException("set_fileset_quota: attrs for obj %s don't have filestename property (attr: %s)" % (fileset_path, attr), GpfsOperationError)
+                self.log.raiseException(("set_fileset_quota: attrs for obj %s don't have filestename property "
+                                         "(attr: %s)") % (fileset_path, attr), GpfsOperationError)
 
         self._set_quota(soft, who=fileset_name, obj=fileset_path, typ='fileset', hard=hard)
 
@@ -783,7 +802,8 @@ class GpfsOperations(PosixOperations):
         if hard is None:
             hard = int(soft * soft2hard_factor)
         elif hard < soft:
-            self.raiseException("setQuota: can't set hard limit %s lower then soft limit %s" % (hard, soft), GpfsOperationError)
+            self.raiseException("setQuota: can't set hard limit %s lower then soft limit %s" %
+                                (hard, soft), GpfsOperationError)
 
         opts += ["-%s" % typ2opt[typ], who]
         opts += ["-s", "%sm" % int(soft / 1024 ** 2)]  # round to MB
