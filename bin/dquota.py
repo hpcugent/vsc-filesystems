@@ -223,7 +223,7 @@ def process_user_quota(storage, gpfs, storage_name, filesystem, quota_map, user_
 
         user_name = user_map.get(int(user_id), None)
 
-        if user_name and user_name.startswith('vsc'):
+        if user_name and user_name.startswith('vsc4'):
             user = VscUser(user_name)
             logger.debug("Checking quota for user %s with ID %s" % (user_name, user_id))
             logger.debug("User %s quota: %s" % (user, quota))
