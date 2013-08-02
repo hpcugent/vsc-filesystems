@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/bin/bash
 
 # remove all loaded modules
 module  purge
