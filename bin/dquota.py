@@ -49,10 +49,9 @@ GPFS_GRACE_REGEX = re.compile(r"(?P<days>\d+)\s*days|(?P<hours>\d+)\s*hours|(?P<
 GPFS_NOGRACE_REGEX = re.compile(r"none", re.I)
 
 # log setup
-fancylogger.logToFile(QUOTA_CHECK_LOG_FILE)
+logger = fancylogger.getLogger(__name__)
 fancylogger.logToScreen(True)
 fancylogger.setLogLevelInfo()
-logger = fancylogger.getLogger('gpfs_quota_checker')
 
 
 QUOTA_EXCEEDED_MAIL_TEXT_TEMPLATE = Template('\n'.join([
