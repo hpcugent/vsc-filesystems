@@ -20,7 +20,6 @@ Script to check for quota transgressions and notify the offending users.
 @author Andy Georges
 """
 
-import copy
 import os
 import pwd
 import re
@@ -36,11 +35,9 @@ from vsc.filesystem.quota.entities import QuotaUser, QuotaFileset
 from vsc.ldap.configuration import VscConfiguration
 from vsc.ldap.utils import LdapQuery
 from vsc.utils import fancylogger
-from vsc.utils.availability import proceed_on_ha_service
 from vsc.utils.cache import FileCache
-from vsc.utils.lock import lock_or_bork, release_or_bork
+from vsc.utils.nagios import NAGIOS_EXIT_CRITICAL
 from vsc.utils.script_tools import ExtendedSimpleOption
-from vsc.utils.timestamp_pid_lockfile import TimestampedPidLockfile
 
 # Constants
 QUOTA_CHECK_REMINDER_CACHE_FILENAME = '/var/cache/quota/gpfs_quota_checker.report.reminderCache.pickle'
@@ -410,11 +407,10 @@ def main():
                                    filesystem=filesystem,
                                    exceeding_items=exceeding_users[storage_name],
                                    dry_run=opts.options.dry_run)
-
     except Exception, err:
         logger.exception("critical exception caught: %s" % (err))
         opts.epilogue_critical("Script failed in a horrible way")
-        sys.exit(1)
+        sys.exit(NAGIOS_EXIT_CRITICAL)
 
     opts.epilogue("quota check completed", stats)
 
