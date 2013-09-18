@@ -409,7 +409,7 @@ def main():
                                    dry_run=opts.options.dry_run)
     except Exception, err:
         logger.exception("critical exception caught: %s" % (err))
-        opts.epilogue_critical("Script failed in a horrible way")
+        opts.critical("Script failed in a horrible way")
         sys.exit(NAGIOS_EXIT_CRITICAL)
 
     opts.epilogue("quota check completed", stats)

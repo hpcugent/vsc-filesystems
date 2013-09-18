@@ -22,6 +22,7 @@ import time
 from vsc.filesystem.gpfs import GpfsOperations
 from vsc.utils import fancylogger
 from vsc.utils.nagios import NAGIOS_EXIT_CRITICAL
+from vsc.utils.script_tools import ExtendedSimpleOption
 
 #Constants
 NAGIOS_CHECK_INTERVAL_THRESHOLD = (6 * 60 + 5) * 60   # 365 minutes -- little over 6 hours.
