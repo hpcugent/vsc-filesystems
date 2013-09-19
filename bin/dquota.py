@@ -41,6 +41,7 @@ from vsc.utils.script_tools import ExtendedSimpleOption
 
 # Constants
 QUOTA_CHECK_REMINDER_CACHE_FILENAME = '/var/cache/quota/gpfs_quota_checker.report.reminderCache.pickle'
+NAGIOS_CHECK_INTERVAL_THRESHOLD = 60 * 60 # one hour
 
 GPFS_GRACE_REGEX = re.compile(r"(?P<days>\d+)\s*days|(?P<hours>\d+)\s*hours|(?P<expired>expired)")
 GPFS_NOGRACE_REGEX = re.compile(r"none", re.I)
