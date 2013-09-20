@@ -161,7 +161,7 @@ def _update_quota_entity(filesets, entity, filesystem, gpfs_quotas, timestamp):
         else:
             fileset_name = None
         logger.debug("The fileset name is %s (filesystem %s); blockgrace %s to expired %s" %
-                     ifileset_name, filesystem, quota.blockGrace, expired))
+                     (fileset_name, filesystem, quota.blockGrace, expired))
         entity.update(fileset_name,
                       int(quota.blockUsage),
                       int(quota.blockQuota),
