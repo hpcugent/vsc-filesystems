@@ -32,6 +32,7 @@ logger = fancylogger.getLogger(__name__)
 fancylogger.logToScreen(True)
 fancylogger.setLogLevelInfo()
 
+QUOTA_STORE_LOG_CRITICAL = 1
 
 def main():
     """The main."""
@@ -56,7 +57,7 @@ def main():
         quota = gpfs.list_quota()
 
         for key in quota:
-            stats["%s_quota_log_critical" % (key,)] = 1
+            stats["%s_quota_log_critical" % (key,)] = QUOTA_STORE_LOG_CRITICAL
             try:
                 filename = "gpfs_quota_%s_%s.gz" % (time.strftime("%Y%m%d-%H:%M"), key)
                 path = os.path.join(opts.options.location, filename)
