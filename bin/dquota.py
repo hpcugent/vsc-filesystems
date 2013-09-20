@@ -51,6 +51,9 @@ logger = fancylogger.getLogger(__name__)
 fancylogger.logToScreen(True)
 fancylogger.setLogLevelInfo()
 
+QUOTA_USERS_WARNING = 10
+QUOTA_USERS_CRITICAL = 20
+QUOTA_FILESETS_CRITICAL = 1
 
 QUOTA_EXCEEDED_MAIL_TEXT_TEMPLATE = Template('\n'.join([
     'Dear $user_name',
@@ -375,7 +378,7 @@ def main():
                                                                quota_storage_map['USR'],
                                                                user_id_map)
 
-            stats["%s_fileset_critical" % (storage_name,)] = 1
+            stats["%s_fileset_critical" % (storage_name,)] = QUOTA_FILESETS_CRITICAL
             if exceeding_filesets[storage_name]:
                 stats["%s_fileset" % (storage_name,)] = 1
                 logger.warning("storage_name %s found %d filesets that are exceeding their quota" % (storage_name,
@@ -391,8 +394,9 @@ def main():
                                       filesystem=filesystem,
                                       exceeding_items=exceeding_filesets[storage_name],
                                       dry_run=opts.options.dry_run)
-            stats["%s_users_warning" % (storage_name,)] = 10
-            stats["%s_users_critical" % (storage_name,)] = 20
+
+            stats["%s_users_warning" % (storage_name,)] = QUOTA_USERS_WARNING
+            stats["%s_users_critical" % (storage_name,)] = QUOTA_USERS_CRITICAL
             if exceeding_users[storage_name]:
                 stats["%s_users" % (storage_name,)] = len(exceeding_users[storage_name])
                 logger.warning("storage_name %s found %d users who are exceeding their quota" %
