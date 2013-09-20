@@ -29,6 +29,7 @@ import time
 from string import Template
 
 from vsc.administration.user import VscUser
+from vsc.administration.vo import VscVo
 from vsc.config.base import VscStorage
 from vsc.filesystem.gpfs import GpfsOperations
 from vsc.filesystem.quota.entities import QuotaUser, QuotaFileset
@@ -260,8 +261,8 @@ def process_user_quota(storage, gpfs, storage_name, filesystem, quota_map, user_
 def notify(storage, item, quota, dry_run=False):
     """Send out the notification"""
     if item.startswith("gvo"):
-        vo = VscLdapGroup(item)
-        for recipient in [VscLdapUser(m) for m in vo.moderator]:
+        vo = VscVo(item)
+        for recipient in [VscUser(m) for m in vo.moderator]:
             user_name = recipient.gecos
             storage = "The %s VO storage on %s" % (item, storage)
             quota_string = "%s" % (quota)
