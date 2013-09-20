@@ -20,7 +20,6 @@ Script to check for quota transgressions and notify the offending users.
 @author Andy Georges
 """
 
-import copy
 import os
 import pwd
 import re
@@ -30,37 +29,32 @@ import time
 from string import Template
 
 from vsc.administration.user import VscUser
+from vsc.administration.vo import VscVo
 from vsc.config.base import VscStorage
 from vsc.filesystem.gpfs import GpfsOperations
 from vsc.filesystem.quota.entities import QuotaUser, QuotaFileset
 from vsc.ldap.configuration import VscConfiguration
 from vsc.ldap.utils import LdapQuery
 from vsc.utils import fancylogger
-from vsc.utils.availability import proceed_on_ha_service
 from vsc.utils.cache import FileCache
-from vsc.utils.generaloption import simple_option
-from vsc.utils.lock import lock_or_bork, release_or_bork
-from vsc.utils.nagios import NagiosReporter, NagiosResult, NAGIOS_EXIT_OK, NAGIOS_EXIT_CRITICAL, NAGIOS_EXIT_WARNING
-from vsc.utils.timestamp_pid_lockfile import TimestampedPidLockfile
+from vsc.utils.nagios import NAGIOS_EXIT_CRITICAL
+from vsc.utils.script_tools import ExtendedSimpleOption
 
 # Constants
-NAGIOS_CHECK_FILENAME = '/var/cache/dquota.nagios.json.gz'
-NAGIOS_HEADER = 'quota_check'
-NAGIOS_CHECK_INTERVAL_THRESHOLD = 30 * 60  # 30 minutes
-
-QUOTA_CHECK_LOG_FILE = '/var/log/gpfs_quota_checker.log'
-QUOTA_CHECK_REMINDER_CACHE_FILENAME = '/var/log/quota/gpfs_quota_checker.report.reminderCache.pickle'
-QUOTA_CHECK_LOCK_FILE = '/var/run/gpfs_quota_checker_tpid.lock'
+QUOTA_CHECK_REMINDER_CACHE_FILENAME = '/var/cache/quota/gpfs_quota_checker.report.reminderCache.pickle'
+NAGIOS_CHECK_INTERVAL_THRESHOLD = 60 * 60 # one hour
 
 GPFS_GRACE_REGEX = re.compile(r"(?P<days>\d+)\s*days|(?P<hours>\d+)\s*hours|(?P<expired>expired)")
 GPFS_NOGRACE_REGEX = re.compile(r"none", re.I)
 
 # log setup
-fancylogger.logToFile(QUOTA_CHECK_LOG_FILE)
+logger = fancylogger.getLogger(__name__)
 fancylogger.logToScreen(True)
 fancylogger.setLogLevelInfo()
-logger = fancylogger.getLogger('gpfs_quota_checker')
 
+QUOTA_USERS_WARNING = 10
+QUOTA_USERS_CRITICAL = 20
+QUOTA_FILESETS_CRITICAL = 1
 
 QUOTA_EXCEEDED_MAIL_TEXT_TEMPLATE = Template('\n'.join([
     'Dear $user_name',
@@ -157,10 +151,10 @@ def _update_quota_entity(filesets, entity, filesystem, gpfs_quotas, timestamp):
             elif grace.get('expired', None):
                 expired = (True, 0)
             else:
-                self.log.raiseException("Unprocessed grace groupdict %s (from string %s)." %
+                logger.raiseException("Unprocessed grace groupdict %s (from string %s)." %
                                         (grace, quota.blockGrace))
         else:
-            self.log.raiseException("Unknown grace string %s." % quota.blockGrace)
+            logger.raiseException("Unknown grace string %s." % quota.blockGrace)
 
         if quota.filesetname:
             fileset_name = filesets[filesystem][quota.filesetname]['filesetName']
@@ -267,8 +261,8 @@ def process_user_quota(storage, gpfs, storage_name, filesystem, quota_map, user_
 def notify(storage, item, quota, dry_run=False):
     """Send out the notification"""
     if item.startswith("gvo"):
-        vo = VscLdapGroup(item)
-        for recipient in [VscLdapUser(m) for m in vo.moderator]:
+        vo = VscVo(item)
+        for recipient in [VscUser(m) for m in vo.moderator]:
             user_name = recipient.gecos
             storage = "The %s VO storage on %s" % (item, storage)
             quota_string = "%s" % (quota)
@@ -336,33 +330,10 @@ def main():
     """Main script"""
 
     options = {
-        'nagios': ('print out nagios information', None, 'store_true', False, 'n'),
-        'nagios-check-filename': ('filename of where the nagios check data is stored', str, 'store', NAGIOS_CHECK_FILENAME),
-        'nagios-check-interval-threshold': ('threshold of nagios checks timing out', None, 'store', NAGIOS_CHECK_INTERVAL_THRESHOLD),
+        'nagios-check-interval-threshold': NAGIOS_CHECK_INTERVAL_THRESHOLD,
         'storage': ('the VSC filesystems that are checked by this script', None, 'extend', []),
-        'dry-run': ('do not make any updates whatsoever', None, 'store_true', False),
-        'ha': ('high-availability master IP address', None, 'store', None),
     }
-    opts = simple_option(options)
-
-    logger.info('started GPFS quota check run.')
-
-    nagios_reporter = NagiosReporter(NAGIOS_HEADER,
-                                     opts.options.nagios_check_filename,
-                                     opts.options.nagios_check_interval_threshold)
-
-    if not proceed_on_ha_service(opts.options.ha):
-        logger.warning("Not running on the target host in the HA setup. Stopping.")
-        nagios_reporter.cache(NAGIOS_EXIT_WARNING,
-                        NagiosResult("Not running on the HA master."))
-        sys.exit(NAGIOS_EXIT_WARNING)
-
-    if opts.options.nagios:
-        nagios_reporter.report_and_exit()
-        sys.exit(0)  # not reached
-
-    lockfile = TimestampedPidLockfile(QUOTA_CHECK_LOCK_FILE)
-    lock_or_bork(lockfile, nagios_reporter)
+    opts = ExtendedSimpleOption(options)
 
     try:
         user_id_map = map_uids_to_names()  # is this really necessary?
@@ -379,6 +350,7 @@ def main():
         quota = gpfs.list_quota()
         exceeding_filesets = {}
         exceeding_users = {}
+        stats = {}
 
         for storage_name in opts.options.storage:
 
@@ -407,12 +379,15 @@ def main():
                                                                quota_storage_map['USR'],
                                                                user_id_map)
 
+            stats["%s_fileset_critical" % (storage_name,)] = QUOTA_FILESETS_CRITICAL
             if exceeding_filesets[storage_name]:
+                stats["%s_fileset" % (storage_name,)] = 1
                 logger.warning("storage_name %s found %d filesets that are exceeding their quota" % (storage_name,
                                                                                                 len(exceeding_filesets)))
                 for (e_fileset, e_quota) in exceeding_filesets[storage_name]:
                     logger.warning("%s has quota %s" % (e_fileset, str(e_quota)))
             else:
+                stats["%s_fileset" % (storage_name,)] = 0
                 logger.debug("storage_name %s found no filesets that are exceeding their quota" % storage_name)
 
             notify_exceeding_filesets(gpfs=gpfs,
@@ -421,12 +396,16 @@ def main():
                                       exceeding_items=exceeding_filesets[storage_name],
                                       dry_run=opts.options.dry_run)
 
+            stats["%s_users_warning" % (storage_name,)] = QUOTA_USERS_WARNING
+            stats["%s_users_critical" % (storage_name,)] = QUOTA_USERS_CRITICAL
             if exceeding_users[storage_name]:
-                logger.warning("storage_name %s found %d users who are exceeding their quota" % (storage_name,
-                                                                                                len(exceeding_users)))
+                stats["%s_users" % (storage_name,)] = len(exceeding_users[storage_name])
+                logger.warning("storage_name %s found %d users who are exceeding their quota" %
+                               (storage_name, len(exceeding_users[storage_name])))
                 for (e_user_id, e_quota) in exceeding_users[storage_name]:
                     logger.warning("%s has quota %s" % (e_user_id, str(e_quota)))
             else:
+                stats["%s_users" % (storage_name,)] = 0
                 logger.debug("storage_name %s found no users who are exceeding their quota" % storage_name)
 
             notify_exceeding_users(gpfs=gpfs,
@@ -434,37 +413,12 @@ def main():
                                    filesystem=filesystem,
                                    exceeding_items=exceeding_users[storage_name],
                                    dry_run=opts.options.dry_run)
-
     except Exception, err:
         logger.exception("critical exception caught: %s" % (err))
-        if not opts.options.dry_run:
-            nagios_reporter.cache(NAGIOS_EXIT_CRITICAL, NagiosResult("CRITICAL script failed - %s" % (err.message)))
-        if not opts.options.dry_run:
-            lockfile.release()
-        sys.exit(1)
-    except Exception, err:
-        logger.exception("exception caught: %s" % (err))
-        if not opts.options.dry_run:
-            lockfile.release()
-        sys.exit(1)
+        opts.critical("Script failed in a horrible way")
+        sys.exit(NAGIOS_EXIT_CRITICAL)
 
-    exceeding_users_count = reduce(lambda acc, k: acc + len(exceeding_users[k]), opts.options.storage, 0),
-    exceeding_filesets_count = reduce(lambda acc, k: acc + len(exceeding_filesets[k]), opts.options.storage, 0),
-    nagios_result = NagiosResult("quota check completed",
-                                 exU=exceeding_users_count,
-                                 exU_warning=10,
-                                 exU_critical=20,
-                                 exF=exceeding_filesets_count,
-                                 exF_warning=1,
-                                 exF_critical=2,
-                                 )
-
-    bork_result = copy.deepcopy(nagios_result)
-    bork_result.message = "lock release failed"
-    release_or_bork(lockfile, nagios_reporter, bork_result)
-
-    nagios_reporter.cache(NAGIOS_EXIT_OK, nagios_result)
-    logger.info("dquota run completed")
+    opts.epilogue("quota check completed", stats)
 
 if __name__ == '__main__':
     main()
