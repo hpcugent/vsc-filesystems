@@ -87,6 +87,35 @@ QUOTA_EXCEEDED_MAIL_TEXT_TEMPLATE = Template('\n'.join([
     ]))
 
 
+VO_QUOTA_EXCEEDED_MAIL_TEXT_TEMPLATE = Template('\n'.join([
+    'Dear $user_name',
+    '',
+    '',
+    'We have noticed that the VO ($vo_name) you moderate has exceeded its quota on the VSC storage,',
+    'more in particular: $storage_name',
+    'As you may know, this may have a significant impact on the jobs the VO members',
+    'can run on the various clusters.',
+    '',
+    'Please clean up any files that are no longer required.',
+    '',
+    'Should you need more storage, you can reply to this mail and ask for',
+    'the quota to be increased. Please motivate your request adequately.',
+    ''
+    'Also, it is recommended to have your VO members clear scratch storage and move data they wish',
+    'to keep to $$VSC_DATA or $$VSC_DATA_VO/$USER. It is paramount that scratch',
+    'space remains temporary storage for running (multi-node) jobs as it is',
+    'accessible faster than both $$VSC_HOME and $$VSC_DATA.',
+    '',
+    'At this point on $time, the VO  usage is the following:',
+    '$quota_info',
+    '',
+    '',
+    'Kind regards,',
+    'The UGent HPC team',
+    ]))
+
+
+
 def get_mmrepquota_maps(quota_map, storage, filesystem, filesets):
     """Obtain the quota information.
 
@@ -263,13 +292,21 @@ def process_user_quota(storage, gpfs, storage_name, filesystem, quota_map, user_
 
 def notify(storage_name, item, quota, dry_run=False):
     """Send out the notification"""
+    mail = VscMail(mail_host="smtp.ugent.be")
     if item.startswith("gvo"):  # VOs
         vo = VscVo(item)
-        for recipient in [VscUser(m) for m in vo.moderator]:
-            user_name = recipient.gecos
-            storage = "The %s VO storage on %s" % (item, storage_name)
-            quota_string = "%s" % (quota,)
-            logger.info("notification: recipient %s storage %s quota_string %s" % (recipient, storage_name, quota_string))
+        for user in [VscUser(m) for m in vo.moderator]:
+            message = VO_QUOTA_EXCEEDED_MAIL_TEXT_TEMPLATE.safe_substitute(user_name=user.gecos,
+                                                                           vo_name=item,
+                                                                           storage_name=storage_name,
+                                                                           quota_info="%s" % (quota,),
+                                                                           time=time.ctime())
+            mail.sendTextMail(mail_to="andy.georges@ugent.be",
+                              mail_from="hpc-admin@lists.ugent.be",
+                              reply_to="hpc-admin@lists.ugent.be",
+                              mail_subject="Quota on %s exceeded" % (storage_name,),
+                              message=message)
+            logger.info("notification: recipient %s storage %s quota_string %s" % (user.cn, storage_name, quota_string))
 
     elif item.startswith("gpr"):  # projects
         pass
@@ -279,12 +316,12 @@ def notify(storage_name, item, quota, dry_run=False):
                                                                     storage_name=storage_name,
                                                                     quota_info="%s" % (quota,),
                                                                     time=time.ctime())
-        mail = VscMail(mail_host="smtp.ugent.be")
         mail.sendTextMail(mail_to="andy.georges@ugent.be",
                           mail_from="hpc-admin@lists.ugent.be",
                           reply_to="hpc-admin@lists.ugent.be",
                           mail_subject="Quota on %s exceeded" % (storage_name,),
                           message=message)
+        logger.info("notification sent: recipient %s storage %s quota_string %s" % (recipient, storage_name, quota_string))
 
 
 def notify_exceeding_items(gpfs, storage, filesystem, exceeding_items, target, dry_run=False):
