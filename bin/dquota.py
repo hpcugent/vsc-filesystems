@@ -37,6 +37,7 @@ from vsc.ldap.configuration import VscConfiguration
 from vsc.ldap.utils import LdapQuery
 from vsc.utils import fancylogger
 from vsc.utils.cache import FileCache
+from vsc.utils.mail import VscMail
 from vsc.utils.nagios import NAGIOS_EXIT_CRITICAL
 from vsc.utils.script_tools import ExtendedSimpleOption
 
@@ -61,20 +62,21 @@ QUOTA_EXCEEDED_MAIL_TEXT_TEMPLATE = Template('\n'.join([
     '',
     '',
     'We have noticed that you have exceeded your quota on the VSC storage,',
-    'more in particular: $storage'
+    'more in particular: $storage_name'
     'As you may know, this may have a significant impact on the jobs you',
     'can run on the various clusters.',
     '',
-    'Please run "show_quota.py" regularly to check your storage and clean',
-    'up any files you no longer require.',
+    'Please clean up any files you no longer require.',
     '',
-    'Should you need more storage, you can use your VO data storage.',
+    'Should you need more storage, you can use your VO storage.',
     'If you are not a member of a VO, please consider joining one or request',
     'a VO to be created for your research group.',
+    'If your VO storage is full, have its moderator ask to increase the quota.'
     ''
     'Also, it is recommended to clear scratch storage and move data you wish',
-    'to keep to $$VSC_DATA. Scratch space should remain temporary storage for',
-    'running jobs as it is accessible faster than both $$VSC_HOME and $$VSC_DATA.',
+    'to keep to $$VSC_DATA or $$VSC_DATA_VO/$USER. It is paramount that scratch',
+    'space remains temporary storage for running (multi-node) jobs as it is',
+    'accessible faster than both $$VSC_HOME and $$VSC_DATA.',
     '',
     'At this point on $time, your personal usage is the following:',
     '$quota_info',
@@ -253,28 +255,36 @@ def process_user_quota(storage, gpfs, storage_name, filesystem, quota_map, user_
             logger.info("Stored user %s quota for storage %s at %s" % (user_name, storage_name, filename))
 
             if quota.exceeds():
-                exceeding_users.append((user_id, quota))
+                exceeding_users.append((user_name, quota))
 
     return exceeding_users
 
 
-def notify(storage, item, quota, dry_run=False):
+def notify(storage_name, item, quota, dry_run=False):
     """Send out the notification"""
-    if item.startswith("gvo"):
+    if item.startswith("gvo"):  # VOs
         vo = VscVo(item)
         for recipient in [VscUser(m) for m in vo.moderator]:
             user_name = recipient.gecos
-            storage = "The %s VO storage on %s" % (item, storage)
-            quota_string = "%s" % (quota)
+            storage = "The %s VO storage on %s" % (item, storage_name)
+            quota_string = "%s" % (quota,)
+            logger.info("notification: recipient %s storage %s quota_string %s" % (recipient, storage_name, quota_string))
 
-            logger.info("notification recipient %s" % (recipient))
-            logger.info("notification storage %s" % (storage))
-            logger.info("notification quota_string %s" % (quota_string))
-
-    elif item.startswith("gpr"):
+    elif item.startswith("gpr"):  # projects
         pass
-    elif item.startswith("vsc"):
-        pass
+    elif item.startswith("vsc"):  # users
+        if item == 'vsc40002':
+            user = VscUser(item)
+            message = QUOTA_EXCEEDED_MAIL_TEXT_TEMPLATE.safe_substitute(user_name=user.gecos,
+                                                                        storage_name=storage_name,
+                                                                        quota_info="%s" % (quota,),
+                                                                        time=time.ctime())
+            mail = VscMail()
+            mail.sendTextMail(mail_to=user.mail,
+                              mail_from="hpc-admin@lists.ugent.be",
+                              reply_to="hpc-admin@lists.ugent.be",
+                              mail_subject="Quota on %s exceeded" % (storage_name,),
+                              message=message)
 
 
 def notify_exceeding_items(gpfs, storage, filesystem, exceeding_items, target, dry_run=False):
