@@ -53,8 +53,8 @@ logger = fancylogger.getLogger(__name__)
 fancylogger.logToScreen(True)
 fancylogger.setLogLevelInfo()
 
-QUOTA_USERS_WARNING = 10
-QUOTA_USERS_CRITICAL = 20
+QUOTA_USERS_WARNING = 20
+QUOTA_USERS_CRITICAL = 40
 QUOTA_FILESETS_CRITICAL = 1
 
 QUOTA_EXCEEDED_MAIL_TEXT_TEMPLATE = Template('\n'.join([
@@ -273,18 +273,17 @@ def notify(storage_name, item, quota, dry_run=False):
     elif item.startswith("gpr"):  # projects
         pass
     elif item.startswith("vsc"):  # users
-        if item == 'vsc40002':
-            user = VscUser(item)
-            message = QUOTA_EXCEEDED_MAIL_TEXT_TEMPLATE.safe_substitute(user_name=user.gecos,
-                                                                        storage_name=storage_name,
-                                                                        quota_info="%s" % (quota,),
-                                                                        time=time.ctime())
-            mail = VscMail()
-            mail.sendTextMail(mail_to=user.mail,
-                              mail_from="hpc-admin@lists.ugent.be",
-                              reply_to="hpc-admin@lists.ugent.be",
-                              mail_subject="Quota on %s exceeded" % (storage_name,),
-                              message=message)
+        user = VscUser(item)
+        message = QUOTA_EXCEEDED_MAIL_TEXT_TEMPLATE.safe_substitute(user_name=user.gecos,
+                                                                    storage_name=storage_name,
+                                                                    quota_info="%s" % (quota,),
+                                                                    time=time.ctime())
+        mail = VscMail(mail_host="smtp.ugent.be")
+        mail.sendTextMail(mail_to="andy.georges@ugent.be",
+                          mail_from="hpc-admin@lists.ugent.be",
+                          reply_to="hpc-admin@lists.ugent.be",
+                          mail_subject="Quota on %s exceeded" % (storage_name,),
+                          message=message)
 
 
 def notify_exceeding_items(gpfs, storage, filesystem, exceeding_items, target, dry_run=False):
