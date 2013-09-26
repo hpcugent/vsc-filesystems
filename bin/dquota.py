@@ -62,7 +62,7 @@ QUOTA_EXCEEDED_MAIL_TEXT_TEMPLATE = Template('\n'.join([
     '',
     '',
     'We have noticed that you have exceeded your quota on the VSC storage,',
-    'more in particular: $storage_name'
+    'more in particular: $storage_name',
     'As you may know, this may have a significant impact on the jobs you',
     'can run on the various clusters.',
     '',
@@ -80,6 +80,7 @@ QUOTA_EXCEEDED_MAIL_TEXT_TEMPLATE = Template('\n'.join([
     '',
     'At this point on $time, your personal usage is the following:',
     '$quota_info',
+    '',
     '',
     'Kind regards,',
     'The UGent HPC team',
