@@ -59,65 +59,64 @@ QUOTA_FILESETS_CRITICAL = 1
 
 QUOTA_NOTIFICATION_CACHE_THRESHOLD = 7 * 86400
 
-QUOTA_EXCEEDED_MAIL_TEXT_TEMPLATE = Template('\n'.join([
-    'Dear $user_name',
-    '',
-    '',
-    'We have noticed that you have exceeded your quota on the VSC storage,',
-    'more in particular: $$$storage_name',
-    '',
-    'As you may know, this may have a significant impact on the jobs you',
-    'can run on the various clusters.',
-    '',
-    'Please clean up any files you no longer require.',
-    '',
-    'Should you need more storage, you can use your VO storage.',
-    'If you are not a member of a VO, please consider joining one or request',
-    'a VO to be created for your research group.',
+QUOTA_EXCEEDED_MAIL_TEXT_TEMPLATE = Template("""
+Dear $user_name
+
+
+We have noticed that you have exceeded your quota on the VSC storage,
+more in particular: $$$storage_name
+
+As you may know, this may have a significant impact on the jobs you
+can run on the various clusters.
+
+Please clean up any files you no longer require.
+
+Should you need more storage, you can use your VO storage.
+If you are not a member of a VO, please consider joining one or request
+a VO to be created for your research group.
     'If your VO storage is full, have its moderator ask to increase the quota.'
     ''
-    'Also, it is recommended to clear scratch storage and move data you wish',
-    'to keep to $$VSC_DATA or $$VSC_DATA_VO/$USER. It is paramount that scratch',
-    'space remains temporary storage for running (multi-node) jobs as it is',
-    'accessible faster than both $$VSC_HOME and $$VSC_DATA.',
-    '',
-    'At this point on $time, your personal usage is the following:',
-    '$quota_info',
-    '',
-    '',
-    'Kind regards,',
-    'The UGent HPC team',
-    ]))
+Also, it is recommended to clear scratch storage and move data you wish
+to keep to $$VSC_DATA or $$VSC_DATA_VO/$USER. It is paramount that scratch
+space remains temporary storage for running (multi-node) jobs as it is
+accessible faster than both $$VSC_HOME and $$VSC_DATA.
+
+At this point on $time, your personal usage is the following:
+$quota_info
 
 
-VO_QUOTA_EXCEEDED_MAIL_TEXT_TEMPLATE = Template('\n'.join([
-    'Dear $user_name',
-    '',
-    '',
-    'We have noticed that the VO ($vo_name) you moderate has exceeded its quota on the VSC storage,',
-    'more in particular: $$$storage_name',
-    '',
-    'As you may know, this may have a significant impact on the jobs the VO members',
-    'can run on the various clusters.',
-    '',
-    'Please clean up any files that are no longer required.',
-    '',
-    'Should you need more storage, you can reply to this mail and ask for',
-    'the quota to be increased. Please motivate your request adequately.',
+Kind regards,
+The UGent HPC team
+""")
+
+
+VO_QUOTA_EXCEEDED_MAIL_TEXT_TEMPLATE = Template("""
+Dear $user_name
+
+
+We have noticed that the VO ($vo_name) you moderate has exceeded its quota on the VSC storage,
+more in particular: $$$storage_name
+
+As you may know, this may have a significant impact on the jobs the VO members
+can run on the various clusters.
+
+Please clean up any files that are no longer required.
+
+Should you need more storage, you can reply to this mail and ask for
+the quota to be increased. Please motivate your request adequately.
     ''
-    'Also, it is recommended to have your VO members clear scratch storage and move data they wish',
-    'to keep to $$VSC_DATA or $$VSC_DATA_VO/$USER. It is paramount that scratch',
-    'space remains temporary storage for running (multi-node) jobs as it is',
-    'accessible faster than both $$VSC_HOME and $$VSC_DATA.',
-    '',
-    'At this point on $time, the VO  usage is the following:',
-    '$quota_info',
-    '',
-    '',
-    'Kind regards,',
-    'The UGent HPC team',
-    ]))
+Also, it is recommended to have your VO members clear scratch storage and move data they wish
+to keep to $$VSC_DATA or $$VSC_DATA_VO/$USER. It is paramount that scratch
+space remains temporary storage for running (multi-node) jobs as it is
+accessible faster than both $$VSC_HOME and $$VSC_DATA.
 
+At this point on $time, the VO  usage is the following:
+$quota_info
+
+
+Kind regards,
+The UGent HPC team
+""")
 
 
 def get_mmrepquota_maps(quota_map, storage, filesystem, filesets):
