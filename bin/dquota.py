@@ -207,7 +207,7 @@ def _update_quota_entity(filesets, entity, filesystem, gpfs_quotas, timestamp):
     return entity
 
 
-def process_fileset_quota(storage, gpfs, storage_name, filesystem, quota_map):
+def process_fileset_quota(storage, gpfs, storage_name, filesystem, quota_map, dry_run=False):
     """Store the quota information in the filesets.
     """
 
@@ -223,14 +223,22 @@ def process_fileset_quota(storage, gpfs, storage_name, filesystem, quota_map):
         filename = os.path.join(path, ".quota_fileset.json.gz")
         path_stat = os.stat(path)
 
-        # TODO: This should somehow be some atomic operation.
-        cache = FileCache(filename)
-        cache.update(key="quota", data=quota, threshold=0)
-        cache.update(key="storage_name", data=storage_name, threshold=0)
-        cache.close()
+        if not dry_run:
+            # TODO: This should somehow be some atomic operation.
+            cache = FileCache(filename)
+            cache.update(key="quota", data=quota, threshold=0)
+            cache.update(key="storage_name", data=storage_name, threshold=0)
+            cache.close()
+        else:
+            logger.info("Dry run: would update cache for %s at %s with %s" % (storage_name, path, "%s" % (quota,)))
 
-        gpfs.chmod(0640, filename)
-        gpfs.chown(path_stat.st_uid, path_stat.st_gid, filename)
+        if not dry_run:
+            gpfs.chmod(0640, filename)
+            gpfs.chown(path_stat.st_uid, path_stat.st_gid, filename)
+        else:
+            logger.info("Dry run: would chmod 640 %s" % (filename,))
+            logger.info("Dry run: would chown %s to %s %s" % (filename, path_stat.st_uid, path_stat.st_gid))
+
 
         logger.info("Stored fileset %s quota for storage %s at %s" % (fileset, storage, filename))
 
@@ -240,7 +248,7 @@ def process_fileset_quota(storage, gpfs, storage_name, filesystem, quota_map):
     return exceeding_filesets
 
 
-def process_user_quota(storage, gpfs, storage_name, filesystem, quota_map, user_map):
+def process_user_quota(storage, gpfs, storage_name, filesystem, quota_map, user_map, dry_run=False):
     """Store the information in the user directories.
     """
     exceeding_users = []
@@ -274,15 +282,22 @@ def process_user_quota(storage, gpfs, storage_name, filesystem, quota_map, user_
             path_stat = os.stat(new_path)
             filename = os.path.join(new_path, ".quota_user.json.gz")
 
-            cache = FileCache(filename)
-            cache.update(key="quota", data=quota, threshold=0)
-            cache.update(key="storage_name", data=storage_name, threshold=0)
-            cache.close()
+            if not dry_run:
+                cache = FileCache(filename)
+                cache.update(key="quota", data=quota, threshold=0)
+                cache.update(key="storage_name", data=storage_name, threshold=0)
+                cache.close()
+            else:
+                logger.info("Dry run: would update cache for %s at %s with %s" % (storage_name, path, "%s" % (quota,)))
 
-            gpfs.ignorerealpathmismatch = True
-            gpfs.chmod(0640, filename)
-            gpfs.chown(path_stat.st_uid, path_stat.st_uid, filename)
-            gpfs.ignorerealpathmismatch = False
+            if not dry_run:
+                gpfs.ignorerealpathmismatch = True
+                gpfs.chmod(0640, filename)
+                gpfs.chown(path_stat.st_uid, path_stat.st_uid, filename)
+                gpfs.ignorerealpathmismatch = False
+            else:
+                logger.info("Dry run: would chmod 640 %s" % (filename,))
+                logger.info("Dry run: would chown %s to %s %s" % (filename, path_stat.st_uid, path_stat.st_gid))
 
             logger.info("Stored user %s quota for storage %s at %s" % (user_name, storage_name, filename))
 
