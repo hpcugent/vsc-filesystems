@@ -180,8 +180,12 @@ def _update_quota_entity(filesets, entity, filesystem, gpfs_quotas, timestamp):
             expired = (False, None)
         elif grace:
             grace = grace.groupdict()
+            if grace.get('day', None):
+                expired = (True, int(grace['day']) * 86400)
             if grace.get('days', None):
                 expired = (True, int(grace['days']) * 86400)
+            elif grace.get('hour', None):
+                expired = (True, int(grace['hour']) * 3600)
             elif grace.get('hours', None):
                 expired = (True, int(grace['hours']) * 3600)
             elif grace.get('expired', None):
