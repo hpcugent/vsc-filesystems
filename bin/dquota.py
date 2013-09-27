@@ -325,10 +325,10 @@ def notify(storage_name, item, quota, dry_run=False):
                                                                            time=time.ctime())
             if not dry_run:
                 mail.sendTextMail(mail_to="andy.georges@ugent.be",
-                                mail_from="hpc@ugent.be",
-                                reply_to="hpc@ugent.be",
-                                mail_subject="Quota on %s exceeded" % (storage_name,),
-                                message=message)
+                                  mail_from="hpc@ugent.be",
+                                  reply_to="hpc@ugent.be",
+                                  mail_subject="Quota on %s exceeded" % (storage_name,),
+                                  message=message)
             else:
                 logger.info("Dry-run, would send the following message: %s" % (message,))
             logger.info("notification: recipient %s storage %s quota_string %s" %
@@ -338,16 +338,24 @@ def notify(storage_name, item, quota, dry_run=False):
         pass
     elif item.startswith("vsc"):  # users
         user = VscUser(item)
+
+        exceeding_filesets = [fs for (fs, q) in quota.quota_map.items() if q.expired[0]]
+        storage_names = []
+        if [ef for ef in exceeding_filesets if not ef.startswith("gvo")]:
+            storage_names.append(storage_name)
+        if [ef for ef in exceeding_filesets if ef.startswith("gvo")]:
+            itorage_names.append(storage_name + "_VO")
+
         message = QUOTA_EXCEEDED_MAIL_TEXT_TEMPLATE.safe_substitute(user_name=user.gecos,
-                                                                    storage_name=storage_name,
+                                                                    storage_name=storage_names,
                                                                     quota_info="%s" % (quota,),
                                                                     time=time.ctime())
         if not dry_run:
             mail.sendTextMail(mail_to="andy.georges@ugent.be",
-                            mail_from="hpc@ugent.be",
-                            reply_to="hpc@ugent.be",
-                            mail_subject="Quota on %s exceeded" % (storage_name,),
-                            message=message)
+                              mail_from="hpc@ugent.be",
+                              reply_to="hpc@ugent.be",
+                              mail_subject="Quota on %s exceeded" % (storage_name,),
+                              message=message)
         else:
             logger.info("Dry-run, would send the following message: %s" % (message,))
         logger.info("notification: recipient %s storage %s quota_string %s" %
