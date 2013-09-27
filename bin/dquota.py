@@ -64,7 +64,7 @@ Dear $user_name
 
 
 We have noticed that you have exceeded your quota on the VSC storage,
-more in particular: $$$storage_name
+more in particular: $storage_name
 
 As you may know, this may have a significant impact on the jobs you
 can run on the various clusters.
@@ -73,9 +73,9 @@ Please clean up any files you no longer require.
 
 Should you need more storage, you can use your VO storage.
 If you are not a member of a VO, please consider joining one or request
-a VO to be created for your research group.
-    'If your VO storage is full, have its moderator ask to increase the quota.'
-    ''
+a VO to be created for your research group. If your VO storage is full,
+please ask its moderator ask to increase the quota.
+
 Also, it is recommended to clear scratch storage and move data you wish
 to keep to $$VSC_DATA or $$VSC_DATA_VO/$USER. It is paramount that scratch
 space remains temporary storage for running (multi-node) jobs as it is
@@ -104,7 +104,7 @@ Please clean up any files that are no longer required.
 
 Should you need more storage, you can reply to this mail and ask for
 the quota to be increased. Please motivate your request adequately.
-    ''
+
 Also, it is recommended to have your VO members clear scratch storage and move data they wish
 to keep to $$VSC_DATA or $$VSC_DATA_VO/$USER. It is paramount that scratch
 space remains temporary storage for running (multi-node) jobs as it is
@@ -344,7 +344,8 @@ def notify(storage_name, item, quota, dry_run=False):
         if [ef for ef in exceeding_filesets if not ef.startswith("gvo")]:
             storage_names.append(storage_name)
         if [ef for ef in exceeding_filesets if ef.startswith("gvo")]:
-            itorage_names.append(storage_name + "_VO")
+            storage_names.append(storage_name + "_VO")
+        storage_names = ", ".join(["$" + sn for sn in storage_names])
 
         message = QUOTA_EXCEEDED_MAIL_TEXT_TEMPLATE.safe_substitute(user_name=user.gecos,
                                                                     storage_name=storage_names,
