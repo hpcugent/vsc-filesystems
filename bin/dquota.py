@@ -228,22 +228,19 @@ def process_fileset_quota(storage, gpfs, storage_name, filesystem, quota_map, dr
         filename = os.path.join(path, ".quota_fileset.json.gz")
         path_stat = os.stat(path)
 
-        if not dry_run:
+        if dry_run:
+            logger.info("Dry run: would update cache for %s at %s with %s" % (storage_name, path, "%s" % (quota,)))
+            logger.info("Dry run: would chmod 640 %s" % (filename,))
+            logger.info("Dry run: would chown %s to %s %s" % (filename, path_stat.st_uid, path_stat.st_gid))
+        else:
             # TODO: This should somehow be some atomic operation.
             cache = FileCache(filename)
             cache.update(key="quota", data=quota, threshold=0)
             cache.update(key="storage_name", data=storage_name, threshold=0)
             cache.close()
-        else:
-            logger.info("Dry run: would update cache for %s at %s with %s" % (storage_name, path, "%s" % (quota,)))
 
-        if not dry_run:
             gpfs.chmod(0640, filename)
             gpfs.chown(path_stat.st_uid, path_stat.st_gid, filename)
-        else:
-            logger.info("Dry run: would chmod 640 %s" % (filename,))
-            logger.info("Dry run: would chown %s to %s %s" % (filename, path_stat.st_uid, path_stat.st_gid))
-
 
         logger.info("Stored fileset %s quota for storage %s at %s" % (fileset, storage, filename))
 
@@ -287,22 +284,20 @@ def process_user_quota(storage, gpfs, storage_name, filesystem, quota_map, user_
             path_stat = os.stat(new_path)
             filename = os.path.join(new_path, ".quota_user.json.gz")
 
-            if not dry_run:
+            if dry_run:
+                logger.info("Dry run: would update cache for %s at %s with %s" % (storage_name, path, "%s" % (quota,)))
+                logger.info("Dry run: would chmod 640 %s" % (filename,))
+                logger.info("Dry run: would chown %s to %s %s" % (filename, path_stat.st_uid, path_stat.st_gid))
+            else:
                 cache = FileCache(filename)
                 cache.update(key="quota", data=quota, threshold=0)
                 cache.update(key="storage_name", data=storage_name, threshold=0)
                 cache.close()
-            else:
-                logger.info("Dry run: would update cache for %s at %s with %s" % (storage_name, path, "%s" % (quota,)))
 
-            if not dry_run:
                 gpfs.ignorerealpathmismatch = True
                 gpfs.chmod(0640, filename)
                 gpfs.chown(path_stat.st_uid, path_stat.st_uid, filename)
                 gpfs.ignorerealpathmismatch = False
-            else:
-                logger.info("Dry run: would chmod 640 %s" % (filename,))
-                logger.info("Dry run: would chown %s to %s %s" % (filename, path_stat.st_uid, path_stat.st_gid))
 
             logger.info("Stored user %s quota for storage %s at %s" % (user_name, storage_name, filename))
 
@@ -323,14 +318,14 @@ def notify(storage_name, item, quota, dry_run=False):
                                                                            storage_name=storage_name,
                                                                            quota_info="%s" % (quota,),
                                                                            time=time.ctime())
-            if not dry_run:
+            if dry_run:
+                logger.info("Dry-run, would send the following message: %s" % (message,))
+            else:
                 mail.sendTextMail(mail_to="andy.georges@ugent.be",
                                   mail_from="hpc@ugent.be",
                                   reply_to="hpc@ugent.be",
                                   mail_subject="Quota on %s exceeded" % (storage_name,),
                                   message=message)
-            else:
-                logger.info("Dry-run, would send the following message: %s" % (message,))
             logger.info("notification: recipient %s storage %s quota_string %s" %
                         (user.cn, storage_name, "%s" % (quota,)))
 
@@ -351,14 +346,14 @@ def notify(storage_name, item, quota, dry_run=False):
                                                                     storage_name=storage_names,
                                                                     quota_info="%s" % (quota,),
                                                                     time=time.ctime())
-        if not dry_run:
+        if dry_run:
+            logger.info("Dry-run, would send the following message: %s" % (message,))
+        else:
             mail.sendTextMail(mail_to="andy.georges@ugent.be",
                               mail_from="hpc@ugent.be",
                               reply_to="hpc@ugent.be",
                               mail_subject="Quota on %s exceeded" % (storage_name,),
                               message=message)
-        else:
-            logger.info("Dry-run, would send the following message: %s" % (message,))
         logger.info("notification: recipient %s storage %s quota_string %s" %
                     (user.cn, storage_name, "%s" % (quota,)))
 
