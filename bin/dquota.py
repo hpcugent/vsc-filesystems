@@ -373,7 +373,10 @@ def notify_exceeding_items(gpfs, storage, filesystem, exceeding_items, target, d
         if updated:
             notify(storage, item, quota, dry_run)
 
-    cache.close()
+    if not dry_run:
+        cache.close()
+    else:
+        logger.info("Dry run: not saving the updated cache")
 
 
 def notify_exceeding_filesets(**kwargs):
