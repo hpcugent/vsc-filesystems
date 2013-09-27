@@ -321,7 +321,7 @@ def notify(storage_name, item, quota, dry_run=False):
             if dry_run:
                 logger.info("Dry-run, would send the following message: %s" % (message,))
             else:
-                mail.sendTextMail(mail_to="andy.georges@ugent.be",
+                mail.sendTextMail(mail_to=user.mail,
                                   mail_from="hpc@ugent.be",
                                   reply_to="hpc@ugent.be",
                                   mail_subject="Quota on %s exceeded" % (storage_name,),
@@ -349,7 +349,7 @@ def notify(storage_name, item, quota, dry_run=False):
         if dry_run:
             logger.info("Dry-run, would send the following message: %s" % (message,))
         else:
-            mail.sendTextMail(mail_to="andy.georges@ugent.be",
+            mail.sendTextMail(mail_to=user.mail,
                               mail_from="hpc@ugent.be",
                               reply_to="hpc@ugent.be",
                               mail_subject="Quota on %s exceeded" % (storage_name,),
