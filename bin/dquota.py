@@ -443,13 +443,15 @@ def main():
                                                                      gpfs,
                                                                      storage_name,
                                                                      filesystem,
-                                                                     quota_storage_map['FILESET'])
+                                                                     quota_storage_map['FILESET'],
+                                                                     opts.options.dry_run)
             exceeding_users[storage_name] = process_user_quota(storage,
                                                                gpfs,
                                                                storage_name,
                                                                filesystem,
                                                                quota_storage_map['USR'],
-                                                               user_id_map)
+                                                               user_id_map,
+                                                               opts.options.dry_run)
 
             stats["%s_fileset_critical" % (storage_name,)] = QUOTA_FILESETS_CRITICAL
             if exceeding_filesets[storage_name]:
