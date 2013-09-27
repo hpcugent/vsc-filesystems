@@ -57,6 +57,8 @@ QUOTA_USERS_WARNING = 20
 QUOTA_USERS_CRITICAL = 40
 QUOTA_FILESETS_CRITICAL = 1
 
+QUOTA_NOTIFICATION_CACHE_THRESHOLD = 7 * 86400
+
 QUOTA_EXCEEDED_MAIL_TEXT_TEMPLATE = Template('\n'.join([
     'Dear $user_name',
     '',
@@ -302,8 +304,8 @@ def notify(storage_name, item, quota, dry_run=False):
                                                                            quota_info="%s" % (quota,),
                                                                            time=time.ctime())
             mail.sendTextMail(mail_to="andy.georges@ugent.be",
-                              mail_from="hpc-admin@lists.ugent.be",
-                              reply_to="hpc-admin@lists.ugent.be",
+                              mail_from="hpc@ugent.be",
+                              reply_to="hpc@ugent.be",
                               mail_subject="Quota on %s exceeded" % (storage_name,),
                               message=message)
             logger.info("notification: recipient %s storage %s quota_string %s" % (user.cn, storage_name, quota_string))
@@ -317,8 +319,8 @@ def notify(storage_name, item, quota, dry_run=False):
                                                                     quota_info="%s" % (quota,),
                                                                     time=time.ctime())
         mail.sendTextMail(mail_to="andy.georges@ugent.be",
-                          mail_from="hpc-admin@lists.ugent.be",
-                          reply_to="hpc-admin@lists.ugent.be",
+                          mail_from="hpc@ugent.be",
+                          reply_to="hpc@ugent.be",
                           mail_subject="Quota on %s exceeded" % (storage_name,),
                           message=message)
         logger.info("notification sent: recipient %s storage %s quota_string %s" % (recipient, storage_name, quota_string))
@@ -343,8 +345,8 @@ def notify_exceeding_items(gpfs, storage, filesystem, exceeding_items, target, d
     logger.info("Processing %d exceeding items" % (len(exceeding_items)))
 
     for (item, quota) in exceeding_items:
-        updated = cache.update(item, quota, 7 * 86400)
-        logger.info("Cache entry for %s was updated: %s" % (item, updated))
+        updated = cache.update(item, quota, QUOTA_NOTIFICATION_CACHE_THRESHOLD)
+        logger.info("Storage %s: cache entry for %s was updated: %s" % (storage, item, updated))
         if updated:
             notify(storage, item, quota, dry_run)
 
