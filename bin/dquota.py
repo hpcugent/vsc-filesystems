@@ -303,12 +303,16 @@ def notify(storage_name, item, quota, dry_run=False):
                                                                            storage_name=storage_name,
                                                                            quota_info="%s" % (quota,),
                                                                            time=time.ctime())
-            mail.sendTextMail(mail_to="andy.georges@ugent.be",
-                              mail_from="hpc@ugent.be",
-                              reply_to="hpc@ugent.be",
-                              mail_subject="Quota on %s exceeded" % (storage_name,),
-                              message=message)
-            logger.info("notification: recipient %s storage %s quota_string %s" % (user.cn, storage_name, quota_string))
+            if not dry_run:
+                mail.sendTextMail(mail_to="andy.georges@ugent.be",
+                                mail_from="hpc@ugent.be",
+                                reply_to="hpc@ugent.be",
+                                mail_subject="Quota on %s exceeded" % (storage_name,),
+                                message=message)
+            else:
+                logger.info("Dry-run, would send the following message: %s" % (message,))
+            logger.info("notification: recipient %s storage %s quota_string %s" %
+                        (user.cn, storage_name, "%s" % (quota,)))
 
     elif item.startswith("gpr"):  # projects
         pass
@@ -318,12 +322,16 @@ def notify(storage_name, item, quota, dry_run=False):
                                                                     storage_name=storage_name,
                                                                     quota_info="%s" % (quota,),
                                                                     time=time.ctime())
-        mail.sendTextMail(mail_to="andy.georges@ugent.be",
-                          mail_from="hpc@ugent.be",
-                          reply_to="hpc@ugent.be",
-                          mail_subject="Quota on %s exceeded" % (storage_name,),
-                          message=message)
-        logger.info("notification sent: recipient %s storage %s quota_string %s" % (recipient, storage_name, quota_string))
+        if not dry_run:
+            mail.sendTextMail(mail_to="andy.georges@ugent.be",
+                            mail_from="hpc@ugent.be",
+                            reply_to="hpc@ugent.be",
+                            mail_subject="Quota on %s exceeded" % (storage_name,),
+                            message=message)
+        else:
+            logger.info("Dry-run, would send the following message: %s" % (message,))
+        logger.info("notification: recipient %s storage %s quota_string %s" %
+                    (user.cn, storage_name, "%s" % (quota,)))
 
 
 def notify_exceeding_items(gpfs, storage, filesystem, exceeding_items, target, dry_run=False):
