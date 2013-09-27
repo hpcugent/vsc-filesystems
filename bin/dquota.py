@@ -37,6 +37,7 @@ from vsc.ldap.configuration import VscConfiguration
 from vsc.ldap.utils import LdapQuery
 from vsc.utils import fancylogger
 from vsc.utils.cache import FileCache
+from vsc.utils.mail import VscMail
 from vsc.utils.nagios import NAGIOS_EXIT_CRITICAL
 from vsc.utils.script_tools import ExtendedSimpleOption
 
@@ -52,36 +53,70 @@ logger = fancylogger.getLogger(__name__)
 fancylogger.logToScreen(True)
 fancylogger.setLogLevelInfo()
 
-QUOTA_USERS_WARNING = 10
-QUOTA_USERS_CRITICAL = 20
+QUOTA_USERS_WARNING = 20
+QUOTA_USERS_CRITICAL = 40
 QUOTA_FILESETS_CRITICAL = 1
 
-QUOTA_EXCEEDED_MAIL_TEXT_TEMPLATE = Template('\n'.join([
-    'Dear $user_name',
-    '',
-    '',
-    'We have noticed that you have exceeded your quota on the VSC storage,',
-    'more in particular: $storage'
-    'As you may know, this may have a significant impact on the jobs you',
-    'can run on the various clusters.',
-    '',
-    'Please run "show_quota.py" regularly to check your storage and clean',
-    'up any files you no longer require.',
-    '',
-    'Should you need more storage, you can use your VO data storage.',
-    'If you are not a member of a VO, please consider joining one or request',
-    'a VO to be created for your research group.',
-    ''
-    'Also, it is recommended to clear scratch storage and move data you wish',
-    'to keep to $$VSC_DATA. Scratch space should remain temporary storage for',
-    'running jobs as it is accessible faster than both $$VSC_HOME and $$VSC_DATA.',
-    '',
-    'At this point on $time, your personal usage is the following:',
-    '$quota_info',
-    '',
-    'Kind regards,',
-    'The UGent HPC team',
-    ]))
+QUOTA_NOTIFICATION_CACHE_THRESHOLD = 7 * 86400
+
+QUOTA_EXCEEDED_MAIL_TEXT_TEMPLATE = Template("""
+Dear $user_name
+
+
+We have noticed that you have exceeded your quota on the VSC storage,
+more in particular: $storage_name
+
+As you may know, this may have a significant impact on the jobs you
+can run on the various clusters.
+
+Please clean up any files you no longer require.
+
+Should you need more storage, you can use your VO storage.
+If you are not a member of a VO, please consider joining one or request
+a VO to be created for your research group. If your VO storage is full,
+please ask its moderator ask to increase the quota.
+
+Also, it is recommended to clear scratch storage and move data you wish
+to keep to $$VSC_DATA or $$VSC_DATA_VO/$USER. It is paramount that scratch
+space remains temporary storage for running (multi-node) jobs as it is
+accessible faster than both $$VSC_HOME and $$VSC_DATA.
+
+At this point on $time, your personal usage is the following:
+$quota_info
+
+
+Kind regards,
+The UGent HPC team
+""")
+
+
+VO_QUOTA_EXCEEDED_MAIL_TEXT_TEMPLATE = Template("""
+Dear $user_name
+
+
+We have noticed that the VO ($vo_name) you moderate has exceeded its quota on the VSC storage,
+more in particular: $$$storage_name
+
+As you may know, this may have a significant impact on the jobs the VO members
+can run on the various clusters.
+
+Please clean up any files that are no longer required.
+
+Should you need more storage, you can reply to this mail and ask for
+the quota to be increased. Please motivate your request adequately.
+
+Also, it is recommended to have your VO members clear scratch storage and move data they wish
+to keep to $$VSC_DATA or $$VSC_DATA_VO/$USER. It is paramount that scratch
+space remains temporary storage for running (multi-node) jobs as it is
+accessible faster than both $$VSC_HOME and $$VSC_DATA.
+
+At this point on $time, the VO  usage is the following:
+$quota_info
+
+
+Kind regards,
+The UGent HPC team
+""")
 
 
 def get_mmrepquota_maps(quota_map, storage, filesystem, filesets):
@@ -144,8 +179,12 @@ def _update_quota_entity(filesets, entity, filesystem, gpfs_quotas, timestamp):
             expired = (False, None)
         elif grace:
             grace = grace.groupdict()
+            if grace.get('day', None):
+                expired = (True, int(grace['day']) * 86400)
             if grace.get('days', None):
                 expired = (True, int(grace['days']) * 86400)
+            elif grace.get('hour', None):
+                expired = (True, int(grace['hour']) * 3600)
             elif grace.get('hours', None):
                 expired = (True, int(grace['hours']) * 3600)
             elif grace.get('expired', None):
@@ -173,7 +212,7 @@ def _update_quota_entity(filesets, entity, filesystem, gpfs_quotas, timestamp):
     return entity
 
 
-def process_fileset_quota(storage, gpfs, storage_name, filesystem, quota_map):
+def process_fileset_quota(storage, gpfs, storage_name, filesystem, quota_map, dry_run=False):
     """Store the quota information in the filesets.
     """
 
@@ -189,14 +228,19 @@ def process_fileset_quota(storage, gpfs, storage_name, filesystem, quota_map):
         filename = os.path.join(path, ".quota_fileset.json.gz")
         path_stat = os.stat(path)
 
-        # TODO: This should somehow be some atomic operation.
-        cache = FileCache(filename)
-        cache.update(key="quota", data=quota, threshold=0)
-        cache.update(key="storage_name", data=storage_name, threshold=0)
-        cache.close()
+        if dry_run:
+            logger.info("Dry run: would update cache for %s at %s with %s" % (storage_name, path, "%s" % (quota,)))
+            logger.info("Dry run: would chmod 640 %s" % (filename,))
+            logger.info("Dry run: would chown %s to %s %s" % (filename, path_stat.st_uid, path_stat.st_gid))
+        else:
+            # TODO: This should somehow be some atomic operation.
+            cache = FileCache(filename)
+            cache.update(key="quota", data=quota, threshold=0)
+            cache.update(key="storage_name", data=storage_name, threshold=0)
+            cache.close()
 
-        gpfs.chmod(0640, filename)
-        gpfs.chown(path_stat.st_uid, path_stat.st_gid, filename)
+            gpfs.chmod(0640, filename)
+            gpfs.chown(path_stat.st_uid, path_stat.st_gid, filename)
 
         logger.info("Stored fileset %s quota for storage %s at %s" % (fileset, storage, filename))
 
@@ -206,7 +250,7 @@ def process_fileset_quota(storage, gpfs, storage_name, filesystem, quota_map):
     return exceeding_filesets
 
 
-def process_user_quota(storage, gpfs, storage_name, filesystem, quota_map, user_map):
+def process_user_quota(storage, gpfs, storage_name, filesystem, quota_map, user_map, dry_run=False):
     """Store the information in the user directories.
     """
     exceeding_users = []
@@ -240,41 +284,78 @@ def process_user_quota(storage, gpfs, storage_name, filesystem, quota_map, user_
             path_stat = os.stat(new_path)
             filename = os.path.join(new_path, ".quota_user.json.gz")
 
-            cache = FileCache(filename)
-            cache.update(key="quota", data=quota, threshold=0)
-            cache.update(key="storage_name", data=storage_name, threshold=0)
-            cache.close()
+            if dry_run:
+                logger.info("Dry run: would update cache for %s at %s with %s" % (storage_name, path, "%s" % (quota,)))
+                logger.info("Dry run: would chmod 640 %s" % (filename,))
+                logger.info("Dry run: would chown %s to %s %s" % (filename, path_stat.st_uid, path_stat.st_gid))
+            else:
+                cache = FileCache(filename)
+                cache.update(key="quota", data=quota, threshold=0)
+                cache.update(key="storage_name", data=storage_name, threshold=0)
+                cache.close()
 
-            gpfs.ignorerealpathmismatch = True
-            gpfs.chmod(0640, filename)
-            gpfs.chown(path_stat.st_uid, path_stat.st_uid, filename)
-            gpfs.ignorerealpathmismatch = False
+                gpfs.ignorerealpathmismatch = True
+                gpfs.chmod(0640, filename)
+                gpfs.chown(path_stat.st_uid, path_stat.st_uid, filename)
+                gpfs.ignorerealpathmismatch = False
 
             logger.info("Stored user %s quota for storage %s at %s" % (user_name, storage_name, filename))
 
             if quota.exceeds():
-                exceeding_users.append((user_id, quota))
+                exceeding_users.append((user_name, quota))
 
     return exceeding_users
 
 
-def notify(storage, item, quota, dry_run=False):
+def notify(storage_name, item, quota, dry_run=False):
     """Send out the notification"""
-    if item.startswith("gvo"):
+    mail = VscMail(mail_host="smtp.ugent.be")
+    if item.startswith("gvo"):  # VOs
         vo = VscVo(item)
-        for recipient in [VscUser(m) for m in vo.moderator]:
-            user_name = recipient.gecos
-            storage = "The %s VO storage on %s" % (item, storage)
-            quota_string = "%s" % (quota)
+        for user in [VscUser(m) for m in vo.moderator]:
+            message = VO_QUOTA_EXCEEDED_MAIL_TEXT_TEMPLATE.safe_substitute(user_name=user.gecos,
+                                                                           vo_name=item,
+                                                                           storage_name=storage_name,
+                                                                           quota_info="%s" % (quota,),
+                                                                           time=time.ctime())
+            if dry_run:
+                logger.info("Dry-run, would send the following message: %s" % (message,))
+            else:
+                mail.sendTextMail(mail_to=user.mail,
+                                  mail_from="hpc@ugent.be",
+                                  reply_to="hpc@ugent.be",
+                                  mail_subject="Quota on %s exceeded" % (storage_name,),
+                                  message=message)
+            logger.info("notification: recipient %s storage %s quota_string %s" %
+                        (user.cn, storage_name, "%s" % (quota,)))
 
-            logger.info("notification recipient %s" % (recipient))
-            logger.info("notification storage %s" % (storage))
-            logger.info("notification quota_string %s" % (quota_string))
+    elif item.startswith("gpr"):  # projects
+        pass
+    elif item.startswith("vsc"):  # users
+        user = VscUser(item)
 
-    elif item.startswith("gpr"):
-        pass
-    elif item.startswith("vsc"):
-        pass
+        exceeding_filesets = [fs for (fs, q) in quota.quota_map.items() if q.expired[0]]
+        storage_names = []
+        if [ef for ef in exceeding_filesets if not ef.startswith("gvo")]:
+            storage_names.append(storage_name)
+        if [ef for ef in exceeding_filesets if ef.startswith("gvo")]:
+            storage_names.append(storage_name + "_VO")
+        storage_names = ", ".join(["$" + sn for sn in storage_names])
+
+        message = QUOTA_EXCEEDED_MAIL_TEXT_TEMPLATE.safe_substitute(user_name=user.gecos,
+                                                                    storage_name=storage_names,
+                                                                    quota_info="%s" % (quota,),
+                                                                    time=time.ctime())
+        if dry_run:
+            logger.info("Dry-run, would send the following message: %s" % (message,))
+        else:
+            mail.sendTextMail(mail_to=user.mail,
+                              mail_from="hpc@ugent.be",
+                              reply_to="hpc@ugent.be",
+                              mail_subject="Quota on %s exceeded" % (storage_name,),
+                              message=message)
+        logger.info("notification: recipient %s storage %s quota_string %s" %
+                    (user.cn, storage_name, "%s" % (quota,)))
 
 
 def notify_exceeding_items(gpfs, storage, filesystem, exceeding_items, target, dry_run=False):
@@ -296,12 +377,15 @@ def notify_exceeding_items(gpfs, storage, filesystem, exceeding_items, target, d
     logger.info("Processing %d exceeding items" % (len(exceeding_items)))
 
     for (item, quota) in exceeding_items:
-        updated = cache.update(item, quota, 7 * 86400)
-        logger.info("Cache entry for %s was updated: %s" % (item, updated))
+        updated = cache.update(item, quota, QUOTA_NOTIFICATION_CACHE_THRESHOLD)
+        logger.info("Storage %s: cache entry for %s was updated: %s" % (storage, item, updated))
         if updated:
             notify(storage, item, quota, dry_run)
 
-    cache.close()
+    if not dry_run:
+        cache.close()
+    else:
+        logger.info("Dry run: not saving the updated cache")
 
 
 def notify_exceeding_filesets(**kwargs):
@@ -371,13 +455,15 @@ def main():
                                                                      gpfs,
                                                                      storage_name,
                                                                      filesystem,
-                                                                     quota_storage_map['FILESET'])
+                                                                     quota_storage_map['FILESET'],
+                                                                     opts.options.dry_run)
             exceeding_users[storage_name] = process_user_quota(storage,
                                                                gpfs,
                                                                storage_name,
                                                                filesystem,
                                                                quota_storage_map['USR'],
-                                                               user_id_map)
+                                                               user_id_map,
+                                                               opts.options.dry_run)
 
             stats["%s_fileset_critical" % (storage_name,)] = QUOTA_FILESETS_CRITICAL
             if exceeding_filesets[storage_name]:
