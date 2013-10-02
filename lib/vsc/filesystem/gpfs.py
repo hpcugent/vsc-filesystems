@@ -34,7 +34,7 @@ from vsc.utils.missing import nub, find_sublist_index, Monoid, MonoidDict
 from vsc.utils.patterns import Singleton
 
 GPFS_BIN_PATH = '/usr/lpp/mmfs/bin'
-GPFS_DEFAULT_INODE_LIMIT = '10M:50K'
+GPFS_DEFAULT_INODE_LIMIT = '1M:50K'
 
 GpfsQuota = namedtuple('GpfsQuota', ',name,blockUsage,blockQuota,blockLimit,blockInDoubt,blockGrace,filesUsage,filesQuota,filesLimit,filesInDoubt,filesGrace,remarks,quota,defQuota,fid,filesetname')
 
@@ -325,7 +325,7 @@ class GpfsOperations(PosixOperations):
         self.gpfslocalquotas = res
         return res
 
-    def list_filesets(self, devices=None, filesetnames=None):
+    def list_filesets(self, devices=None, filesetnames=None, force=False):
         """Get all the filesets for one or more specific devices
 
         @type devices: list of devices (if string: 1 device; if None: all found devices)
@@ -544,7 +544,8 @@ class GpfsOperations(PosixOperations):
 
         return res
 
-    def make_fileset(self, new_fileset_path, fileset_name=None, parent_fileset_name=None, afm=None):
+    def make_fileset(self, new_fileset_path, fileset_name=None, parent_fileset_name=None, afm=None, inodes_max=None,
+                     inodes_prealloc=None):
         """
         Given path, create a new fileset and link it to said path
           - check uniqueness
@@ -555,8 +556,11 @@ class GpfsOperations(PosixOperations):
         @type parent_fileset_name: string representing the name of the fileset with whoch the inode space should
                                    be shared. If this is None, then a new inode space will be created for this fileset.
         @type afm: Unused at this point.
-        """
-        """
+        @type inodes_max: int representing maximal number of inodes to allocate for this fileset
+        @type inodes_preallloc: int representing the maximal number of inodes to preallocate for this fileset
+
+        If the latter two arguments are not provided, the default GPFS_DEFAULT_INODE_LIMIT is used.
+
         [root@node612 ~]# mmcrfileset -h
         Usage:
           mmcrfileset Device FilesetName [-p afmAttribute=Value...] [-t Comment]
@@ -628,7 +632,13 @@ class GpfsOperations(PosixOperations):
         mmcrfileset_options = [foundgpfsdevice, fileset_name]
         if parent_fileset_name is None:
             mmcrfileset_options += ['--inode-space', 'new']
-            mmcrfileset_options += ['--inode-limit', GPFS_DEFAULT_INODE_LIMIT]
+            if inodes_max:
+                INODE_LIMIT_STRING = "%d" % (inodes_max,)
+                if inodes_prealloc:
+                    INODE_LIMIT_STRING += ":%d" % (inodes_prealloc,)
+            else:
+                INODE_LIMIT_STRING = GPFS_DEFAULT_INODE_LIMIT
+            mmcrfileset_options += ['--inode-limit', INODE_LIMIT_STRING]
         else:
             parent_fileset_exists = False
             for efsetid, efset in self.gpfslocalfilesets[foundgpfsdevice].items():
