@@ -29,12 +29,12 @@ from urllib import unquote as percentdecode
 from socket import gethostname
 from itertools import dropwhile
 
+from vsc.config.base import GPFS_DEFAULT_INODE_LIMIT
 from vsc.filesystem.posix import PosixOperations, PosixOperationError
 from vsc.utils.missing import nub, find_sublist_index, Monoid, MonoidDict
 from vsc.utils.patterns import Singleton
 
 GPFS_BIN_PATH = '/usr/lpp/mmfs/bin'
-GPFS_DEFAULT_INODE_LIMIT = '1M:50K'
 
 GpfsQuota = namedtuple('GpfsQuota', ',name,blockUsage,blockQuota,blockLimit,blockInDoubt,blockGrace,filesUsage,filesQuota,filesLimit,filesInDoubt,filesGrace,remarks,quota,defQuota,fid,filesetname')
 
