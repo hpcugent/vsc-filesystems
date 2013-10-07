@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-##
+# #
 #
 # Copyright 2013 Ghent University
 #
@@ -24,8 +24,8 @@ from vsc.utils import fancylogger
 from vsc.utils.nagios import NAGIOS_EXIT_CRITICAL
 from vsc.utils.script_tools import ExtendedSimpleOption
 
-#Constants
-NAGIOS_CHECK_INTERVAL_THRESHOLD = (6 * 60 + 5) * 60   # 365 minutes -- little over 6 hours.
+# Constants
+NAGIOS_CHECK_INTERVAL_THRESHOLD = (6 * 60 + 5) * 60  # 365 minutes -- little over 6 hours.
 QUOTA_LOG_ZIP_PATH = '/var/log/quota/zips'
 
 logger = fancylogger.getLogger(__name__)
@@ -55,6 +55,9 @@ def main():
     try:
         gpfs = GpfsOperations()
         quota = gpfs.list_quota()
+
+        if not os.path.exists(opts.options.location):
+            os.makedirs(opts.options.location, 0755)
 
         for key in quota:
             stats["%s_quota_log_critical" % (key,)] = QUOTA_STORE_LOG_CRITICAL
