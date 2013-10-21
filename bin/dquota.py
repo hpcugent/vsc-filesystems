@@ -249,6 +249,36 @@ def process_fileset_quota(storage, gpfs, storage_name, filesystem, quota_map, dr
     return exceeding_filesets
 
 
+def log_quota_to_django(user_name, storage_name, quota):
+    """
+    Upload the quota information to the django database, so it can be displayed for the users in the web application.
+
+    We make a single REST request per fileset.
+    """
+    opener = urllib2.build_opener(urllib2.HTTPHandler)
+
+    for (fileset, quota_) in quota.quota_map.items():
+
+        params = {
+            "used": quota_.used
+            "soft": quota_.soft
+            "hard": quota_.hard
+            "doubt" : quota_.doubt
+            "expired": quota.expired[0]
+            "remaining": quota.expired[1]  # seconds
+        }
+
+        payload = jsonpickle.encode(params)
+
+        request = urllib2.Request("http://localhost:8000/quota/%s/%s/%s" % (user_id, storage, fileset), payload)
+        request.add_header('Content-Type', 'application/json')
+        request.get_method = lambda: 'PUT'
+
+        uri = opener.open(request)
+        uri.read()
+
+
+
 def process_user_quota(storage, gpfs, storage_name, filesystem, quota_map, user_map, dry_run=False):
     """Store the information in the user directories.
     """
