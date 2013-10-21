@@ -275,8 +275,7 @@ def log_quota_to_django(user_name, storage_name, quota):
         request.get_method = lambda: 'PUT'
 
         uri = opener.open(request)
-        uri.read()
-
+        logger.info("Request returned: %s" % (uri.read(),))
 
 
 def process_user_quota(storage, gpfs, storage_name, filesystem, quota_map, user_map, dry_run=False):
