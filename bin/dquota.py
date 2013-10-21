@@ -274,8 +274,7 @@ def log_quota_to_django(user_name, storage_name, quota):
         request.get_method = lambda: 'PUT'
 
         uri = opener.open(request)
-        uri.read()
-
+        logger.info("Request returned: %s" % (uri.read(),))
 
 
 def sanitize_quota_information(fileset_name, quota):
