@@ -249,11 +249,13 @@ def process_fileset_quota(storage, gpfs, storage_name, filesystem, quota_map, dr
     return exceeding_filesets
 
 
-def log_quota_to_django(user_name, storage_name, quota):
+def log_quota_to_django(user_name, storage_name, quota, dry_run=False):
     """
     Upload the quota information to the django database, so it can be displayed for the users in the web application.
 
     We make a single REST request per fileset.
+
+    FIXME: requires authentication!
     """
     opener = urllib2.build_opener(urllib2.HTTPHandler)
 
@@ -270,7 +272,7 @@ def log_quota_to_django(user_name, storage_name, quota):
 
         payload = jsonpickle.encode(params)
 
-        request = urllib2.Request("http://localhost:8000/quota/%s/%s/%s" % (user_id, storage, fileset), payload)
+        request = urllib2.Request("http://node628.cubone.gent.vsc:8000/quota/%s/%s/%s" % (user_id, storage, fileset), payload)
         request.add_header('Content-Type', 'application/json')
         request.get_method = lambda: 'PUT'
 
@@ -288,6 +290,7 @@ def process_user_quota(storage, gpfs, storage_name, filesystem, quota_map, user_
     for (user_id, quota) in quota_map.items():
 
         user_name = user_map.get(int(user_id), None)
+        log_quota_to_django(user_name, storage_name, quota)  # FIXME: ignore dry run for now
 
         if user_name and user_name.startswith('vsc4'):
             user = VscUser(user_name)
