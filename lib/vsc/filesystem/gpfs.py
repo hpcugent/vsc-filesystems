@@ -591,7 +591,7 @@ class GpfsOperations(PosixOperations):
         - create fileset with fsetpath part of symlink
         """
         self.list_filesystems()  # get known filesystems
-        self.list_filesets()  # get all info uptodate
+        self.list_filesets()  # do NOT force an update here. We do this at the end, should there be a fileset created.
 
         fsetpath = self._sanity_check(new_fileset_path)
 
@@ -664,8 +664,8 @@ class GpfsOperations(PosixOperations):
             self.log.raiseException("Linking fileset with name %s on device %s to path %s failed (out: %s)" %
                                     (fileset_name, foundgpfsdevice, fsetpath, out), GpfsOperationError)
 
-        # at the end, rescan the filesets and update the info
-        self.list_filesets()
+        # at the end, rescan the filesets and force update the info
+        self.list_filesets(update=True)
 
     def set_user_quota(self, soft, user, obj=None, hard=None):
         """Set quota for a user.
