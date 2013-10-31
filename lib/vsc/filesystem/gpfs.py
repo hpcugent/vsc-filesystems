@@ -325,7 +325,7 @@ class GpfsOperations(PosixOperations):
         self.gpfslocalquotas = res
         return res
 
-    def list_filesets(self, devices=None, filesetnames=None, force=False):
+    def list_filesets(self, devices=None, filesetnames=None, update=False):
         """Get all the filesets for one or more specific devices
 
         @type devices: list of devices (if string: 1 device; if None: all found devices)
@@ -336,6 +336,10 @@ class GpfsOperations(PosixOperations):
                     key = id value is dict
                         key = remaining header entries and corresponding values
         """
+
+        if not update and self.gpfslocalfilesets:
+            return self.gpfslocalfilesets
+
         opts = []
 
         if devices is None:
