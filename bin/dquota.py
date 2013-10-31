@@ -45,7 +45,8 @@ from vsc.utils.script_tools import ExtendedSimpleOption
 QUOTA_CHECK_REMINDER_CACHE_FILENAME = '/var/cache/quota/gpfs_quota_checker.report.reminderCache.pickle'
 NAGIOS_CHECK_INTERVAL_THRESHOLD = 60 * 60 # one hour
 
-GPFS_GRACE_REGEX = re.compile(r"(?P<days>\d+)\s*days|(?P<hours>\d+)\s*hours|(?P<expired>expired)")
+GPFS_GRACE_REGEX = re.compile(r"(?P<days>\d+)\s*days?|(?P<hours>\d+)\s*hours?|(?P<minutes>\d+)\s*minutes?|(?P<expired>expired)")
+
 GPFS_NOGRACE_REGEX = re.compile(r"none", re.I)
 
 # log setup
@@ -179,14 +180,12 @@ def _update_quota_entity(filesets, entity, filesystem, gpfs_quotas, timestamp):
             expired = (False, None)
         elif grace:
             grace = grace.groupdict()
-            if grace.get('day', None):
-                expired = (True, int(grace['day']) * 86400)
             if grace.get('days', None):
                 expired = (True, int(grace['days']) * 86400)
-            elif grace.get('hour', None):
-                expired = (True, int(grace['hour']) * 3600)
             elif grace.get('hours', None):
                 expired = (True, int(grace['hours']) * 3600)
+            elif grace.get('minutes', None):
+                expired = (True, int(grace['minutes']) * 60)
             elif grace.get('expired', None):
                 expired = (True, 0)
             else:
