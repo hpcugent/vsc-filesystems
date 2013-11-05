@@ -67,7 +67,7 @@ def main():
                                                                                                (now-timestamp)/60)
         else:
             for (fileset, qi) in quota.quota_map.items():
-            print "%s: used %d MiB (%d%%) quota %d MiB in fileset %d" % (storage_name,
+                print "%s: used %d MiB (%d%%) quota %d MiB in fileset %d" % (storage_name,
                                                            quota)
 
 
