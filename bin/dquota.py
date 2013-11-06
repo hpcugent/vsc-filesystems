@@ -254,6 +254,7 @@ def process_user_quota(storage, gpfs, storage_name, filesystem, quota_map, user_
     """
     exceeding_users = []
     login_mount_point = storage[storage_name].login_mount_point
+    nfs_mount_point = '/user/scratch'
     gpfs_mount_point = storage[storage_name].gpfs_mount_point
 
     for (user_id, quota) in quota_map.items():
@@ -267,16 +268,23 @@ def process_user_quota(storage, gpfs, storage_name, filesystem, quota_map, user_
 
             path = user._get_path(storage_name)
 
+            logger.debug("path for storing quota info would be %s" % (path,))
+
             # FIXME: We need some better way to address this
             # Right now, we replace the nfs mount prefix which the symlink points to
             # with the gpfs mount point. this is a workaround until we resolve the
             # symlink problem once we take new default scratch into production
             if gpfs.is_symlink(path):
                 target = os.path.realpath(path)
-                if target.startswith(login_mount_point):
-                    new_path = target.replace(login_mount_point, gpfs_mount_point, 1)
+                logger.debug("path is a symlink, target is %s" % (target,))
+                logger.debug("login_mount_point for %s is %s" % (storage_name, login_mount_point))
+                if target.startswith(nfs_mount_point):
+                    new_path = target.replace(nfs_mount_point, gpfs_mount_point, 1)
                     logger.info("Found a symlinked path %s to the nfs mount point %s. Replaced with %s" %
-                                (path, login_mount_point, gpfs_mount_point))
+                                (path, nfs_mount_point, gpfs_mount_point))
+                else:
+                    logger.warning("Unable to store quota information for %s on %s; symlink cannot be resolved properly"
+                                   % (user_name, storage_name))
             else:
                 new_path = path
 
@@ -284,7 +292,7 @@ def process_user_quota(storage, gpfs, storage_name, filesystem, quota_map, user_
             filename = os.path.join(new_path, ".quota_user.json.gz")
 
             if dry_run:
-                logger.info("Dry run: would update cache for %s at %s with %s" % (storage_name, path, "%s" % (quota,)))
+                logger.info("Dry run: would update cache for %s at %s with %s" % (storage_name, new_path, "%s" % (quota,)))
                 logger.info("Dry run: would chmod 640 %s" % (filename,))
                 logger.info("Dry run: would chown %s to %s %s" % (filename, path_stat.st_uid, path_stat.st_gid))
             else:
