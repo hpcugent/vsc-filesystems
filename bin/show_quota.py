@@ -39,6 +39,23 @@ logger = fancylogger.getLogger('show_quota')
 
 DEFAULT_ALLOWED_TIME_THRESHOLD = 15 * 60
 
+def quota_pretty_print(storage_name, fileset, quota_information):
+    """Returns a nice looking string with all the required quota information."""
+    s = "%s: used %d MiB (%d%%) quota %d (%d hard limit) MiB in fileset %s" % (
+        storage_name,
+        quota_information.used / 1024^2,
+        quota_information.used / quota_information.soft,
+        quota_information.soft / 1024^2,
+        quota_information.hard / 1024^2,
+        fileset)
+
+    (exceeds, grace) = quota_information.expired
+    if exceeds:
+        s += " - quota exceeded, grace = %d" % (grace,)
+
+    return s
+
+
 def main():
 
     options = {
@@ -56,10 +73,15 @@ def main():
 
         mount_point = storage[storage_name].login_mount_point
         path_template = storage.path_templates[storage_name]['user']
-        path = os.path.join(mount_point, path_template[0], path_template(user_name))
+        path = os.path.join(mount_point, path_template[0], path_template[1](user_name), ".quota_user.json.gz")
 
         cache = FileCache(path)
-        (timestamp, quota) = cache.load('quota')
+        try:
+            (timestamp, quota) = cache.load('quota')
+        except TypeError, err:
+            logger.debug("Cannot load data from %s" % (path,))
+            print "%s: WARNING: No quota information found" % (storage_name,)
+            continue
 
         if now - timestamp > opts.options.threshold:
             print "%s: WARNING: no recent quota information (age of data is %d minutes)" % (storage_name,
@@ -67,8 +89,7 @@ def main():
                                                                                                (now-timestamp)/60)
         else:
             for (fileset, qi) in quota.quota_map.items():
-                print "%s: used %d MiB (%d%%) quota %d MiB in fileset %d" % (storage_name,
-                                                           quota)
+                print quota_pretty_print(storage_name, fileset, qi)
 
 
 if __name__ == '__main__':
