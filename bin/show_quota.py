@@ -41,6 +41,10 @@ DEFAULT_ALLOWED_TIME_THRESHOLD = 15 * 60
 
 def quota_pretty_print(storage_name, fileset, quota_information):
     """Returns a nice looking string with all the required quota information."""
+
+    if quota_information.soft == 0:
+        return None
+
     s = "%s: used %d MiB (%d%%) quota %d (%d hard limit) MiB in fileset %s" % (
         storage_name,
         quota_information.used / 1024^2,
@@ -89,7 +93,9 @@ def main():
                                                                                                (now-timestamp)/60)
         else:
             for (fileset, qi) in quota.quota_map.items():
-                print quota_pretty_print(storage_name, fileset, qi)
+                pp = quota_pretty_print(storage_name, fileset, qi)
+                if pp:
+                    print pp
 
 
 if __name__ == '__main__':
