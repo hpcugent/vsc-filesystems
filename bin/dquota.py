@@ -432,7 +432,9 @@ def main():
         gpfs = GpfsOperations()
         storage = VscStorage()
 
-        filesystems = gpfs.list_filesystems().keys()
+        target_filesystems = [storage[s].filesystem for s in opts.options.storage]
+
+        filesystems = gpfs.list_filesystems(target_filesystems).keys()
         logger.debug("Found the following GPFS filesystems: %s" % (filesystems))
 
         filesets = gpfs.list_filesets()
