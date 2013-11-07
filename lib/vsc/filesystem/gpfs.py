@@ -31,7 +31,7 @@ from itertools import dropwhile
 
 from vsc.config.base import GPFS_DEFAULT_INODE_LIMIT
 from vsc.filesystem.posix import PosixOperations, PosixOperationError
-from vsc.utils.missing import nub, find_sublist_index, Monoid, MonoidDict
+from vsc.utils.missing import nub, find_sublist_index, Monoid, MonoidDict, RUDict
 from vsc.utils.patterns import Singleton
 
 GPFS_BIN_PATH = '/usr/lpp/mmfs/bin'
@@ -100,11 +100,11 @@ class GpfsOperations(PosixOperations):
                             fs.append(gpfsdevice)
                         else:
                             fs.append(None)
-                            self.log.raiseException(("While trying to resolve GPFS device from localfilesystem device"
-                                                     " fs %s found gpfsdevice %s that is not in "
-                                                     "gpfslocalfilesystems %s") %
-                                                    (fs, gpfsdevice, self.gpfslocalfilesystems.keys()),
-                                                    GpfsOperationError)
+                            self.log.warning(("While trying to resolve GPFS device from localfilesystem device"
+                                              " fs %s found gpfsdevice %s that is not in "
+                                              "gpfslocalfilesystems %s") %
+                                              (fs, gpfsdevice, self.gpfslocalfilesystems.keys()),
+                                              GpfsOperationError)
                     else:
                         fs.append(None)
                         self.log.raiseException(("Something went wrong trying to resolve GPFS device from "
@@ -242,24 +242,28 @@ class GpfsOperations(PosixOperations):
         if not update and self.gpfslocalfilesystems:
             return self.gpfslocalfilesystems
 
-        if isinstance(device, list):
-            devices = device
-        else:
+        if not isinstance(device, list):
             devices = [device]
-
-        info = self._executeY('mmlsfs', devices)
-        # for v3.5 deviceName:fieldName:data:remarks:
-
-        # set the gpfsdevices
-        gpfsdevices = nub(info.get('deviceName', []))
-        if len(gpfsdevices) == 0:
-            self.log.raiseException("No devices found. Returned info %s" % info, GpfsOperationError)
         else:
-            self.log.debug("listAllFilesystems found devices %s out of requested %s" % (gpfsdevices, devices))
+            devices = device
 
-        res = dict([(dev, {}) for dev in gpfsdevices])  # build structure
-        for dev, k, v in zip(info['deviceName'], info['fieldName'], info['data']):
-            res[dev][k] = v
+        res = RUDict()
+        for device in devices:
+
+            info = self._executeY('mmlsfs', [device])
+            # for v3.5 deviceName:fieldName:data:remarks:
+
+            # set the gpfsdevices
+            gpfsdevices = nub(info.get('deviceName', []))
+            if len(gpfsdevices) == 0:
+                self.log.raiseException("No devices found. Returned info %s" % info, GpfsOperationError)
+            else:
+                self.log.debug("listAllFilesystems found device %s out of requested %s" % (gpfsdevices, devices))
+
+            res_ = dict([(dev, {}) for dev in gpfsdevices])  # build structure
+            res.update(res_)
+            for dev, k, v in zip(info['deviceName'], info['fieldName'], info['data']):
+                res[dev][k] = v
 
         self.gpfslocalfilesystems = res
         return res
