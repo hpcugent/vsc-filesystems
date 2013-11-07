@@ -249,6 +249,18 @@ def process_fileset_quota(storage, gpfs, storage_name, filesystem, quota_map, dr
     return exceeding_filesets
 
 
+def sanitize_quota_information(quota):
+    """Sanitize the information that is store at the user's side.
+
+    There should be _no_ nformation regarding filesets besides:
+        - vsc4xy
+        - gvo*
+    """
+    for (fileset, value) in quota.quota_map.items():
+        if not fileset.startswith('vsc4') and not fileset.startswith('gvo'):
+            quota.quota_map.pop(fileset)
+
+
 def process_user_quota(storage, gpfs, storage_name, filesystem, quota_map, user_map, dry_run=False):
     """Store the information in the user directories.
     """
@@ -290,6 +302,8 @@ def process_user_quota(storage, gpfs, storage_name, filesystem, quota_map, user_
 
             path_stat = os.stat(new_path)
             filename = os.path.join(new_path, ".quota_user.json.gz")
+
+            sanitize_quota_information(quota)
 
             if dry_run:
                 logger.info("Dry run: would update cache for %s at %s with %s" % (storage_name, new_path, "%s" % (quota,)))
