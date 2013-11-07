@@ -306,7 +306,7 @@ def process_user_quota(storage, gpfs, storage_name, filesystem, quota_map, user_
             path_stat = os.stat(new_path)
             filename = os.path.join(new_path, ".quota_user.json.gz")
 
-            sanitize_quota_information(path_template[0], quota)
+            sanitize_quota_information(path_template['user'][0], quota)
 
             if dry_run:
                 logger.info("Dry run: would update cache for %s at %s with %s" % (storage_name, new_path, "%s" % (quota,)))
