@@ -249,7 +249,7 @@ def process_fileset_quota(storage, gpfs, storage_name, filesystem, quota_map, dr
     return exceeding_filesets
 
 
-def sanitize_quota_information(quota):
+def sanitize_quota_information(fileset_name, quota):
     """Sanitize the information that is store at the user's side.
 
     There should be _no_ nformation regarding filesets besides:
@@ -257,7 +257,7 @@ def sanitize_quota_information(quota):
         - gvo*
     """
     for (fileset, value) in quota.quota_map.items():
-        if not fileset.startswith('vsc4') and not fileset.startswith('gvo'):
+        if not fileset.startswith('vsc4') and not fileset.startswith('gvo') and not fileset.startswith(fileset_name):
             quota.quota_map.pop(fileset)
 
 
@@ -268,6 +268,9 @@ def process_user_quota(storage, gpfs, storage_name, filesystem, quota_map, user_
     login_mount_point = storage[storage_name].login_mount_point
     nfs_mount_point = '/user/scratch'
     gpfs_mount_point = storage[storage_name].gpfs_mount_point
+    path_template = storage.path_templates[storage_name]
+
+    logger.info("Processing user quota for %d items" % (len(quota_map),))
 
     for (user_id, quota) in quota_map.items():
 
@@ -303,7 +306,7 @@ def process_user_quota(storage, gpfs, storage_name, filesystem, quota_map, user_
             path_stat = os.stat(new_path)
             filename = os.path.join(new_path, ".quota_user.json.gz")
 
-            sanitize_quota_information(quota)
+            sanitize_quota_information(path_template[0], quota)
 
             if dry_run:
                 logger.info("Dry run: would update cache for %s at %s with %s" % (storage_name, new_path, "%s" % (quota,)))
