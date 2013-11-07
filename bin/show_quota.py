@@ -37,21 +37,27 @@ fancylogger.logToScreen(True)
 fancylogger.setLogLevelWarning()
 logger = fancylogger.getLogger('show_quota')
 
-DEFAULT_ALLOWED_TIME_THRESHOLD = 15 * 60
+DEFAULT_ALLOWED_TIME_THRESHOLD = 17 * 60
 
 def quota_pretty_print(storage_name, fileset, quota_information):
     """Returns a nice looking string with all the required quota information."""
 
     if quota_information.soft == 0:
+        return None  # we should not inform the users of filesets where there is no quota limit set
+
+    if fileset.startswith('gvo'):
+        storage_name_s = storage_name + "_VO"
+    elif fileset.startswith('vsc4'):
+        storage_name_s = storage_name
+    else:
         return None
 
-    s = "%s: used %d MiB (%d%%) quota %d (%d hard limit) MiB in fileset %s" % (
-        storage_name,
+    s = "%s: used %d MiB (%d%%) quota %d (%d hard limit) MiB" % (
+        storage_name_s,
         quota_information.used / 1024^2,
         quota_information.used / quota_information.soft,
         quota_information.soft / 1024^2,
-        quota_information.hard / 1024^2,
-        fileset)
+        quota_information.hard / 1024^2)
 
     (exceeds, grace) = quota_information.expired
     if exceeds:
@@ -63,11 +69,11 @@ def quota_pretty_print(storage_name, fileset, quota_information):
 def main():
 
     options = {
-        'storage': ('the VSC filesystems that are checked by this script', None, 'extend', []),
+        'storage': ('the VSC filesystems that are checked by this script', 'strlist', 'store', []),
         'threshold': ('allowed the time difference between the cached quota and the time of running', None, 'store',
                       DEFAULT_ALLOWED_TIME_THRESHOLD),
     }
-    opts = simple_option(options, config_files='/etc/quota_information.conf')
+    opts = simple_option(options, config_files=['/etc/quota_information.conf'])
 
     storage = VscStorage()
     user_name = getpwuid(os.getuid())[0]
