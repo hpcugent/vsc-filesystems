@@ -67,7 +67,7 @@ def main():
         'threshold': ('allowed the time difference between the cached quota and the time of running', None, 'store',
                       DEFAULT_ALLOWED_TIME_THRESHOLD),
     }
-    opts = simple_option(options, config_files='/etc/quota_information.conf')
+    opts = simple_option(options, config_files=['/etc/quota_information.conf'])
 
     storage = VscStorage()
     user_name = getpwuid(os.getuid())[0]
