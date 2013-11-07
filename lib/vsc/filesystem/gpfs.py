@@ -255,7 +255,7 @@ class GpfsOperations(PosixOperations):
         if len(gpfsdevices) == 0:
             self.log.raiseException("No devices found. Returned info %s" % info, GpfsOperationError)
         else:
-            self.log.debug("listAllFilesystems found devices %s" % gpfsdevices)
+            self.log.debug("listAllFilesystems found devices %s out of requested %s" % (gpfsdevices, devices))
 
         res = dict([(dev, {}) for dev in gpfsdevices])  # build structure
         for dev, k, v in zip(info['deviceName'], info['fieldName'], info['data']):
