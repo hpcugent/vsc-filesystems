@@ -242,7 +242,12 @@ class GpfsOperations(PosixOperations):
         if not update and self.gpfslocalfilesystems:
             return self.gpfslocalfilesystems
 
-        info = self._executeY('mmlsfs', [device])
+        if isinstance(device, list):
+            devices = device
+        else:
+            devices = [device]
+
+        info = self._executeY('mmlsfs', devices)
         # for v3.5 deviceName:fieldName:data:remarks:
 
         # set the gpfsdevices
