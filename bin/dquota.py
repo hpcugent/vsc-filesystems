@@ -266,7 +266,6 @@ def process_user_quota(storage, gpfs, storage_name, filesystem, quota_map, user_
     """
     exceeding_users = []
     login_mount_point = storage[storage_name].login_mount_point
-    nfs_mount_point = '/user/scratch'
     gpfs_mount_point = storage[storage_name].gpfs_mount_point
     path_template = storage.path_templates[storage_name]
 
@@ -293,10 +292,10 @@ def process_user_quota(storage, gpfs, storage_name, filesystem, quota_map, user_
                 target = os.path.realpath(path)
                 logger.debug("path is a symlink, target is %s" % (target,))
                 logger.debug("login_mount_point for %s is %s" % (storage_name, login_mount_point))
-                if target.startswith(nfs_mount_point):
-                    new_path = target.replace(nfs_mount_point, gpfs_mount_point, 1)
+                if target.startswith(login_mount_point):
+                    new_path = target.replace(login_mount_point, gpfs_mount_point, 1)
                     logger.info("Found a symlinked path %s to the nfs mount point %s. Replaced with %s" %
-                                (path, nfs_mount_point, gpfs_mount_point))
+                                (path, login_mount_point, gpfs_mount_point))
                 else:
                     logger.warning("Unable to store quota information for %s on %s; symlink cannot be resolved properly"
                                    % (user_name, storage_name))
