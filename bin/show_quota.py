@@ -75,11 +75,17 @@ def main():
         'threshold': ('allowed the time difference between the cached quota and the time of running', None, 'store',
                       DEFAULT_ALLOWED_TIME_THRESHOLD),
         'fileset_prefixes': ('the filesets that we allow for showing QuotaUser', 'strlist', 'store', []),
+        'vo': ('provide storage details for the VO you belong to')
     }
     opts = simple_option(options, config_files=['/etc/quota_information.conf'])
 
     storage = VscStorage()
     user_name = getpwuid(os.getuid())[0]
+
+    vos = [g.gr_name for g in grp.getgrall() if 'vsc40075' in g.gr_mem and g.gr_name.startswith('gvo')]
+
+    opts.options.vo = opts.options.vo and vos
+
     now = time.time()
 
     for storage_name in opts.options.storage:
@@ -98,13 +104,37 @@ def main():
 
         if now - timestamp > opts.options.threshold:
             print "%s: WARNING: no recent quota information (age of data is %d minutes)" % (storage_name,
-
-                                                                                               (now-timestamp)/60)
+                                                                                            (now-timestamp)/60)
         else:
             for (fileset, qi) in quota.quota_map.items():
                 pp = quota_pretty_print(storage_name, fileset, qi, opts.options.fileset_prefixes)
                 if pp:
                     print pp
+
+    if opts.options.vo:
+        for storage_name in opts.options.storage:
+
+            mount_point = storage[storage_name].login_mount_point
+            path_template = storage.path_templates[storage_name]['vo']
+            path = os.path.join(mount_point, path_template[0], path_template[1](vos[0]), ".quota_fileset.json.gz")
+
+            cache = FileCache(path)
+            try:
+                (timestamp, quota) = cache.load('quota')
+            except TypeError, err:
+                logger.debug("Cannot load data from %s" % (path,))
+                print "%s: WARNING: No VO quota information found" % (storage_name,)
+                continue
+
+            if now - timestamp > opts.options.threshold:
+                print "%s: WARNING: no recent VO quota information (age of data is %d minutes)" % (storage_name,
+                                                                                                   (now-timestamp)/60)
+            else:
+                for (fileset, qi) in quota.quota_map.items():
+                    pp = quota_pretty_print(storage_name, fileset, qi, opts.options.fileset_prefixes)
+                    if pp:
+                        print pp
+
 
 
 if __name__ == '__main__':
