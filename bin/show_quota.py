@@ -22,6 +22,7 @@ Note that this script was begun from scratch after the move to the new storage s
 @author: Andy Georges (Ghent University)
 """
 
+import grp
 import os
 import time
 from pwd import getpwuid
@@ -75,19 +76,20 @@ def main():
         'threshold': ('allowed the time difference between the cached quota and the time of running', None, 'store',
                       DEFAULT_ALLOWED_TIME_THRESHOLD),
         'fileset_prefixes': ('the filesets that we allow for showing QuotaUser', 'strlist', 'store', []),
-        'vo': ('provide storage details for the VO you belong to')
+        'vo': ('provide storage details for the VO you belong to', None, 'store_true', False)
     }
     opts = simple_option(options, config_files=['/etc/quota_information.conf'])
 
     storage = VscStorage()
     user_name = getpwuid(os.getuid())[0]
 
-    vos = [g.gr_name for g in grp.getgrall() if 'vsc40075' in g.gr_mem and g.gr_name.startswith('gvo')]
+    vos = [g.gr_name for g in grp.getgrall() if user_name in g.gr_mem and g.gr_name.startswith('gvo')]
 
     opts.options.vo = opts.options.vo and vos
 
     now = time.time()
 
+    print "User quota:"
     for storage_name in opts.options.storage:
 
         mount_point = storage[storage_name].login_mount_point
@@ -112,7 +114,9 @@ def main():
                     print pp
 
     if opts.options.vo:
-        for storage_name in opts.options.storage:
+
+        print "\nVO quota:"
+        for storage_name in [s for s in opts.options.storage if s != 'VSC_HOME']:  # No VOs on VSC_HOME atm
 
             mount_point = storage[storage_name].login_mount_point
             path_template = storage.path_templates[storage_name]['vo']
@@ -134,7 +138,6 @@ def main():
                     pp = quota_pretty_print(storage_name, fileset, qi, opts.options.fileset_prefixes)
                     if pp:
                         print pp
-
 
 
 if __name__ == '__main__':
