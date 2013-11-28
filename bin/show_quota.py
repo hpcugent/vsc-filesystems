@@ -71,7 +71,7 @@ def quota_pretty_print(storage_name, fileset, quota_information, fileset_prefixe
 
 def print_user_quota(opts, storage, user_name, now):
     """
-    Print the quota for the user, i.e., USR quota in all filesets the user hass access to.
+    Print the quota for the user, i.e., USR quota in all filesets the user has access to.
     """
     print "User quota:"
     for storage_name in opts.options.storage:
