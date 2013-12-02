@@ -24,6 +24,7 @@ from collections import namedtuple
 
 from vsc.filesystem.gpfs import GpfsOperations
 from vsc.utils import fancylogger
+from vsc.utils.mail import VscMail
 from vsc.utils.nagios import NAGIOS_EXIT_CRITICAL
 from vsc.utils.script_tools import ExtendedSimpleOption
 
@@ -49,19 +50,19 @@ def process_inodes_information(filesets):
     """
     critical_filesets = dict()
 
-    for (fs_key, fs_info) in filesets.items():
-        allocated = fs_info['allocInodes']
-        maxinodes = fs_info['maxInodes']
+    for fs_info in filesets.values():
+        allocated = int(fs_info['allocInodes'])
+        maxinodes = int(fs_info['maxInodes'])
 
         if allocated > 0.9 * maxinodes:
-            critical_filesets[fs_info[filesetName]] = InodeCritical(allocated=allocated, maxinodes=maxinodes)
+            critical_filesets[fs_info['filesetName']] = InodeCritical(allocated=allocated, maxinodes=maxinodes)
 
     return critical_filesets
 
 
-def mail_admins(critical_filesets):
+def mail_admins(critical_filesets, dry_run):
     """Send email to the HPC admin about the inodes running out soonish."""
-    mail = VscMail()
+    mail = VscMail(mail_host="smtp.ugent.be")
 
     message = """
 Dear HPC admins,
@@ -71,26 +72,27 @@ The following filesets will be running out of inodes soon (or may already have r
 %(fileset_info)s
 
 Kind regards,
-Your friendly inode-watching script``
-
-    """
-
+Your friendly inode-watching script
+"""
     fileset_info = []
-    for (fs_name, fs_info) in critical_filesets:
-        for (fileset_name, inode_info) in fs_info:
-            fileset_info.append("%s - %s: used %d (%d) of %d" % (fs_name,
+    for (fs_name, fs_info) in critical_filesets.items():
+        for (fileset_name, inode_info) in fs_info.items():
+            fileset_info.append("%s - %s: used %d (%d%%) of %d" % (fs_name,
                                                                  fileset_name,
                                                                  inode_info.allocated,
                                                                  int(inode_info.allocated * 100 / inode_info.maxinodes),
                                                                  inode_info.maxinodes))
 
-    message = message % ({fileset_info="\n".join(fileset_info)})
+    message = message % ({'fileset_info': "\n".join(fileset_info)})
 
-    mail.sendTextMail(mail_to="hpc-admin@lists.ugent.be",
-                      mail_from="hpc-admin@lists.ugent.be",
-                      reply_to="hpc-admin@lists.ugent.be",
-                      mail_subject="Inode space(s) running out on %s" % (socket.gethostname()),
-                      message=message)
+    if dry_run:
+        logger.info("Would have sent this message: %s" % (message,))
+    else:
+        mail.sendTextMail(mail_to="hpc-admin@lists.ugent.be",
+                          mail_from="hpc-admin@lists.ugent.be",
+                          reply_to="hpc-admin@lists.ugent.be",
+                          mail_subject="Inode space(s) running out on %s" % (socket.gethostname()),
+                          message=message)
 
 
 def main():
@@ -105,10 +107,6 @@ def main():
 
     opts = ExtendedSimpleOption(options)
 
-    filesystem_error = 0
-    filesystem_ok = 0
-    error = False
-
     stats = {}
 
     try:
@@ -119,7 +117,6 @@ def main():
             os.makedirs(opts.options.location, 0755)
 
         critical_filesets = dict()
-        critical = False
 
         for filesystem in filesets:
             stats["%s_inodes_log_critical" % (filesystem,)] = INODE_STORE_LOG_CRITICAL
@@ -133,17 +130,21 @@ def main():
                 logger.info("Stored inodes information for FS %s" % (filesystem))
 
                 cfs = process_inodes_information(filesets[filesystem])
+                logger.info("Processed inodes information for filesystem %s" % (filesystem,))
                 if cfs:
                     critical_filesets[filesystem] = cfs
+                    logger.info("Filesystem %s has at least %d filesets reaching the limit" % (filesystem, len(cfs)))
 
-            except Exception, err:
-                stats["%s_inodes_log" % (key,)] = 1
-                logger.exception("Failed storing inodes information for FS %s" % (key))
+            except Exception:
+                stats["%s_inodes_log" % (filesystem,)] = 1
+                logger.exception("Failed storing inodes information for FS %s" % (filesystem))
+
+        logger.info("Critical filesets: %s" % (critical_filesets,))
 
         if critical_filesets:
-            mail_admins(critical_filesets)
+            mail_admins(critical_filesets, opts.options.dry_run)
 
-    except Exception, err:
+    except Exception:
         logger.exception("Failure obtaining GPFS inodes")
         opts.critical("Failure to obtain GPFS inodes information")
         sys.exit(NAGIOS_EXIT_CRITICAL)
