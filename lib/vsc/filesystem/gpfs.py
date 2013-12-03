@@ -39,6 +39,13 @@ GPFS_BIN_PATH = '/usr/lpp/mmfs/bin'
 GpfsQuota = namedtuple('GpfsQuota', ',name,blockUsage,blockQuota,blockLimit,blockInDoubt,blockGrace,filesUsage,filesQuota,filesLimit,filesInDoubt,filesGrace,remarks,quota,defQuota,fid,filesetname')
 
 
+def _automatic_mount_only(fs):
+    """
+    Filter that returns true if the filesystem is automount enabled
+    """
+    return fs['automaticMountOption'] in ('yes', 'automount')
+
+
 class GpfsOperationError(PosixOperationError):
     pass
 
@@ -231,7 +238,7 @@ class GpfsOperations(PosixOperations):
 
         return res
 
-    def list_filesystems(self, device='all', update=False):
+    def list_filesystems(self, device='all', update=False, fs_filter=_automatic_mount_only):
         """List all filesystems.
 
         Set self.gpfslocalfilesystems to a convenient dict structure of the returned dict
@@ -264,6 +271,9 @@ class GpfsOperations(PosixOperations):
             res.update(res_)
             for dev, k, v in zip(info['deviceName'], info['fieldName'], info['data']):
                 res[dev][k] = v
+
+        if fs_filter:
+            res = dict((f, v) for (f, v) in res.items() if fs_filter(v))
 
         self.gpfslocalfilesystems = res
         return res
