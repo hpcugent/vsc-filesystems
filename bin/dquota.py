@@ -233,7 +233,7 @@ def process_fileset_quota(storage, gpfs, storage_name, filesystem, quota_map, dr
             logger.info("Dry run: would chown %s to %s %s" % (filename, path_stat.st_uid, path_stat.st_gid))
         else:
             # TODO: This should somehow be some atomic operation.
-            cache = FileCache(filename)
+            cache = FileCache(filename, False)
             cache.update(key="quota", data=quota, threshold=0)
             cache.update(key="storage_name", data=storage_name, threshold=0)
             cache.close()
@@ -312,7 +312,7 @@ def process_user_quota(storage, gpfs, storage_name, filesystem, quota_map, user_
                 logger.info("Dry run: would chmod 640 %s" % (filename,))
                 logger.info("Dry run: would chown %s to %s %s" % (filename, path_stat.st_uid, path_stat.st_gid))
             else:
-                cache = FileCache(filename)
+                cache = FileCache(filename, False)
                 cache.update(key="quota", data=quota, threshold=0)
                 cache.update(key="storage_name", data=storage_name, threshold=0)
                 cache.close()
