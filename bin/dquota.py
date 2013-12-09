@@ -42,7 +42,6 @@ from vsc.utils.nagios import NAGIOS_EXIT_CRITICAL
 from vsc.utils.script_tools import ExtendedSimpleOption
 
 # Constants
-QUOTA_CHECK_REMINDER_CACHE_FILENAME = '/var/cache/quota/gpfs_quota_checker.report.reminderCache.pickle'
 NAGIOS_CHECK_INTERVAL_THRESHOLD = 60 * 60 # one hour
 
 GPFS_GRACE_REGEX = re.compile(r"(?P<days>\d+)\s*days?|(?P<hours>\d+)\s*hours?|(?P<minutes>\d+)\s*minutes?|(?P<expired>expired)")
@@ -222,7 +221,7 @@ def process_fileset_quota(storage, gpfs, storage_name, filesystem, quota_map, dr
 
     for (fileset, quota) in quota_map.items():
         logger.debug("Fileset %s quota: %s" % (filesets[filesystem][fileset]['filesetName'], quota))
-
+        fileset_name = filesets[filesystem][fileset]['filesetName']
         path = filesets[filesystem][fileset]['path']
         filename = os.path.join(path, ".quota_fileset.json.gz")
         path_stat = os.stat(path)
@@ -241,10 +240,10 @@ def process_fileset_quota(storage, gpfs, storage_name, filesystem, quota_map, dr
             gpfs.chmod(0640, filename)
             gpfs.chown(path_stat.st_uid, path_stat.st_gid, filename)
 
-        logger.info("Stored fileset %s quota for storage %s at %s" % (fileset, storage, filename))
+        logger.info("Stored fileset %s [%s] quota for storage %s at %s" % (fileset, fileset_name, storage, filename))
 
         if quota.exceeds():
-            exceeding_filesets.append((fileset, quota))
+            exceeding_filesets.append((fileset_name, quota))
 
     return exceeding_filesets
 
@@ -379,6 +378,8 @@ def notify(storage_name, item, quota, dry_run=False):
                               message=message)
         logger.info("notification: recipient %s storage %s quota_string %s" %
                     (user.cn, storage_name, "%s" % (quota,)))
+    else:
+        logger.error("Should send a mail, but cannot process item %s" % (item,))
 
 
 def notify_exceeding_items(gpfs, storage, filesystem, exceeding_items, target, dry_run=False):
