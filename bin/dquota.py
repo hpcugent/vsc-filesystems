@@ -220,8 +220,8 @@ def process_fileset_quota(storage, gpfs, storage_name, filesystem, quota_map, dr
     logger.info("filesets = %s" % (filesets))
 
     for (fileset, quota) in quota_map.items():
-        logger.debug("Fileset %s quota: %s" % (filesets[filesystem][fileset]['filesetName'], quota))
         fileset_name = filesets[filesystem][fileset]['filesetName']
+        logger.debug("Fileset %s quota: %s" % (fileset_name, quota))
         path = filesets[filesystem][fileset]['path']
         filename = os.path.join(path, ".quota_fileset.json.gz")
         path_stat = os.stat(path)
