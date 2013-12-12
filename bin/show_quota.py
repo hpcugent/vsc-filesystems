@@ -80,7 +80,7 @@ def print_user_quota(opts, storage, user_name, now):
         path_template = storage.path_templates[storage_name]['user']
         path = os.path.join(mount_point, path_template[0], path_template[1](user_name), ".quota_user.json.gz")
 
-        cache = FileCache(path)
+        cache = FileCache(path, True)
         try:
             (timestamp, quota) = cache.load('quota')
         except TypeError:
@@ -109,7 +109,7 @@ def print_vo_quota(opts, storage, vos, now):
         path_template = storage.path_templates[storage_name]['vo']
         path = os.path.join(mount_point, path_template[0], path_template[1](vos[0]), ".quota_fileset.json.gz")
 
-        cache = FileCache(path)
+        cache = FileCache(path, True)
         try:
             (timestamp, quota) = cache.load('quota')
         except TypeError:
