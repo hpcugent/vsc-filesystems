@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # #
 #
-# Copyright 2012-2013 Ghent University
+# Copyright 2012-2014 Ghent University
 #
 # This file is part of the tools originally by the HPC team of
 # Ghent University (http://ugent.be/hpc).
@@ -19,12 +19,13 @@ Script to check for quota transgressions and notify the offending users.
 
 @author Andy Georges
 """
-
+import jsonpickle
 import os
 import pwd
 import re
 import sys
 import time
+import urllib2
 
 from string import Template
 
@@ -39,6 +40,7 @@ from vsc.utils import fancylogger
 from vsc.utils.cache import FileCache
 from vsc.utils.mail import VscMail
 from vsc.utils.nagios import NAGIOS_EXIT_CRITICAL
+from vsc.utils.rest_oauth import request_access_token, make_api_request
 from vsc.utils.script_tools import ExtendedSimpleOption
 
 # Constants
@@ -211,17 +213,21 @@ def _update_quota_entity(filesets, entity, filesystem, gpfs_quotas, timestamp):
     return entity
 
 
-def process_fileset_quota(storage, gpfs, storage_name, filesystem, quota_map, dry_run=False):
+def process_fileset_quota(storage, gpfs, storage_name, filesystem, quota_map, url, opener, access_token, dry_run=False):
     """Store the quota information in the filesets.
     """
 
     filesets = gpfs.list_filesets()
     exceeding_filesets = []
 
+    log_vo_quota_to_django(storage_name, quota_map, opener, url, access_token)  # FIXME: ignore dry run for now
+
     logger.info("filesets = %s" % (filesets))
 
+    payload = []
     for (fileset, quota) in quota_map.items():
-        logger.debug("Fileset %s quota: %s" % (filesets[filesystem][fileset]['filesetName'], quota))
+        fileset_name = filesets[filesystem][fileset]['filesetName'],
+        logger.debug("Fileset %s quota: %s" % (fileset_name, quota))
 
         path = filesets[filesystem][fileset]['path']
         filename = os.path.join(path, ".quota_fileset.json.gz")
@@ -233,6 +239,7 @@ def process_fileset_quota(storage, gpfs, storage_name, filesystem, quota_map, dr
             logger.info("Dry run: would chown %s to %s %s" % (filename, path_stat.st_uid, path_stat.st_gid))
         else:
             # TODO: This should somehow be some atomic operation.
+
             cache = FileCache(filename)
             cache.update(key="quota", data=quota, threshold=0)
             cache.update(key="storage_name", data=storage_name, threshold=0)
@@ -246,51 +253,75 @@ def process_fileset_quota(storage, gpfs, storage_name, filesystem, quota_map, dr
         if quota.exceeds():
             exceeding_filesets.append((fileset, quota))
 
+        if fileset_name in ('gvo00002'):
+            payload.append({
+                "fileset": fileset_name,
+                "vo": fileset_name,
+                "soft": quota['soft'],
+                "hard": quota['hard], "used": 8388608, "doubt": 0, "remaining": 0, "expired": "false"
+
+
+
     return exceeding_filesets
 
 
-def log_quota_to_django(user_name, storage_name, quota, dry_run=False):
+def log_user_quota_to_django(user_map, storage_name, quota_map, opener, url, access_token, dry_run=False):
     """
     Upload the quota information to the django database, so it can be displayed for the users in the web application.
-
-    We make a single REST request per fileset.
-
-    FIXME: requires authentication!
     """
-    opener = urllib2.build_opener(urllib2.HTTPHandler)
 
-    for (fileset, quota_) in quota.quota_map.items():
+    payload = []
+    for (user_id, quota) in quota_map.items():
 
-        params = {
-            "used": quota_.used
-            "soft": quota_.soft
-            "hard": quota_.hard
-            "doubt" : quota_.doubt
-            "expired": quota.expired[0]
-            "remaining": quota.expired[1]  # seconds
-        }
+        user_name = user_map.get(user_id, None)
+        if not user_name:
+            continue
+        if not user_name in ('vsc40075'):
+            continue
 
-        payload = jsonpickle.encode(params)
+        for (fileset, quota_) in quota.quota_map.items():
 
-        request = urllib2.Request("http://node628.cubone.gent.vsc:8000/quota/%s/%s/%s" % (user_id, storage, fileset), payload)
-        request.add_header('Content-Type', 'application/json')
-        request.get_method = lambda: 'PUT'
+            params = {
+                "fileset": fileset,
+                "user": user_name,
+                "used": quota_.used,
+                "soft": quota_.soft,
+                "hard": quota_.hard,
+                "doubt" : quota_.doubt,
+                "expired": quota.expired[0],
+                "remaining": quota.expired[1],  # seconds
+            }
+            payload.append(params)
 
-        uri = opener.open(request)
-        logger.info("Request returned: %s" % (uri.read(),))
+    log_quota_to_django(storage_name, opener, url, payload, access_token, dry_run)
 
 
-def process_user_quota(storage, gpfs, storage_name, filesystem, quota_map, user_map, dry_run=False):
+def log_quota_to_django(storage_name, opener, url, payload, access_token, dry_run=False):
+
+    payload = jsonpickle.encode(payload)
+
+    if dry_run:
+        logger.info("Would push payload to account web app: %s" % (payload,))
+    else:
+        try:
+            path = "%s/api/usage/institute/gent/storage/%s/vo/size/" % (url, storage_name)
+            result = make_api_request(opener, path, "PUT", payload, access_token)
+        except Exception:
+            logger.raiseException("Could not store quota info in account web app")
+
+
+def process_user_quota(storage, gpfs, storage_name, filesystem, quota_map, user_map, opener, url, access_token, dry_run=False):
     """Store the information in the user directories.
     """
     exceeding_users = []
     login_mount_point = storage[storage_name].login_mount_point
     gpfs_mount_point = storage[storage_name].gpfs_mount_point
 
+    log_user_quota_to_django(user_map, storage_name, quota_map, opener, url, access_token)  # FIXME: ignore dry run for now
+
     for (user_id, quota) in quota_map.items():
 
         user_name = user_map.get(int(user_id), None)
-        log_quota_to_django(user_name, storage_name, quota)  # FIXME: ignore dry run for now
 
         if user_name and user_name.startswith('vsc4'):
             user = VscUser(user_name)
@@ -447,10 +478,15 @@ def main():
     options = {
         'nagios-check-interval-threshold': NAGIOS_CHECK_INTERVAL_THRESHOLD,
         'storage': ('the VSC filesystems that are checked by this script', None, 'extend', []),
+        'account_page_url': ('Base URL of the account page', None, 'store', 'https://account.vscentrum.be/django')
+        'access_token': ('OAuth2 token to access the account page REST API', None, 'store', None),
     }
     opts = ExtendedSimpleOption(options)
 
     try:
+        opener = urllib2.build_opener(urllib2.HTTPHandler)
+        access_token = opts.options.access_token
+
         user_id_map = map_uids_to_names()  # is this really necessary?
         LdapQuery(VscConfiguration())
         gpfs = GpfsOperations()
@@ -494,6 +530,9 @@ def main():
                                                                filesystem,
                                                                quota_storage_map['USR'],
                                                                user_id_map,
+                                                               opener,
+                                                               opts.options.account_page_url,
+                                                               access_token,
                                                                opts.options.dry_run)
 
             stats["%s_fileset_critical" % (storage_name,)] = QUOTA_FILESETS_CRITICAL
