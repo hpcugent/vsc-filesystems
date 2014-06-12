@@ -500,7 +500,7 @@ def main():
     options = {
         'nagios-check-interval-threshold': NAGIOS_CHECK_INTERVAL_THRESHOLD,
         'storage': ('the VSC filesystems that are checked by this script', None, 'extend', []),
-        'account_page_url': ('Base URL of the account page', None, 'store', 'https://account.vscentrum.be/django')
+        'account_page_url': ('Base URL of the account page', None, 'store', 'https://account.vscentrum.be/django'),
         'access_token': ('OAuth2 token to access the account page REST API', None, 'store', None),
     }
     opts = ExtendedSimpleOption(options)
