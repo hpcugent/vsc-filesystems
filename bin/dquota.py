@@ -212,7 +212,7 @@ def _update_quota_entity(filesets, entity, filesystem, gpfs_quotas, timestamp):
     return entity
 
 
-def process_fileset_quota(storage, gpfs, storage_name, filesystem, quota_map, url, opener, access_token, dry_run=False):
+def process_fileset_quota(storage, gpfs, storage_name, filesystem, quota_map, opener, url, access_token, dry_run=False):
     """Store the quota information in the filesets.
     """
 
@@ -285,7 +285,7 @@ def log_user_quota_to_django(user_map, storage_name, quota_map, opener, url, acc
     log_quota_to_django(storage_name, opener, url, payload, access_token, dry_run)
 
 
-def log_vo_quota_to_django(vo_map, storage_name, quota_map, opener, url, payload, access_token, dry_run=False):
+def log_vo_quota_to_django(storage_name, quota_map, opener, url, payload, access_token, dry_run=False):
     pass
 
 def log_quota_to_django(storage_name, opener, url, payload, access_token, dry_run=False):
@@ -541,6 +541,9 @@ def main():
                                                                      storage_name,
                                                                      filesystem,
                                                                      quota_storage_map['FILESET'],
+                                                                     opener,
+                                                                     opts.options.account_page_url,
+                                                                     access_token,
                                                                      opts.options.dry_run)
             exceeding_users[storage_name] = process_user_quota(storage,
                                                                gpfs,
