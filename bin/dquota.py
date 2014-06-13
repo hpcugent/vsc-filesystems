@@ -262,10 +262,9 @@ def log_user_quota_to_django(user_map, storage_name, quota_map, opener, url, acc
     payload = []
     for (user_id, quota) in quota_map.items():
 
-        user_name = user_map.get(user_id, None)
-        if not user_name:
-            continue
-        if not user_name in ('vsc40075'):
+        user_name = user_map.get(int(user_id), None)
+        if not user_name or not user_name.startswith('vsc4'):
+            logger.warning("User %s not found in user map" % (user_id,))
             continue
 
         for (fileset, quota_) in quota.quota_map.items():
@@ -277,18 +276,18 @@ def log_user_quota_to_django(user_map, storage_name, quota_map, opener, url, acc
                 "soft": quota_.soft,
                 "hard": quota_.hard,
                 "doubt" : quota_.doubt,
-                "expired": quota.expired[0],
-                "remaining": quota.expired[1],  # seconds
+                "expired": quota_.expired[0],
+                "remaining": quota_.expired[1],  # seconds
             }
             payload.append(params)
 
-    log_quota_to_django(storage_name, opener, url, payload, access_token, dry_run)
+    log_quota_to_django(storage_name, "user", opener, url, payload, access_token, dry_run)
 
 
 def log_vo_quota_to_django(storage_name, quota_map, opener, url, payload, access_token, dry_run=False):
     pass
 
-def log_quota_to_django(storage_name, opener, url, payload, access_token, dry_run=False):
+def log_quota_to_django(storage_name, kind, opener, url, payload, access_token, dry_run=False):
 
     payload = jsonpickle.encode(payload)
 
@@ -296,7 +295,7 @@ def log_quota_to_django(storage_name, opener, url, payload, access_token, dry_ru
         logger.info("Would push payload to account web app: %s" % (payload,))
     else:
         try:
-            path = "%s/api/usage/institute/gent/storage/%s/vo/size/" % (url, storage_name)
+            path = "%s/api/usage/storage/%s/%s/size/" % (url, storage_name, kind)
             result = make_api_request(opener, path, "PUT", payload, access_token)
         except Exception:
             logger.raiseException("Could not store quota info in account web app")
