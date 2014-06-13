@@ -40,7 +40,7 @@ from vsc.utils import fancylogger
 from vsc.utils.cache import FileCache
 from vsc.utils.mail import VscMail
 from vsc.utils.nagios import NAGIOS_EXIT_CRITICAL
-from vsc.utils.rest_oauth import request_access_token, make_api_request
+from vsc.utils.rest_oauth import make_api_request
 from vsc.utils.script_tools import ExtendedSimpleOption
 
 # Constants
@@ -219,7 +219,7 @@ def process_fileset_quota(storage, gpfs, storage_name, filesystem, quota_map, ur
     filesets = gpfs.list_filesets()
     exceeding_filesets = []
 
-    log_vo_quota_to_django(storage_name, quota_map, opener, url, access_token)  # FIXME: ignore dry run for now
+    log_vo_quota_to_django(storage_name, quota_map, opener, url, access_token, dry_run)
 
     logger.info("filesets = %s" % (filesets))
 
@@ -294,6 +294,9 @@ def log_user_quota_to_django(user_map, storage_name, quota_map, opener, url, acc
     log_quota_to_django(storage_name, opener, url, payload, access_token, dry_run)
 
 
+def log_vo_quota_to_django(vo_map, storage_name, quota_map, opener, url, payload, access_token, dry_run=False):
+    pass
+
 def log_quota_to_django(storage_name, opener, url, payload, access_token, dry_run=False):
 
     payload = jsonpickle.encode(payload)
@@ -311,7 +314,7 @@ def log_quota_to_django(storage_name, opener, url, payload, access_token, dry_ru
 def sanitize_quota_information(fileset_name, quota):
     """Sanitize the information that is store at the user's side.
 
-    There should be _no_ nformation regarding filesets besides:
+    There should be _no_ information regarding filesets besides:
         - vsc4xy
         - gvo*
     """
@@ -328,7 +331,7 @@ def process_user_quota(storage, gpfs, storage_name, filesystem, quota_map, user_
     gpfs_mount_point = storage[storage_name].gpfs_mount_point
     path_template = storage.path_templates[storage_name]
 
-    log_user_quota_to_django(user_map, storage_name, quota_map, opener, url, access_token)  # FIXME: ignore dry run for now
+    log_user_quota_to_django(user_map, storage_name, quota_map, opener, url, access_token, dry_run)
 
     for (user_id, quota) in quota_map.items():
 
