@@ -260,11 +260,12 @@ def log_user_quota_to_django(user_map, storage_name, quota_map, opener, url, acc
     """
 
     payload = []
+    count = 0
+
     for (user_id, quota) in quota_map.items():
 
         user_name = user_map.get(int(user_id), None)
         if not user_name or not user_name.startswith('vsc4'):
-            logger.warning("User %s not found in user map" % (user_id,))
             continue
 
         for (fileset, quota_) in quota.quota_map.items():
@@ -277,11 +278,18 @@ def log_user_quota_to_django(user_map, storage_name, quota_map, opener, url, acc
                 "hard": quota_.hard,
                 "doubt" : quota_.doubt,
                 "expired": quota_.expired[0],
-                "remaining": quota_.expired[1],  # seconds
+                "remaining": quota_.expired[1] or 0,  # seconds
             }
             payload.append(params)
+            count += 1
 
-    log_quota_to_django(storage_name, "user", opener, url, payload, access_token, dry_run)
+            if count > 100:
+                log_quota_to_django(storage_name, "user", opener, url, payload, access_token, dry_run)
+                count = 0
+                payload = []
+
+    if count:
+        log_quota_to_django(storage_name, "user", opener, url, payload, access_token, dry_run)
 
 
 def log_vo_quota_to_django(storage_name, quota_map, opener, url, payload, access_token, dry_run=False):
@@ -321,7 +329,7 @@ def process_user_quota(storage, gpfs, storage_name, filesystem, quota_map, user_
     gpfs_mount_point = storage[storage_name].gpfs_mount_point
     path_template = storage.path_templates[storage_name]
 
-    # log_user_quota_to_django(user_map, storage_name, quota_map, opener, url, access_token, dry_run)
+    log_user_quota_to_django(user_map, storage_name, quota_map, opener, url, access_token, dry_run)
 
     for (user_id, quota) in quota_map.items():
 
