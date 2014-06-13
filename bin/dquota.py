@@ -251,15 +251,6 @@ def process_fileset_quota(storage, gpfs, storage_name, filesystem, quota_map, ur
         if quota.exceeds():
             exceeding_filesets.append((fileset_name, quota))
 
-        if fileset_name in ('gvo00002'):
-            payload.append({
-                "fileset": fileset_name,
-                "vo": fileset_name,
-                "soft": quota['soft'],
-                "hard": quota['hard], "used": 8388608, "doubt": 0, "remaining": 0, "expired": "false"
-
-
-
     return exceeding_filesets
 
 
