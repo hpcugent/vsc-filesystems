@@ -304,7 +304,7 @@ def log_quota_to_django(storage_name, kind, opener, url, payload, access_token, 
     else:
         try:
             path = "%s/api/usage/storage/%s/%s/size/" % (url, storage_name, kind)
-            result = make_api_request(opener, path, "PUT", payload, access_token)
+            # result = make_api_request(opener, path, "PUT", payload, access_token)
         except Exception:
             logger.raiseException("Could not store quota info in account web app")
 
@@ -329,7 +329,7 @@ def process_user_quota(storage, gpfs, storage_name, filesystem, quota_map, user_
     gpfs_mount_point = storage[storage_name].gpfs_mount_point
     path_template = storage.path_templates[storage_name]
 
-    log_user_quota_to_django(user_map, storage_name, quota_map, opener, url, access_token, dry_run)
+    # log_user_quota_to_django(user_map, storage_name, quota_map, opener, url, access_token, dry_run)
 
     for (user_id, quota) in quota_map.items():
 
