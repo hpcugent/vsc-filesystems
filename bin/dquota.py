@@ -225,7 +225,7 @@ def process_fileset_quota(storage, gpfs, storage_name, filesystem, quota_map, op
 
     payload = []
     for (fileset, quota) in quota_map.items():
-        fileset_name = filesets[filesystem][fileset]['filesetName'],
+        fileset_name = filesets[filesystem][fileset]['filesetName']
         logger.debug("Fileset %s quota: %s" % (fileset_name, quota))
 
         path = filesets[filesystem][fileset]['path']
