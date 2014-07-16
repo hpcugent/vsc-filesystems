@@ -98,6 +98,33 @@ def print_user_quota(opts, storage, user_name, now):
                     print pp
 
 
+def print_fileset_quota(opts, storage, user_name, now):
+    print "Fileset quota:"
+    for storage_name in opts.options.storage:
+
+        mount_point = storage[storage_name].login_mount_point
+        path_template = storage.path_templates[storage_name]['user']
+        path = os.path.join(mount_point, path_template[0], path_template[1](user_name), ".quota_fileset.json.gz")
+
+        cache = FileCache(path, True)
+        try:
+            (timestamp, quota) = cache.load('quota')
+        except TypeError:
+            logger.debug("Cannot load data from %s" % (path,))
+            print "%s: WARNING: No quota information found" % (storage_name,)
+            continue
+
+        if now - timestamp > opts.options.threshold:
+            print "%s: WARNING: no recent quota information (age of data is %d minutes)" % (storage_name,
+                                                                                            (now-timestamp)/60)
+        else:
+            for (fileset, qi) in quota.quota_map.items():
+                pp = quota_pretty_print(storage_name, fileset, qi, opts.options.fileset_prefixes)
+                if pp:
+                    print pp
+
+
+
 def print_vo_quota(opts, storage, vos, now):
     """
     Print the quota for the VO fileset.
@@ -135,7 +162,8 @@ def main():
         'threshold': ('allowed the time difference between the cached quota and the time of running', None, 'store',
                       DEFAULT_ALLOWED_TIME_THRESHOLD),
         'fileset_prefixes': ('the filesets that we allow for showing QuotaUser', 'strlist', 'store', []),
-        'vo': ('provide storage details for the VO you belong to', None, 'store_true', False)
+        'vo': ('provide storage details for the VO you belong to', None, 'store_true', False),
+        'information': ('Types of information that are available', None, 'extend', []),
     }
     opts = simple_option(options, config_files=['/etc/quota_information.conf'])
 
@@ -143,16 +171,23 @@ def main():
     vsc = VSC(False)
     user_name = getpwuid(os.getuid())[0]
 
-    vos = [g.gr_name for g in grp.getgrall()
-                     if user_name in g.gr_mem
-                     and g.gr_name.startswith('gvo')
-                     and g.gr_name != vsc.default_vo]  # default VO has no quota associated with it
+    if 'vo' in opts.options.information:
+        vos = [g.gr_name for g in grp.getgrall()
+                         if user_name in g.gr_mem
+                         and g.gr_name.startswith('gvo')
+                         and g.gr_name != vsc.default_vo]  # default VO has no quota associated with it
 
-    opts.options.vo = opts.options.vo and vos
+        opts.options.vo = opts.options.vo and vos
+    else:
+        opts.options.vo = False
 
     now = time.time()
 
-    print_user_quota(opts, storage, user_name, now)
+    if 'user' in opts.options.information:
+        print_user_quota(opts, storage, user_name, now)
+
+    if 'fileset' in opts.options.information:
+        print_fileset_quota(opts, storage, user_name, now)
 
     if opts.options.vo:
         print_vo_quota(opts, storage, vos, now)
@@ -160,3 +195,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
