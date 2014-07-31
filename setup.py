@@ -50,7 +50,7 @@ PACKAGE = {
                 ],
     'install_requires': [
         'vsc-accountpage-clients >= 0.1.2',
-        'vsc-base >= 1.6.6',
+        'vsc-base >= 1.9.3',
         'vsc-config >= 1.10',
         'vsc-utils >= 1.4.6',
     ],
