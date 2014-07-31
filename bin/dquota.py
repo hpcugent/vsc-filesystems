@@ -393,6 +393,10 @@ def process_user_quota(storage, gpfs, storage_name, filesystem, quota_map, user_
 
 def notify(storage_name, item, quota, client, dry_run=False):
     """Send out the notification"""
+    if storage_name in ('VSC_SCRATCH_MUK',):  #FIXME: a more general solution should be found
+        logger.info("Not sending mails on muk at this point")
+        return
+
     mail = VscMail(mail_host="smtp.ugent.be")
     if item.startswith("gvo"):  # VOs
         vo = client.api.vo[item].get()
@@ -433,9 +437,6 @@ def notify(storage_name, item, quota, client, dry_run=False):
                                                                     storage_name=storage_names,
                                                                     quota_info="%s" % (quota,),
                                                                     time=time.ctime())
-        if storage_name in ('VSC_SCRATCH_MUK',):  #FIXME: a more general solution should be found
-            logger.info("Not sending mails on muk at this point")
-            return
 
         if dry_run:
             logger.info("Dry-run, would send the following message: %s" % (message,))
