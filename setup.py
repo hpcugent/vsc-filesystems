@@ -37,7 +37,7 @@ shared_setup.SHARED_TARGET.update({
 
 PACKAGE = {
     'name': 'vsc-filesystems',
-    'version': '0.27.1',
+    'version': '0.28.0',
     'author': [sdw, ag],
     'maintainer': [sdw, ag],
     'packages': ['vsc', 'vsc.filesystem', 'vsc.filesystem.quota'],
@@ -49,7 +49,7 @@ PACKAGE = {
                 'bin/show_quota.py',
                 ],
     'install_requires': [
-        'vsc-base >= 1.6.6',
+        'vsc-base >= 1.9.7',
         'vsc-config >= 1.10',
         'vsc-utils >= 1.4.6',
     ],
