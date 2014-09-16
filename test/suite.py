@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: latin-1 -*-
 # #
-# Copyright 2009-2013 Ghent University
+# Copyright 2009-2014 Ghent University
 #
 # This file is part of vsc-filesystems,
 # originally created by the HPC team of Ghent University (http://ugent.be/hpc/en),
@@ -21,9 +21,9 @@ Unit test suite for vsc-filesystems.
 import sys
 import unittest
 
-import test.posix as p
+import test.posix as posix_tests
 
-TESTS = [p]
+TESTS = [posix_tests]
 SUITE = unittest.TestSuite([x.suite() for x in TESTS])
 
 
