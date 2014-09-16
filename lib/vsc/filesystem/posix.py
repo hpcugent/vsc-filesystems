@@ -330,7 +330,7 @@ class PosixOperations(object):
     def is_dir(self, obj=None):
         """Check if it is a directory"""
         obj = self._sanity_check(obj)
-        # do symlinks count ?
+        return os.path.isdir(obj)
 
     def make_dir(self, obj=None):
         """Make a directory hierarchy.
