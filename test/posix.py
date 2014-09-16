@@ -30,7 +30,7 @@ class PosixTest(EnhancedTestCase):
         """Set things up for running tests."""
         self.po = PosixOperations()
         # mock the sanity check, to ease testing
-        self.po._sanity_check = id
+        self.po._sanity_check = lambda x: x
 
     def test_is_dir(self):
         """Tests for is_dir method."""
