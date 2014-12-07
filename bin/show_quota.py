@@ -57,12 +57,13 @@ def quota_pretty_print(storage_name, fileset, quota_information, fileset_prefixe
 
     s = "%s: used %d %s (%d%%) quota %d (%d hard limit) %s" % (
         storage_name_s,
-        format_sizes(quota_information.used)[0],
-        format_sizes(quota_information.used)[1],
+        # quota sizes are in 1k blocks
+        format_sizes(quota_information.used*1024)[0],
+        format_sizes(quota_information.used*1024)[1],
         quota_information.used * 100 / quota_information.soft,
-        format_sizes(quota_information.soft)[0],
-        format_sizes(quota_information.hard)[0],
-        format_sizes(quota_information.hard)[1])
+        format_sizes(quota_information.soft*1024)[0],
+        format_sizes(quota_information.hard*1024)[0],
+        format_sizes(quota_information.hard*1024)[1])
 
     (exceeds, grace) = quota_information.expired
     if exceeds:
@@ -73,7 +74,7 @@ def quota_pretty_print(storage_name, fileset, quota_information, fileset_prefixe
 
 def format_sizes(quotasize):
     """Returns a tuple of the size and the appropiate unit so that size < 1024"""
-    size_units = ["KiB", "MiB", "GiB", "TiB", "PiB", "EiB", "ZiB", "YiB"]
+    size_units = ["B", "kiB", "MiB", "GiB", "TiB", "PiB", "EiB", "ZiB", "YiB"]
     for n in range(0, len(size_units)):
         val = quotasize / 1024**n
         if val < 1024:
