@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: latin-1 -*-
 ##
-# Copyright 2013-2013 Ghent University
+# Copyright 2013-2014 Ghent University
 #
 # This file is part of vsc-filesystems,
 # originally created by the HPC team of Ghent University (http://ugent.be/hpc/en),
@@ -55,18 +55,30 @@ def quota_pretty_print(storage_name, fileset, quota_information, fileset_prefixe
     else:
         return None
 
-    s = "%s: used %d MiB (%d%%) quota %d (%d hard limit) MiB" % (
+    s = "%s: used %d %s (%d%%) quota %d (%d hard limit) %s" % (
         storage_name_s,
-        quota_information.used / 1024^2,
-        quota_information.used  * 100 / quota_information.soft,
-        quota_information.soft / 1024^2,
-        quota_information.hard / 1024^2)
+        # quota sizes are in 1k blocks
+        format_sizes(quota_information.used*1024)[0],
+        format_sizes(quota_information.used*1024)[1],
+        quota_information.used * 100 / quota_information.soft,
+        format_sizes(quota_information.soft*1024)[0],
+        format_sizes(quota_information.hard*1024)[0],
+        format_sizes(quota_information.hard*1024)[1])
 
     (exceeds, grace) = quota_information.expired
     if exceeds:
         s += " - quota exceeded, grace = %d" % (grace,)
 
     return s
+
+
+def format_sizes(quotasize):
+    """Returns a tuple of the size and the appropiate unit so that size < 1024"""
+    size_units = ["B", "kiB", "MiB", "GiB", "TiB", "PiB", "EiB", "ZiB", "YiB"]
+    for n in range(0, len(size_units)):
+        val = quotasize / 1024**n
+        if val < 1024:
+            return (val, size_units[n])
 
 
 def print_user_quota(opts, storage, user_name, now):
