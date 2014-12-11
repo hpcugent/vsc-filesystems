@@ -29,6 +29,7 @@ import urllib2
 
 from string import Template
 
+from vsc.accountpage.client import AccountpageClient
 from vsc.administration.user import VscUser
 from vsc.administration.vo import VscVo
 from vsc.config.base import VscStorage
@@ -212,14 +213,14 @@ def _update_quota_entity(filesets, entity, filesystem, gpfs_quotas, timestamp):
     return entity
 
 
-def process_fileset_quota(storage, gpfs, storage_name, filesystem, quota_map, opener, url, access_token, dry_run=False):
+def process_fileset_quota(storage, gpfs, storage_name, filesystem, quota_map, client, dry_run=False):
     """Store the quota information in the filesets.
     """
 
     filesets = gpfs.list_filesets()
     exceeding_filesets = []
 
-    log_vo_quota_to_django(storage_name, quota_map, opener, url, access_token, dry_run)
+    #log_vo_quota_to_django(storage_name, quota_map, client, dry_run)
 
     logger.info("filesets = %s" % (filesets))
 
@@ -321,7 +322,7 @@ def sanitize_quota_information(fileset_name, quota):
             quota.quota_map.pop(fileset)
 
 
-def process_user_quota(storage, gpfs, storage_name, filesystem, quota_map, user_map, opener, url, access_token, dry_run=False):
+def process_user_quota(storage, gpfs, storage_name, filesystem, quota_map, user_map, client, dry_run=False):
     """Store the information in the user directories.
     """
     exceeding_users = []
@@ -329,14 +330,14 @@ def process_user_quota(storage, gpfs, storage_name, filesystem, quota_map, user_
     gpfs_mount_point = storage[storage_name].gpfs_mount_point
     path_template = storage.path_templates[storage_name]
 
-    # log_user_quota_to_django(user_map, storage_name, quota_map, opener, url, access_token, dry_run)
+    # log_user_quota_to_django(user_map, storage_name, quota_map, client, dry_run)
 
     for (user_id, quota) in quota_map.items():
 
         user_name = user_map.get(int(user_id), None)
 
         if user_name and user_name.startswith('vsc4'):
-            user = VscUser(user_name)
+            user = VscUser(user_name)  # FIXME: this needs to become another class e.g., CommonUser. We do not need any LDAP functionality here.
             logger.debug("Checking quota for user %s with ID %s" % (user_name, user_id))
             logger.debug("User %s quota: %s" % (user, quota))
 
@@ -390,13 +391,19 @@ def process_user_quota(storage, gpfs, storage_name, filesystem, quota_map, user_
     return exceeding_users
 
 
-def notify(storage_name, item, quota, dry_run=False):
+def notify(storage_name, item, quota, client, dry_run=False):
     """Send out the notification"""
+    if storage_name in ('VSC_SCRATCH_MUK',):  #FIXME: a more general solution should be found
+        logger.info("Not sending mails on muk at this point")
+        return
+
     mail = VscMail(mail_host="smtp.ugent.be")
     if item.startswith("gvo"):  # VOs
-        vo = VscVo(item)
-        for user in [VscUser(m) for m in vo.moderator]:
-            message = VO_QUOTA_EXCEEDED_MAIL_TEXT_TEMPLATE.safe_substitute(user_name=user.gecos,
+        vo = client.api.vo[item].get()
+        for vsc_id in vo['moderators']:
+            (code, user) = client.api.account[vsc_id].get()
+            (code, person) = client.api.account[vsc_id].person.get()
+            message = VO_QUOTA_EXCEEDED_MAIL_TEXT_TEMPLATE.safe_substitute(user_name=person['gecos'],
                                                                            vo_name=item,
                                                                            storage_name=storage_name,
                                                                            quota_info="%s" % (quota,),
@@ -404,18 +411,19 @@ def notify(storage_name, item, quota, dry_run=False):
             if dry_run:
                 logger.info("Dry-run, would send the following message: %s" % (message,))
             else:
-                mail.sendTextMail(mail_to=user.mail,
+                mail.sendTextMail(mail_to=user['email'],
                                   mail_from="hpc@ugent.be",
                                   reply_to="hpc@ugent.be",
                                   mail_subject="Quota on %s exceeded" % (storage_name,),
                                   message=message)
             logger.info("notification: recipient %s storage %s quota_string %s" %
-                        (user.cn, storage_name, "%s" % (quota,)))
+                        (user['vsc_id'], storage_name, "%s" % (quota,)))
 
     elif item.startswith("gpr"):  # projects
         pass
     elif item.startswith("vsc"):  # users
-        user = VscUser(item)
+        (code, user) = client.api.account[item].get()
+        (code, person) = client.api.account[item].person.get()
 
         exceeding_filesets = [fs for (fs, q) in quota.quota_map.items() if q.expired[0]]
         storage_names = []
@@ -425,25 +433,26 @@ def notify(storage_name, item, quota, dry_run=False):
             storage_names.append(storage_name + "_VO")
         storage_names = ", ".join(["$" + sn for sn in storage_names])
 
-        message = QUOTA_EXCEEDED_MAIL_TEXT_TEMPLATE.safe_substitute(user_name=user.gecos,
+        message = QUOTA_EXCEEDED_MAIL_TEXT_TEMPLATE.safe_substitute(user_name=person['gecos'],
                                                                     storage_name=storage_names,
                                                                     quota_info="%s" % (quota,),
                                                                     time=time.ctime())
+
         if dry_run:
             logger.info("Dry-run, would send the following message: %s" % (message,))
         else:
-            mail.sendTextMail(mail_to=user.mail,
+            mail.sendTextMail(mail_to=user['email'],
                               mail_from="hpc@ugent.be",
                               reply_to="hpc@ugent.be",
                               mail_subject="Quota on %s exceeded" % (storage_name,),
                               message=message)
         logger.info("notification: recipient %s storage %s quota_string %s" %
-                    (user.cn, storage_name, "%s" % (quota,)))
+                    (user['vsc_id'], storage_name, "%s" % (quota,)))
     else:
         logger.error("Should send a mail, but cannot process item %s" % (item,))
 
 
-def notify_exceeding_items(gpfs, storage, filesystem, exceeding_items, target, dry_run=False):
+def notify_exceeding_items(gpfs, storage, filesystem, exceeding_items, target, client, dry_run=False):
     """Send out notification to the fileset owners.
 
     - if the fileset belongs to a VO: the VO moderator
@@ -465,7 +474,7 @@ def notify_exceeding_items(gpfs, storage, filesystem, exceeding_items, target, d
         updated = cache.update(item, quota, QUOTA_NOTIFICATION_CACHE_THRESHOLD)
         logger.info("Storage %s: cache entry for %s was updated: %s" % (storage, item, updated))
         if updated:
-            notify(storage, item, quota, dry_run)
+            notify(storage, item, quota, client, dry_run)
 
     if not dry_run:
         cache.close()
@@ -508,10 +517,11 @@ def main():
 
     try:
         opener = urllib2.build_opener(urllib2.HTTPHandler)
-        access_token = opts.options.access_token
+
+        client = AccountpageClient(token=opts.options.access_token)
 
         user_id_map = map_uids_to_names()  # is this really necessary?
-        LdapQuery(VscConfiguration())
+        #LdapQuery(VscConfiguration())
         gpfs = GpfsOperations()
         storage = VscStorage()
 
@@ -548,9 +558,7 @@ def main():
                                                                      storage_name,
                                                                      filesystem,
                                                                      quota_storage_map['FILESET'],
-                                                                     opener,
-                                                                     opts.options.account_page_url,
-                                                                     access_token,
+                                                                     client,
                                                                      opts.options.dry_run)
             exceeding_users[storage_name] = process_user_quota(storage,
                                                                gpfs,
@@ -558,9 +566,7 @@ def main():
                                                                filesystem,
                                                                quota_storage_map['USR'],
                                                                user_id_map,
-                                                               opener,
-                                                               opts.options.account_page_url,
-                                                               access_token,
+                                                               client,
                                                                opts.options.dry_run)
 
             stats["%s_fileset_critical" % (storage_name,)] = QUOTA_FILESETS_CRITICAL
@@ -578,6 +584,7 @@ def main():
                                       storage=storage_name,
                                       filesystem=filesystem,
                                       exceeding_items=exceeding_filesets[storage_name],
+                                      client=client,
                                       dry_run=opts.options.dry_run)
 
             stats["%s_users_warning" % (storage_name,)] = QUOTA_USERS_WARNING
@@ -596,6 +603,7 @@ def main():
                                    storage=storage_name,
                                    filesystem=filesystem,
                                    exceeding_items=exceeding_users[storage_name],
+                                   client=client,
                                    dry_run=opts.options.dry_run)
     except Exception, err:
         logger.exception("critical exception caught: %s" % (err))
