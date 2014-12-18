@@ -37,17 +37,12 @@ shared_setup.SHARED_TARGET.update({
 
 PACKAGE = {
     'name': 'vsc-filesystems',
-    'version': '0.27.2',
+    'version': '0.28',
     'author': [sdw, ag],
     'maintainer': [sdw, ag],
     'packages': ['vsc', 'vsc.filesystem', 'vsc.filesystem.quota'],
     'namespace_packages': ['vsc'],
-    'scripts': ['bin/quota_log.py',
-                'bin/inode_log.py',
-                'bin/dquota.py',
-                'bin/my_show_quota.sh',
-                'bin/show_quota.py',
-                ],
+    'scripts': [],
     'install_requires': [
         'vsc-base >= 1.6.6',
         'vsc-config >= 1.10',
