@@ -328,7 +328,7 @@ class PosixOperations(object):
             self.log.raiseException("Cannot create symlink from %s to %s" % (obj, target), PosixOperationError)
 
     def is_dir(self, obj=None):
-        """Check if it is a directory"""
+        """Check if obj is (symlink to) a directory"""
         obj = self._sanity_check(obj)
         return os.path.isdir(obj)
 
