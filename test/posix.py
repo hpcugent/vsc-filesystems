@@ -28,6 +28,8 @@ class PosixTest(EnhancedTestCase):
 
     def setUp(self):
         """Set things up for running tests."""
+        super(PosixTest, self).setUp()
+
         self.po = PosixOperations()
         # mock the sanity check, to ease testing
         self.po._sanity_check = lambda x: x
