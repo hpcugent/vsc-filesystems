@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: latin-1 -*-
 # #
-# Copyright 2009-2013 Ghent University
+# Copyright 2009-2014 Ghent University
 #
 # This file is part of vsc-filesystems,
 # originally created by the HPC team of Ghent University (http://ugent.be/hpc/en),
@@ -20,7 +20,7 @@ vsc-filesystems base distribution setup.py
 @author: Andy Georges (Ghent University)
 """
 import vsc.install.shared_setup as shared_setup
-from vsc.install.shared_setup import ag, sdw
+from vsc.install.shared_setup import ag, kh, sdw
 
 
 def remove_bdist_rpm_source_file():
@@ -37,17 +37,12 @@ shared_setup.SHARED_TARGET.update({
 
 PACKAGE = {
     'name': 'vsc-filesystems',
-    'version': '0.28.0',
-    'author': [sdw, ag],
-    'maintainer': [sdw, ag],
+    'version': '0.28.1',
+    'author': [sdw, ag, kh],
+    'maintainer': [sdw, ag, kh],
     'packages': ['vsc', 'vsc.filesystem', 'vsc.filesystem.quota'],
     'namespace_packages': ['vsc'],
-    'scripts': ['bin/quota_log.py',
-                'bin/inode_log.py',
-                'bin/dquota.py',
-                'bin/my_show_quota.sh',
-                'bin/show_quota.py',
-                ],
+    'scripts': [],
     'install_requires': [
         'vsc-base >= 1.9.7',
         'vsc-config >= 1.10',
