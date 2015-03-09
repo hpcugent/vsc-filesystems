@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: latin-1 -*-
-# #
-# Copyright 2009-2013 Ghent University
+##
+# Copyright 2009-2015 Ghent University
 #
 # This file is part of vsc-filesystems,
 # originally created by the HPC team of Ghent University (http://ugent.be/hpc/en),
@@ -12,7 +12,7 @@
 #
 # All rights reserved.
 #
-# #
+##
 """
 General POSIX filesystem interaction (sort of replacement for linux_utils)
 
@@ -328,9 +328,9 @@ class PosixOperations(object):
             self.log.raiseException("Cannot create symlink from %s to %s" % (obj, target), PosixOperationError)
 
     def is_dir(self, obj=None):
-        """Check if it is a directory"""
+        """Check if obj is (symlink to) a directory"""
         obj = self._sanity_check(obj)
-        # do symlinks count ?
+        return os.path.isdir(obj)
 
     def make_dir(self, obj=None):
         """Make a directory hierarchy.
