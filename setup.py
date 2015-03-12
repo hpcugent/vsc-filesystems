@@ -37,7 +37,7 @@ shared_setup.SHARED_TARGET.update({
 
 PACKAGE = {
     'name': 'vsc-filesystems',
-    'version': '0.28.1',
+    'version': '0.29',
     'author': [sdw, ag, kh],
     'maintainer': [sdw, ag, kh],
     'packages': ['vsc', 'vsc.filesystem', 'vsc.filesystem.quota'],
