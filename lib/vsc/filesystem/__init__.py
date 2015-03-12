@@ -18,3 +18,5 @@ Part of vsc.job a framework to generate filesystem interaction with python
 
 @author: Stijn De Weirdt (Ghent University)
 """
+import pkg_resources
+pkg_resources.declare_namespace(__name__)
