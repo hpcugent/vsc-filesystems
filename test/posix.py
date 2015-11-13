@@ -17,13 +17,12 @@ Unit tests for vsc.filesystems.posix
 @author: Kenneth Hoste (Ghent University)
 """
 import os
-from unittest import TestLoader, main
-from vsc.utils.testing import EnhancedTestCase
+from vsc.install.testing import TestCase
 
 from vsc.filesystem.posix import PosixOperations
 
 
-class PosixTest(EnhancedTestCase):
+class PosixTest(TestCase):
     """Tests for vsc.filesystems.posix"""
 
     def setUp(self):
@@ -38,11 +37,3 @@ class PosixTest(EnhancedTestCase):
         """Tests for is_dir method."""
         self.assertEqual(self.po.is_dir(os.environ['HOME']), True)
         self.assertEqual(self.po.is_dir('/no/such/dir'), False)
-    
-
-def suite():
-    """ returns all the testcases in this module """
-    return TestLoader().loadTestsFromTestCase(PosixTest)
-
-if __name__ == '__main__':
-    main()
