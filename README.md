@@ -1,4 +1,4 @@
-# vsc-filesystems
+# Description
 
 ### Build Status
 - Python 2.6 : [![Build Status](https://jenkins1.ugent.be/job/vsc-filesystems-python26/badge/icon)](https://jenkins1.ugent.be/job/vsc-filesystems-python26/)
