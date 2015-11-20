@@ -1,12 +1,13 @@
-# vsc-filesystems
-
-### Build Status
-- Python 2.6 : [![Build Status](https://jenkins1.ugent.be/job/vsc-filesystems-python26/badge/icon)](https://jenkins1.ugent.be/job/vsc-filesystems-python26/)
-- Python 2.7 : [![Build Status](https://jenkins1.ugent.be/job/vsc-filesystems-python27/badge/icon)](https://jenkins1.ugent.be/job/vsc-filesystems-python27/)
+# Description
 
 Code to deal with the filesystems used in HPC clusters
 
 Originally created by the HPC team of Ghent University (http://ugent.be/hpc).
+
+
+### Build Status
+- Python 2.6 : [![Build Status](https://jenkins1.ugent.be/job/vsc-filesystems-python26/badge/icon)](https://jenkins1.ugent.be/job/vsc-filesystems-python26/)
+- Python 2.7 : [![Build Status](https://jenkins1.ugent.be/job/vsc-filesystems-python27/badge/icon)](https://jenkins1.ugent.be/job/vsc-filesystems-python27/)
 
 # Documentation
 https://jenkins1.ugent.be/job/vsc-filesystems-python26/Documentation/
