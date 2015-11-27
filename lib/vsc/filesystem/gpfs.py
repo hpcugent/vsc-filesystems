@@ -46,6 +46,24 @@ def _automatic_mount_only(fs):
     return fs['automaticMountOption'] in ('yes', 'automount')
 
 
+def split_output_lines(out):
+    """
+    Split the output into field.
+
+    Takes into acount that some lines may end in a :, some might not. If the header exhibits no colon,
+    the field count might be off and we might not be able to parse the output as expected.
+    """
+    header_ends_in_colon = out[0][-1] == ":"
+
+    def clean(line):
+        if not header_ends_in_colon and line[-1] == ":":
+            return line[:-1]
+        else:
+            return line
+
+    return [[percentdecode(y) for y in clean(x).strip().split(':')] for x in out.strip().split('\n')]
+
+
 class GpfsOperationError(PosixOperationError):
     pass
 
@@ -192,7 +210,7 @@ class GpfsOperations(PosixOperations):
         # it's percent encoded: first split in :, then decode
         b = [[percentdecode(y) for y in  x.split(':')] for x in a]
         """
-        what = [[percentdecode(y) for y in x.strip().split(':')] for x in out.strip().split('\n')]
+        what = split_output_lines(out)
         expectedheader = [name, '', 'HEADER', 'version', 'reserved', 'reserved']
 
         # verify result and remove all items that do not match the expected output data
@@ -239,7 +257,8 @@ class GpfsOperations(PosixOperations):
         return res
 
     def list_filesystems(self, device='all', update=False, fs_filter=_automatic_mount_only):
-        """List all filesystems.
+        """
+        List all filesystems.
 
         Set self.gpfslocalfilesystems to a convenient dict structure of the returned dict
         where the key is the deviceName, the value is a dict
@@ -345,7 +364,8 @@ class GpfsOperations(PosixOperations):
         return res
 
     def list_filesets(self, devices=None, filesetnames=None, update=False):
-        """Get all the filesets for one or more specific devices
+        """
+        Get all the filesets for one or more specific devices
 
         @type devices: list of devices (if string: 1 device; if None: all found devices)
         @type filesetnames: report only on specific filesets (if string: 1 filesetname)
