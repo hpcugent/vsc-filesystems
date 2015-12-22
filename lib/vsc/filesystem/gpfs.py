@@ -881,8 +881,6 @@ class GpfsOperations(PosixOperations):
             else:
                 self.log.raiseException(err.args[0], GpfsOperationError)
 
-        #return ('bla', 'baah')
-
     def create_filesystem_snapshot(self, fsname, snapname):
         """
         Create a full filesystem snapshot
@@ -897,7 +895,8 @@ class GpfsOperations(PosixOperations):
         opts = [fsname, snapname]
         ec, out = self._execute('mmcrsnapshot', opts, True)
         if ec > 0:
-            self.log.raiseException("create_filesystem_snapshot: mmcrsnapshot with opts %s failed: %s" % (opts, out), GpfsOperationError)
+            self.log.raiseException("create_filesystem_snapshot: mmcrsnapshot with opts %s failed: %s" 
+                % (opts, out), GpfsOperationError)
 
         return ec == 0
 
@@ -916,7 +915,8 @@ class GpfsOperations(PosixOperations):
         opts = [fsname, snapname]
         ec, out = self._execute('mmdelsnapshot', opts, True)
         if ec > 0:
-            self.log.raiseException("delete_filesystem_snapshot: mmdelsnapshot with opts %s failed" % (opts, out), GpfsOperationError)
+            self.log.raiseException("delete_filesystem_snapshot: mmdelsnapshot with opts %s failed" 
+                % (opts, out), GpfsOperationError)
         return ec == 0
 
 
