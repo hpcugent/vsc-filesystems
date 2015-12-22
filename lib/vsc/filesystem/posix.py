@@ -95,7 +95,7 @@ class PosixOperations(object):
             try:
                 out = subprocess.check_output(cmd, shell=shell)
                 ec = 0
-            except Exception, err:
+            except subprocess.CalledProcessError, err:
                 ec = err.returncode
                 out = "%s" % err
                 self.log.exception("_execute command [%s] failed: ec %s" % (cmd, ec))
