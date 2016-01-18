@@ -915,7 +915,7 @@ class GpfsOperations(PosixOperations):
         opts = [fsname, snapname]
         ec, out = self._execute('mmdelsnapshot', opts, True)
         if ec > 0:
-            self.log.raiseException("delete_filesystem_snapshot: mmdelsnapshot with opts %s failed" 
+            self.log.raiseException("delete_filesystem_snapshot: mmdelsnapshot with opts %s failed: %s" 
                 % (opts, out), GpfsOperationError)
         return ec == 0
 
