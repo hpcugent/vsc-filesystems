@@ -1,6 +1,6 @@
 # -*- coding: latin-1 -*-
 #
-# Copyright 2009-2015 Ghent University
+# Copyright 2009-2016 Ghent University
 #
 # This file is part of vsc-filesystems,
 # originally created by the HPC team of Ghent University (http://ugent.be/hpc/en),
@@ -867,6 +867,57 @@ class GpfsOperations(PosixOperations):
         ec, out = self._execute('tssetquota', opts, True)
         if ec > 0:
             self.log.raiseException("_set_quota: tssetquota with opts %s failed" % (opts), GpfsOperationError)
+
+
+    def list_snapshots(self, filesystem):
+        """ List the snapshots of the given filesystem """
+        try: 
+            snaps = self._executeY('mmlssnapshot', [filesystem])
+            return snaps['directory']
+        except GpfsOperationError as err:
+            if 'No snapshots in file system' in err.args[0]:
+                self.log.debug('No snapshots in filesystem %s' % filesystem)
+                return []
+            else:
+                self.log.raiseException(err.args[0], GpfsOperationError)
+
+    def create_filesystem_snapshot(self, fsname, snapname):
+        """
+        Create a full filesystem snapshot
+            @type fsname: string representing the name of the filesystem
+            @type snapname: string representing the name of the new snapshot
+        """
+        snapshots = self.list_snapshots(fsname)
+        if snapname in snapshots:
+            self.log.error("Snapshotname %s already exists for filesystem %s!" % (snapname, fsname))
+            return 0
+
+        opts = [fsname, snapname]
+        ec, out = self._execute('mmcrsnapshot', opts, True)
+        if ec > 0:
+            self.log.raiseException("create_filesystem_snapshot: mmcrsnapshot with opts %s failed: %s" 
+                % (opts, out), GpfsOperationError)
+
+        return ec == 0
+
+    def delete_filesystem_snapshot(self,fsname, snapname):
+        """
+        Delete a full filesystem snapshot
+            @type fsname: string representing the name of the filesystem
+            @type snapname: string representing the name of the snapshot to delete
+        """
+
+        snapshots = self.list_snapshots(fsname)
+        if snapname not in snapshots:
+            self.log.error("Snapshotname %s does not exists for filesystem %s!" % (snapname, fsname))
+            return 0
+
+        opts = [fsname, snapname]
+        ec, out = self._execute('mmdelsnapshot', opts, True)
+        if ec > 0:
+            self.log.raiseException("delete_filesystem_snapshot: mmdelsnapshot with opts %s failed: %s" 
+                % (opts, out), GpfsOperationError)
+        return ec == 0
 
 
 if __name__ == '__main__':
