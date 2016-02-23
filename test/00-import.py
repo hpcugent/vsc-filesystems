@@ -1,1 +1,1 @@
-from vsc.install.testing import VSCImportTest
+from vsc.install.commontest import CommonTest
