@@ -24,7 +24,7 @@ from vsc.install.shared_setup import ag, kh, sdw
 
 
 PACKAGE = {
-    'version': '0.30.1',
+    'version': '0.30.2',
     'author': [sdw, ag, kh],
     'maintainer': [sdw, ag, kh],
     'tests_require': ['mock'],
