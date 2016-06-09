@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: latin-1 -*-
 # #
-# Copyright 2009-2015 Ghent University
+# Copyright 2009-2016 Ghent University
 #
 # This file is part of vsc-filesystems,
 # originally created by the HPC team of Ghent University (http://ugent.be/hpc/en),
@@ -24,7 +24,7 @@ from vsc.install.shared_setup import ag, kh, sdw
 
 
 PACKAGE = {
-    'version': '0.30.2',
+    'version': '0.30.3',
     'author': [sdw, ag, kh],
     'maintainer': [sdw, ag, kh],
     'tests_require': ['mock'],
