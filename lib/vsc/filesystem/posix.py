@@ -5,7 +5,7 @@
 # This file is part of vsc-filesystems,
 # originally created by the HPC team of Ghent University (http://ugent.be/hpc/en),
 # with support of Ghent University (http://ugent.be/hpc),
-# the Flemish Supercomputer Centre (VSC) (https://vscentrum.be/nl/en),
+# the Flemish Supercomputer Centre (VSC) (https://www.vscentrum.be),
 # the Flemish Research Foundation (FWO) (http://www.fwo.be/en)
 # and the Department of Economy, Science and Innovation (EWI) (http://www.ewi-vlaanderen.be/en).
 #
@@ -403,15 +403,24 @@ class PosixOperations(object):
             '    . ~/.bashrc',
             'fi',
             ]
+        bashrc_text = [
+            '# do NOT remove the following lines:',
+            'if [ -f /etc/bashrc ]; then',
+            '    . /etc/bashrc',
+            'fi',
+        ]
         if self.dry_run:
             self.log.info("Writing .bashrc an .bash_profile. Dry-run, so not really doing anything.")
             self.log.info(".bash_profile will contain: %s" % ("\n".join(bashprofile_text)))
+            self.log.info(".bashrc will contain: %s" % ("\n".join(bashrc_text)))
         else:
             if os.path.exists(os.path.join(home_dir, '.bashrc')):
                 self.log.info(".bashrc already exists for user %s. Not overwriting." % (user_id))
             else:
-                self.log.info('Creating .bashrc and .bash_profile')
-                open(os.path.join(home_dir, '.bashrc'), 'w').close()
+                self.log.info(".bashrc not found for user %s. Writing default." % (user_id))
+                fp = open(os.path.join(home_dir, '.bashrc'), 'w')
+                fp.write("\n".join(bashrc_text + ['']))
+                fp.close()
 
             if os.path.exists(os.path.join(home_dir, '.bash_profile')):
                 self.log.info(".bash_profile already exists for user %s. Not overwriting." % (user_id))
