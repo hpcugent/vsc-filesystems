@@ -404,7 +404,7 @@ class PosixOperations(object):
             'fi',
             ]
         bashrc_text = [
-            '# do NOT remove the following lines:'
+            '# do NOT remove the following lines:',
             'if [ -f /etc/bashrc ]; then',
             '    . /etc/bashrc',
             'fi',
