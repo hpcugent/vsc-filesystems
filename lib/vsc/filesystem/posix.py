@@ -411,8 +411,10 @@ class PosixOperations(object):
         ]
         if self.dry_run:
             self.log.info("Writing .bashrc an .bash_profile. Dry-run, so not really doing anything.")
-            self.log.info(".bash_profile will contain: %s" % ("\n".join(bashprofile_text)))
-            self.log.info(".bashrc will contain: %s" % ("\n".join(bashrc_text)))
+            if not os.path.exists(os.path.join(home_dir, '.bash_profile')):
+                self.log.info(".bash_profile will contain: %s" % ("\n".join(bashprofile_text)))
+            if not os.path.exists(os.path.join(home_dir, '.bashrc')):
+                self.log.info(".bashrc will contain: %s" % ("\n".join(bashrc_text)))
         else:
             if os.path.exists(os.path.join(home_dir, '.bashrc')):
                 self.log.info(".bashrc already exists for user %s. Not overwriting." % (user_id))
