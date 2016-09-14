@@ -858,7 +858,7 @@ class GpfsOperations(PosixOperations):
             self.raiseException("setQuota: can't set hard limit %s lower then soft limit %s" %
                                 (hard, soft), GpfsOperationError)
 
-        opts += ["-%s" % typ2opt[typ], who]
+        opts += ["-%s" % typ2opt[typ], "%s" % who]
         opts += ["-s", "%sm" % int(soft / 1024 ** 2)]  # round to MB
         opts += ["-h", "%sm" % int(hard / 1024 ** 2)]  # round to MB
 
@@ -871,7 +871,7 @@ class GpfsOperations(PosixOperations):
 
     def list_snapshots(self, filesystem):
         """ List the snapshots of the given filesystem """
-        try: 
+        try:
             snaps = self._executeY('mmlssnapshot', [filesystem])
             return snaps['directory']
         except GpfsOperationError as err:
@@ -895,7 +895,7 @@ class GpfsOperations(PosixOperations):
         opts = [fsname, snapname]
         ec, out = self._execute('mmcrsnapshot', opts, True)
         if ec > 0:
-            self.log.raiseException("create_filesystem_snapshot: mmcrsnapshot with opts %s failed: %s" 
+            self.log.raiseException("create_filesystem_snapshot: mmcrsnapshot with opts %s failed: %s"
                 % (opts, out), GpfsOperationError)
 
         return ec == 0
@@ -915,7 +915,7 @@ class GpfsOperations(PosixOperations):
         opts = [fsname, snapname]
         ec, out = self._execute('mmdelsnapshot', opts, True)
         if ec > 0:
-            self.log.raiseException("delete_filesystem_snapshot: mmdelsnapshot with opts %s failed: %s" 
+            self.log.raiseException("delete_filesystem_snapshot: mmdelsnapshot with opts %s failed: %s"
                 % (opts, out), GpfsOperationError)
         return ec == 0
 
