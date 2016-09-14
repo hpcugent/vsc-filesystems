@@ -789,7 +789,7 @@ class GpfsOperations(PosixOperations):
                    }
 
         opts = []
-        opts += ["-%s %s" % (typ2opt[typ], id)]
+        opts += ["-%s" % typ2opt[typ], "%s" % id]
         opts += ["-t", "%s" % int(grace)]
 
         opts.append(obj)
