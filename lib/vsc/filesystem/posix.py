@@ -220,7 +220,7 @@ class PosixOperations(object):
 
         try:
             fsid = os.stat(obj).st_dev  # this resolves symlinks
-        except:
+        except OSError:
             self.log.exception("Failed to get fsid from obj %s" % obj)
             return
 
@@ -249,7 +249,7 @@ class PosixOperations(object):
             # returns [('rootfs', '/', 2051L, 'rootfs'), ('ext4', '/', 2051L, '/dev/root'), ('tmpfs', '/dev', 17L, '/dev'), ...
             self.localfilesystemnaming = ['type', 'mountpoint', 'id', 'device']
             self.localfilesystems = [[y[2], y[1], os.stat(y[1]).st_dev, y[0]] for y in currentmounts]
-        except:
+        except (IOError, OSError):
             self.log.exception("Failed to create the list of current mounted filesystems")
             raise
 
@@ -347,7 +347,7 @@ class PosixOperations(object):
             else:
                 os.makedirs(obj)
                 return True
-        except OSError, err:
+        except OSError as err:
             if err.errno == errno.EEXIST:
                 return False
             else:
@@ -440,7 +440,7 @@ class PosixOperations(object):
             self.log.info("Changing ownership of %s to %s:%s" % (f, user_id, group_id))
             try:
                 self.chown(user_id, group_id, f)
-            except OSError, _:
+            except OSError:
                 self.log.raiseException("Cannot change ownership of file %s to %s:%s" %
                                         (f, user_id, group_id), PosixOperationError)
 
@@ -455,6 +455,11 @@ class PosixOperations(object):
             @type who: identifier (eg username or userid)
             @type grace: int, grace period in seconds
         """
+        del grace
+        del hard
+        del typ
+        del who
+        del soft
         obj = self._sanity_check(obj)
         self.log.error("setQuota not implemented for this class %s" % self.__class__.__name__)
 
@@ -468,7 +473,7 @@ class PosixOperations(object):
                 self.log.info("Chown on %s to %s:%s. Dry-run, so not actually changing this ownership" % (obj, owner, group))
             else:
                 os.chown(obj, owner, group)
-        except OSError, _:
+        except OSError:
             self.log.raiseException("Cannot change ownership of object %s to %s:%s" % (obj, owner, group),
                                     PosixOperationError)
 
@@ -487,7 +492,7 @@ class PosixOperations(object):
                 self.log.info("Chmod on %s to %s. Dry-run, so not actually changing access permissions" % (obj, permissions))
             else:
                 os.chmod(obj, permissions)
-        except OSError, _:
+        except OSError:
             self.log.raiseException("Could not change the permissions on object %s to %o" % (obj, permissions),
                                     PosixOperationError)
 
@@ -507,7 +512,7 @@ class PosixOperations(object):
             if os.path.isdir(obj):
                 try:
                     os.rmdir(obj)
-                except OSError, err:
+                except OSError:
                     self.log.exception("Cannot remove directory %s" % (obj))
             else:
                 os.unlink(obj)

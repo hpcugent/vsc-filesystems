@@ -199,7 +199,7 @@ class GpfsOperations(PosixOperations):
         else:
             opts.append('-Y')
 
-        ec, out = self._execute(name, opts)
+        _, out = self._execute(name, opts)
 
         """Output looks like
         [root@node612 ~]# mmlsfs all -Y
@@ -251,7 +251,7 @@ class GpfsOperations(PosixOperations):
                 if name != '':
                     for (_, line) in fields[1:]:
                         res[name] = [line[6 + index]]
-        except:
+        except IndexError:
             self.log.raiseException("Failed to regroup data %s (from output %s)" % (fields, out))
 
         return res
@@ -454,7 +454,7 @@ class GpfsOperations(PosixOperations):
         self.list_filesets()
         try:
             filesets = self.gpfslocalfilesets[filesystem_name]
-        except:
+        except KeyError:
             self.log.raiseException("GPFS has no fileset information for filesystem %s" %
                                     (filesystem_name), GpfsOperationError)
 
@@ -483,11 +483,11 @@ class GpfsOperations(PosixOperations):
         # if this fails, nodes probably have shortnames
         try:
             # - means disk offline, so no nodename
-            alldomains = ['.'.join(x.split('.')[1:]) for x in infoM['IOPerformedOnNode'] if not x in ['-', 'localhost']]
+            alldomains = ['.'.join(x.split('.')[1:]) for x in infoM['IOPerformedOnNode'] if x not in ['-', 'localhost']]
             if len(set(alldomains)) > 1:
                 self.log.error("More then one domain found: %s." % alldomains)
             commondomain = alldomains[0]  # TODO: should be most frequent one
-        except:
+        except KeyError:
             self.log.exception("Can't determine domainname for nodes %s" % infoM['IOPerformedOnNode'])
             commondomain = None
 
@@ -629,6 +629,7 @@ class GpfsOperations(PosixOperations):
         - create fileset in existing fileset
         - create fileset with fsetpath part of symlink
         """
+        del afm
         self.list_filesystems()  # get known filesystems
         self.list_filesets()  # do NOT force an update here. We do this at the end, should there be a fileset created.
 
@@ -684,7 +685,7 @@ class GpfsOperations(PosixOperations):
             mmcrfileset_options += ['--inode-limit', INODE_LIMIT_STRING]
         else:
             parent_fileset_exists = False
-            for efsetid, efset in self.gpfslocalfilesets[foundgpfsdevice].items():
+            for efset in self.gpfslocalfilesets[foundgpfsdevice].values():
                 if parent_fileset_name and parent_fileset_name == efset.get('filesetName', None):
                     parent_fileset_exists = True
             if not parent_fileset_exists:
@@ -794,7 +795,7 @@ class GpfsOperations(PosixOperations):
 
         opts.append(obj)
 
-        ec, out = self._execute('tssetquota', opts, True)
+        ec, _ = self._execute('tssetquota', opts, True)
         if ec > 0:
             self.log.raiseException("_set_grace: tssetquota with opts %s failed" % (opts), GpfsOperationError)
 
@@ -864,7 +865,7 @@ class GpfsOperations(PosixOperations):
 
         opts.append(obj)
 
-        ec, out = self._execute('tssetquota', opts, True)
+        ec, _ = self._execute('tssetquota', opts, True)
         if ec > 0:
             self.log.raiseException("_set_quota: tssetquota with opts %s failed" % (opts), GpfsOperationError)
 
