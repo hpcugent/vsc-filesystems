@@ -662,7 +662,7 @@ class GpfsOperations(PosixOperations):
                                (fsetpath, mntpt, fileset_name))
 
         # bail if there is a fileset with the same name or the same link location, i.e., path
-        for efsetid, efset in self.gpfslocalfilesets[foundgpfsdevice].items():
+        for efset in self.gpfslocalfilesets[foundgpfsdevice].values():
             efsetpath = efset.get('path', None)
             efsetname = efset.get('filesetName', None)
             if efsetpath == fsetpath or efsetname == fileset_name:
@@ -770,7 +770,7 @@ class GpfsOperations(PosixOperations):
         """
         self._set_grace(obj, 'fileset', grace)
 
-    def _set_grace(self, obj, typ, grace=0, id=0):
+    def _set_grace(self, obj, typ, grace=0, id_=0):
         """Set the grace period for a given type of objects in GPFS.
 
         @type obj: the path or the GPFS device
@@ -789,7 +789,7 @@ class GpfsOperations(PosixOperations):
                    }
 
         opts = []
-        opts += ["-%s" % typ2opt[typ], "%s" % id]
+        opts += ["-%s" % typ2opt[typ], "%s" % id_]
         opts += ["-t", "%s" % int(grace)]
 
         opts.append(obj)
@@ -847,7 +847,7 @@ class GpfsOperations(PosixOperations):
 
         soft2hard_factor = 1.05
 
-        if not typ in typ2opt:
+        if typ not in typ2opt:
             self.log.raiseException("_set_quota: unsupported type %s" % typ, GpfsOperationError)
 
         opts = []
@@ -867,7 +867,6 @@ class GpfsOperations(PosixOperations):
         ec, out = self._execute('tssetquota', opts, True)
         if ec > 0:
             self.log.raiseException("_set_quota: tssetquota with opts %s failed" % (opts), GpfsOperationError)
-
 
     def list_snapshots(self, filesystem):
         """ List the snapshots of the given filesystem """
@@ -900,7 +899,7 @@ class GpfsOperations(PosixOperations):
 
         return ec == 0
 
-    def delete_filesystem_snapshot(self,fsname, snapname):
+    def delete_filesystem_snapshot(self, fsname, snapname):
         """
         Delete a full filesystem snapshot
             @type fsname: string representing the name of the filesystem
@@ -915,8 +914,8 @@ class GpfsOperations(PosixOperations):
         opts = [fsname, snapname]
         ec, out = self._execute('mmdelsnapshot', opts, True)
         if ec > 0:
-            self.log.raiseException("delete_filesystem_snapshot: mmdelsnapshot with opts %s failed: %s"
-                % (opts, out), GpfsOperationError)
+            self.log.raiseException("delete_filesystem_snapshot: mmdelsnapshot with opts %s failed: %s" %
+                (opts, out), GpfsOperationError)
         return ec == 0
 
 
