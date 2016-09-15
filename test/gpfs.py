@@ -136,7 +136,7 @@ class ToolsTest(TestCase):
     @mock.patch('vsc.filesystem.gpfs.GpfsOperations._sanity_check')
     @mock.patch('vsc.filesystem.gpfs.GpfsOperations.exists')
     def test__set_grace(self, mock_exists, mock_sanity_check, mock_execute):
-        """Test that the command passes is properly constrcuted so it can be executed by execve."""
+        """Test that the command passes is properly constructed so it can be executed by execve."""
 
         test_path = os.path.join("user", "scratchdelcatty", "gent", "vsc400", "vsc40075")
         mock_sanity_check.return_value = test_path
