@@ -437,7 +437,7 @@ class GpfsOperations(PosixOperations):
         self.list_filesystems()  # make sure we have the latest information
         try:
             return self.gpfslocalfilesystems[filesystem]
-        except KeyError, _:
+        except KeyError:
             self.log.raiseException("GPFS has no information for filesystem %s" % (filesystem), GpfsOperationError)
 
     def get_fileset_info(self, filesystem_name, fileset_name):
@@ -485,10 +485,10 @@ class GpfsOperations(PosixOperations):
             # - means disk offline, so no nodename
             alldomains = ['.'.join(x.split('.')[1:]) for x in infoM['IOPerformedOnNode'] if x not in ['-', 'localhost']]
             if len(set(alldomains)) > 1:
-                self.log.error("More then one domain found: %s." % alldomains)
+                self.log.error("More than one domain found: %s." % alldomains)
             commondomain = alldomains[0]  # TODO: should be most frequent one
-        except KeyError:
-            self.log.exception("Can't determine domainname for nodes %s" % infoM['IOPerformedOnNode'])
+        except (IndexError, KeyError):
+            self.log.exception("Cannot determine domainname for nodes %s" % infoM['IOPerformedOnNode'])
             commondomain = None
 
         for idx, node in enumerate(infoM['IOPerformedOnNode']):
