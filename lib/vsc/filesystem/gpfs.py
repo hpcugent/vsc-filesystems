@@ -199,7 +199,7 @@ class GpfsOperations(PosixOperations):
         else:
             opts.append('-Y')
 
-        ec, out = self._execute(name, opts)
+        _, out = self._execute(name, opts)
 
         """Output looks like
         [root@node612 ~]# mmlsfs all -Y
@@ -251,7 +251,7 @@ class GpfsOperations(PosixOperations):
                 if name != '':
                     for (_, line) in fields[1:]:
                         res[name] = [line[6 + index]]
-        except:
+        except IndexError:
             self.log.raiseException("Failed to regroup data %s (from output %s)" % (fields, out))
 
         return res
@@ -437,7 +437,7 @@ class GpfsOperations(PosixOperations):
         self.list_filesystems()  # make sure we have the latest information
         try:
             return self.gpfslocalfilesystems[filesystem]
-        except KeyError, _:
+        except KeyError:
             self.log.raiseException("GPFS has no information for filesystem %s" % (filesystem), GpfsOperationError)
 
     def get_fileset_info(self, filesystem_name, fileset_name):
@@ -454,7 +454,7 @@ class GpfsOperations(PosixOperations):
         self.list_filesets()
         try:
             filesets = self.gpfslocalfilesets[filesystem_name]
-        except:
+        except KeyError:
             self.log.raiseException("GPFS has no fileset information for filesystem %s" %
                                     (filesystem_name), GpfsOperationError)
 
@@ -483,12 +483,12 @@ class GpfsOperations(PosixOperations):
         # if this fails, nodes probably have shortnames
         try:
             # - means disk offline, so no nodename
-            alldomains = ['.'.join(x.split('.')[1:]) for x in infoM['IOPerformedOnNode'] if not x in ['-', 'localhost']]
+            alldomains = ['.'.join(x.split('.')[1:]) for x in infoM['IOPerformedOnNode'] if x not in ['-', 'localhost']]
             if len(set(alldomains)) > 1:
-                self.log.error("More then one domain found: %s." % alldomains)
+                self.log.error("More than one domain found: %s." % alldomains)
             commondomain = alldomains[0]  # TODO: should be most frequent one
-        except:
-            self.log.exception("Can't determine domainname for nodes %s" % infoM['IOPerformedOnNode'])
+        except (IndexError, KeyError):
+            self.log.exception("Cannot determine domainname for nodes %s" % infoM['IOPerformedOnNode'])
             commondomain = None
 
         for idx, node in enumerate(infoM['IOPerformedOnNode']):
@@ -629,6 +629,7 @@ class GpfsOperations(PosixOperations):
         - create fileset in existing fileset
         - create fileset with fsetpath part of symlink
         """
+        del afm
         self.list_filesystems()  # get known filesystems
         self.list_filesets()  # do NOT force an update here. We do this at the end, should there be a fileset created.
 
@@ -662,7 +663,7 @@ class GpfsOperations(PosixOperations):
                                (fsetpath, mntpt, fileset_name))
 
         # bail if there is a fileset with the same name or the same link location, i.e., path
-        for efsetid, efset in self.gpfslocalfilesets[foundgpfsdevice].items():
+        for efset in self.gpfslocalfilesets[foundgpfsdevice].values():
             efsetpath = efset.get('path', None)
             efsetname = efset.get('filesetName', None)
             if efsetpath == fsetpath or efsetname == fileset_name:
@@ -684,7 +685,7 @@ class GpfsOperations(PosixOperations):
             mmcrfileset_options += ['--inode-limit', INODE_LIMIT_STRING]
         else:
             parent_fileset_exists = False
-            for efsetid, efset in self.gpfslocalfilesets[foundgpfsdevice].items():
+            for efset in self.gpfslocalfilesets[foundgpfsdevice].values():
                 if parent_fileset_name and parent_fileset_name == efset.get('filesetName', None):
                     parent_fileset_exists = True
             if not parent_fileset_exists:
@@ -770,7 +771,7 @@ class GpfsOperations(PosixOperations):
         """
         self._set_grace(obj, 'fileset', grace)
 
-    def _set_grace(self, obj, typ, grace=0, id=0):
+    def _set_grace(self, obj, typ, grace=0, id_=0):
         """Set the grace period for a given type of objects in GPFS.
 
         @type obj: the path or the GPFS device
@@ -789,12 +790,12 @@ class GpfsOperations(PosixOperations):
                    }
 
         opts = []
-        opts += ["-%s %s" % (typ2opt[typ], id)]
+        opts += ["-%s" % typ2opt[typ], "%s" % id_]
         opts += ["-t", "%s" % int(grace)]
 
         opts.append(obj)
 
-        ec, out = self._execute('tssetquota', opts, True)
+        ec, _ = self._execute('tssetquota', opts, True)
         if ec > 0:
             self.log.raiseException("_set_grace: tssetquota with opts %s failed" % (opts), GpfsOperationError)
 
@@ -847,7 +848,7 @@ class GpfsOperations(PosixOperations):
 
         soft2hard_factor = 1.05
 
-        if not typ in typ2opt:
+        if typ not in typ2opt:
             self.log.raiseException("_set_quota: unsupported type %s" % typ, GpfsOperationError)
 
         opts = []
@@ -858,20 +859,19 @@ class GpfsOperations(PosixOperations):
             self.raiseException("setQuota: can't set hard limit %s lower then soft limit %s" %
                                 (hard, soft), GpfsOperationError)
 
-        opts += ["-%s" % typ2opt[typ], who]
+        opts += ["-%s" % typ2opt[typ], "%s" % who]
         opts += ["-s", "%sm" % int(soft / 1024 ** 2)]  # round to MB
         opts += ["-h", "%sm" % int(hard / 1024 ** 2)]  # round to MB
 
         opts.append(obj)
 
-        ec, out = self._execute('tssetquota', opts, True)
+        ec, _ = self._execute('tssetquota', opts, True)
         if ec > 0:
             self.log.raiseException("_set_quota: tssetquota with opts %s failed" % (opts), GpfsOperationError)
 
-
     def list_snapshots(self, filesystem):
         """ List the snapshots of the given filesystem """
-        try: 
+        try:
             snaps = self._executeY('mmlssnapshot', [filesystem])
             return snaps['directory']
         except GpfsOperationError as err:
@@ -895,12 +895,12 @@ class GpfsOperations(PosixOperations):
         opts = [fsname, snapname]
         ec, out = self._execute('mmcrsnapshot', opts, True)
         if ec > 0:
-            self.log.raiseException("create_filesystem_snapshot: mmcrsnapshot with opts %s failed: %s" 
+            self.log.raiseException("create_filesystem_snapshot: mmcrsnapshot with opts %s failed: %s"
                 % (opts, out), GpfsOperationError)
 
         return ec == 0
 
-    def delete_filesystem_snapshot(self,fsname, snapname):
+    def delete_filesystem_snapshot(self, fsname, snapname):
         """
         Delete a full filesystem snapshot
             @type fsname: string representing the name of the filesystem
@@ -915,8 +915,8 @@ class GpfsOperations(PosixOperations):
         opts = [fsname, snapname]
         ec, out = self._execute('mmdelsnapshot', opts, True)
         if ec > 0:
-            self.log.raiseException("delete_filesystem_snapshot: mmdelsnapshot with opts %s failed: %s" 
-                % (opts, out), GpfsOperationError)
+            self.log.raiseException("delete_filesystem_snapshot: mmdelsnapshot with opts %s failed: %s" %
+                (opts, out), GpfsOperationError)
         return ec == 0
 
 
