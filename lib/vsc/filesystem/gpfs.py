@@ -116,24 +116,28 @@ class GpfsOperations(PosixOperations):
         for fs in self.localfilesystems:
             if fs[self.localfilesystemnaming.index('type')] == 'gpfs':
                 localdevice = fs[self.localfilesystemnaming.index('device')]
+
                 expectedprefix = '/dev'
                 if localdevice.startswith(expectedprefix):
                     tmp = localdevice.split(os.sep)[len(expectedprefix.split(os.sep)):]
                     if len(tmp) == 1:
                         gpfsdevice = tmp[0]
-                        if gpfsdevice in self.gpfslocalfilesystems:
-                            fs.append(gpfsdevice)
-                        else:
-                            fs.append(None)
-                            self.log.warning(("While trying to resolve GPFS device from localfilesystem device"
-                                              " fs %s found gpfsdevice %s that is not in "
-                                              "gpfslocalfilesystems %s") %
-                                              (fs, gpfsdevice, self.gpfslocalfilesystems.keys()),
-                                              GpfsOperationError)
                     else:
                         fs.append(None)
                         self.log.raiseException(("Something went wrong trying to resolve GPFS device from "
                                                  "localfilesystem device: fs %s") % fs, GpfsOperationError)
+                else:
+                    gpfsdevice = localdevice
+
+                if gpfsdevice in self.gpfslocalfilesystems:
+                    fs.append(gpfsdevice)
+                else:
+                    fs.append(None)
+                    self.log.warning(("While trying to resolve GPFS device from localfilesystem device"
+                                      " fs %s found gpfsdevice %s that is not in "
+                                      "gpfslocalfilesystems %s") %
+                                      (fs, gpfsdevice, self.gpfslocalfilesystems.keys()),
+                                      GpfsOperationError)
             else:
                 fs.append(None)
 
