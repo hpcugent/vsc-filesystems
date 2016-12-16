@@ -38,11 +38,11 @@ GPFS_BIN_PATH = '/usr/lpp/mmfs/bin'
 
 GpfsQuota = namedtuple('GpfsQuota', ',name,blockUsage,blockQuota,blockLimit,blockInDoubt,blockGrace,filesUsage,filesQuota,filesLimit,filesInDoubt,filesGrace,remarks,quota,defQuota,fid,filesetname')
 
-GPFS_HEALTH_STATES = ['CHECKING', 'UNKNOWN', 'HEALTHY', 'DEGRADED', 'FAILED', 'DEPEND']
 GPFS_OK_STATES = ['HEALTHY']
 GPFS_WARNING_STATES = ['DEGRADED']
 GPFS_ERROR_STATES = ['FAILED', 'DEPEND']
 GPFS_UNKNOWN_STATES = ['CHECKING', 'UNKNOWN']
+GPFS_HEALTH_STATES = GPFS_OK_STATES + GPFS_WARNING_STATES + GPFS_ERROR_STATES + GPFS_UNKNOWN_STATES
 
 
 def _automatic_mount_only(fs):
@@ -192,7 +192,7 @@ class GpfsOperations(PosixOperations):
                 self.log.raiseException(("Failed to find the initial field of the line: %s after fixup and "
                                          "splitting line into [%s, %s]") % (first_field, line, remainder))
 
-    def _assemble_fields(self,fields, out, header_type=None):
+    def _assemble_fields(self, fields, out):
         """Assemble executeY output fields """
 
         # do we have multiple field counts?
@@ -953,7 +953,7 @@ class GpfsOperations(PosixOperations):
 
     def get_mmhealth_state(self):
         """ Get the mmhealth state info of the GPFS components """
-        opts = ['show', 'node']
+        opts = ['node', 'show']
         res = self._executeY('mmhealth', opts)
         states = res['State']
         return dict(zip(states['component'], states['status']))

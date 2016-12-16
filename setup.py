@@ -20,11 +20,11 @@ vsc-filesystems base distribution setup.py
 @author: Andy Georges (Ghent University)
 """
 import vsc.install.shared_setup as shared_setup
-from vsc.install.shared_setup import ag, kh, sdw
+from vsc.install.shared_setup import ag, kh, sdw, kw
 
 
 PACKAGE = {
-    'version': '0.32',
+    'version': '0.33',
     'author': [sdw, ag, kh],
     'maintainer': [sdw, ag, kh, kw],
     'tests_require': ['mock'],
