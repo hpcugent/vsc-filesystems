@@ -27,7 +27,7 @@ import re
 from collections import namedtuple
 from urllib import unquote as percentdecode
 from socket import gethostname
-from itertools import dropwhile
+from itertools import dropwhile, ifilter
 
 from vsc.config.base import GPFS_DEFAULT_INODE_LIMIT
 from vsc.filesystem.posix import PosixOperations, PosixOperationError
@@ -37,6 +37,12 @@ from vsc.utils.patterns import Singleton
 GPFS_BIN_PATH = '/usr/lpp/mmfs/bin'
 
 GpfsQuota = namedtuple('GpfsQuota', ',name,blockUsage,blockQuota,blockLimit,blockInDoubt,blockGrace,filesUsage,filesQuota,filesLimit,filesInDoubt,filesGrace,remarks,quota,defQuota,fid,filesetname')
+
+GPFS_HEALTH_STATES = ['CHECKING', 'UNKNOWN', 'HEALTHY', 'DEGRADED', 'FAILED', 'DEPEND']
+GPFS_OK_STATES = ['HEALTHY']
+GPFS_WARNING_STATES = ['DEGRADED']
+GPFS_ERROR_STATES = ['FAILED', 'DEPEND']
+GPFS_UNKNOWN_STATES = ['CHECKING', 'UNKNOWN']
 
 
 def _automatic_mount_only(fs):
@@ -186,6 +192,43 @@ class GpfsOperations(PosixOperations):
                 self.log.raiseException(("Failed to find the initial field of the line: %s after fixup and "
                                          "splitting line into [%s, %s]") % (first_field, line, remainder))
 
+    def _assemble_fields(self,fields, out, header_type=None):
+        """Assemble executeY output fields """
+
+        # do we have multiple field counts?
+        field_counts = [i for (i, _) in fields]
+        if len(nub(field_counts)) > 1:
+            maximum_field_count = max(field_counts)
+            description_field_count = field_counts[0]
+            for (field_count, line) in fields[1:]:
+                if field_count == description_field_count:
+                    continue
+                elif field_count < description_field_count:
+                    self.log.debug("Description length %s greater then %s. Adding whitespace. (names %s, row %s)" %
+                                   (maximum_field_count, field_count, fields[0][6:], line[6:]))
+                    line.extend([''] * (maximum_field_count - field_count))
+                else:
+                    # try to fix the line
+                    self.log.info("Line has too many fields (%d > %d), trying to fix %s" %
+                                  (field_count, description_field_count, line))
+                    fixed_lines = self.fixup_executeY_line(line, description_field_count)
+                    i = fields.index((field_count, line))
+                    fields[i:i + 1] = map(lambda fs: (len(fs), fs), fixed_lines)
+
+        # assemble result
+        listm = Monoid([], lambda xs, ys: xs + ys)  # not exactly the fastest mappend for lists ...
+        res = MonoidDict(listm)
+        try:
+            for index, name in enumerate(fields[0][1][6:]):
+                if name != '':
+                    for (_, line) in fields[1:]:
+                        res[name] = [line[6 + index]]
+        except IndexError:
+            self.log.raiseException("Failed to regroup data %s (from output %s)" % (fields, out))
+
+        return res
+
+
     def _executeY(self, name, opts=None, prefix=False):
         """Run with -Y and parse output in dict of name:list of values
            type prefix: boolean, if true prefix the -Y to the options (otherwise append the option).
@@ -224,41 +267,26 @@ class GpfsOperations(PosixOperations):
         # sanity check: all output lines should have the same number of fields. if this is not the case, padding is
         # added
         fields = [(len(x), x) for x in retained]
-        if len(fields) == 0:
-            self.log.raiseException("No valid lines for output: %s" % (out), GpfsOperationError)
+        if len(fields) != 0:
+            return self._assemble_fields(fields, out)
+        else:
+            # mmhealth command has other header, no other known command does this.
+            self.log.info('Not the default header, trying state and event headers')
+            rest = {}
+            for typ in ('State', 'Event'):
+                try:
+                    filt = ifilter(lambda x: x[1] == typ, what)
+                    fields = [(len(x), x) for x in filt]
+                except IndexError:
+                    self.log.raiseException("No valid lines for output: %s" % (out), GpfsOperationError)
+                if len(fields):
+                    res = self._assemble_fields(fields, out)
+                    rest[typ] = res
 
-        # do we have multiple field counts?
-        field_counts = [i for (i, _) in fields]
-        if len(nub(field_counts)) > 1:
-            maximum_field_count = max(field_counts)
-            description_field_count = field_counts[0]
-            for (field_count, line) in fields[1:]:
-                if field_count == description_field_count:
-                    continue
-                elif field_count < description_field_count:
-                    self.log.debug("Description length %s greater then %s. Adding whitespace. (names %s, row %s)" %
-                                   (maximum_field_count, field_count, fields[0][6:], line[6:]))
-                    line.extend([''] * (maximum_field_count - field_count))
                 else:
-                    # try to fix the line
-                    self.log.info("Line has too many fields (%d > %d), trying to fix %s" %
-                                  (field_count, description_field_count, line))
-                    fixed_lines = self.fixup_executeY_line(line, description_field_count)
-                    i = fields.index((field_count, line))
-                    fields[i:i + 1] = map(lambda fs: (len(fs), fs), fixed_lines)
-
-        # assemble result
-        listm = Monoid([], lambda xs, ys: xs + ys)  # not exactly the fastest mappend for lists ...
-        res = MonoidDict(listm)
-        try:
-            for index, name in enumerate(fields[0][1][6:]):
-                if name != '':
-                    for (_, line) in fields[1:]:
-                        res[name] = [line[6 + index]]
-        except IndexError:
-            self.log.raiseException("Failed to regroup data %s (from output %s)" % (fields, out))
-
-        return res
+                    self.log.raiseException("No valid lines of header type %s for output: %s" % (typ, out), GpfsOperationError)
+                
+            return rest
 
     def list_filesystems(self, device='all', update=False, fs_filter=_automatic_mount_only):
         """
@@ -922,6 +950,13 @@ class GpfsOperations(PosixOperations):
             self.log.raiseException("delete_filesystem_snapshot: mmdelsnapshot with opts %s failed: %s" %
                 (opts, out), GpfsOperationError)
         return ec == 0
+
+    def get_mmhealth_state(self):
+        """ Get the mmhealth state info of the GPFS components """
+        opts = ['show', 'node']
+        res = self._executeY('mmhealth', opts)
+        states = res['State']
+        return dict(zip(states['component'], states['status']))
 
 
 if __name__ == '__main__':
