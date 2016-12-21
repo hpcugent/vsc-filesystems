@@ -194,6 +194,6 @@ mmhealth:State:0:1:::storage2206.shuppet.gent.vsc:HADOOPCONNECTOR:storage2206.sh
         mock_exec.return_value = (0, mmhealth_output)
         res = gpfsi.get_mmhealth_state()
         expected_res =  {'NODE': 'FAILED', 'HADOOPCONNECTOR': 'DEGRADED', 'NETWORK': 'HEALTHY', 'GPFS': 'FAILED', 'CES': 'DEPEND', 'FILESYSTEM': 'DEPEND', 'DISK': 'HEALTHY'}
-        mock_exec.assert_called_once_with('mmhealth', ['show', 'node', '-Y'])
+        mock_exec.assert_called_once_with('mmhealth', ['node', 'show', '-Y'])
         self.assertEqual(res, expected_res)
 
