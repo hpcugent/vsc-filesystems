@@ -1,6 +1,6 @@
 # -*- coding: latin-1 -*-
 #
-# Copyright 2009-2016 Ghent University
+# Copyright 2009-2017 Ghent University
 #
 # This file is part of vsc-filesystems,
 # originally created by the HPC team of Ghent University (http://ugent.be/hpc/en),
@@ -36,7 +36,8 @@ from vsc.utils.patterns import Singleton
 
 GPFS_BIN_PATH = '/usr/lpp/mmfs/bin'
 
-GpfsQuota = namedtuple('GpfsQuota', ',name,blockUsage,blockQuota,blockLimit,blockInDoubt,blockGrace,filesUsage,filesQuota,filesLimit,filesInDoubt,filesGrace,remarks,quota,defQuota,fid,filesetname')
+GpfsQuota = namedtuple('GpfsQuota', (',name,blockUsage,blockQuota,blockLimit,blockInDoubt,blockGrace,filesUsage,'
+    'filesQuota,filesLimit,filesInDoubt,filesGrace,remarks,quota,defQuota,fid,filesetname'))
 
 GPFS_OK_STATES = ['HEALTHY']
 GPFS_WARNING_STATES = ['DEGRADED']
@@ -88,6 +89,7 @@ class GpfsOperations(PosixOperations):
 
         self.gpfsdisks = None
 
+    # pylint: disable=arguments-differ
     def _execute(self, name, opts=None, changes=False):
         """Return and check the GPFS command.
             @type cmd: string, will be prefixed by GPFS_BIN_PATH if not absolute
@@ -284,7 +286,8 @@ class GpfsOperations(PosixOperations):
                     rest[typ] = res
 
                 else:
-                    self.log.raiseException("No valid lines of header type %s for output: %s" % (typ, out), GpfsOperationError)
+                    self.log.raiseException("No valid lines of header type %s for output: %s" % (typ, out), 
+                        GpfsOperationError)
                 
             return rest
 
@@ -438,7 +441,13 @@ class GpfsOperations(PosixOperations):
             opts_ = copy.deepcopy(opts)
             opts_.insert(1, device)
             res = self._executeY('mmlsfileset', opts_)
-            # for v3.5 filesystemName:filesetName:id:rootInode:status:path:parentId:created:inodes:dataInKB:comment:filesetMode:afmTarget:afmState:afmMode:afmFileLookupRefreshInterval:afmFileOpenRefreshInterval:afmDirLookupRefreshInterval:afmDirOpenRefreshInterval:afmAsyncDelay:reserved:afmExpirationTimeout:afmRPO:afmLastPSnapId:inodeSpace:isInodeSpaceOwner:maxInodes:allocInodes:inodeSpaceMask:afmShowHomeSnapshots:afmNumReadThreads:afmNumReadGWs:afmReadBufferSize:afmWriteBufferSize:afmReadSparseThreshold:afmParallelReadChunkSize:afmParallelReadThreshold:snapId:
+            # for v3.5
+            # filesystemName:filesetName:id:rootInode:status:path:parentId:created:inodes:dataInKB:comment:
+            # filesetMode:afmTarget:afmState:afmMode:afmFileLookupRefreshInterval:afmFileOpenRefreshInterval:
+            # afmDirLookupRefreshInterval:afmDirOpenRefreshInterval:afmAsyncDelay:reserved:afmExpirationTimeout:afmRPO:
+            # afmLastPSnapId:inodeSpace:isInodeSpaceOwner:maxInodes:allocInodes:inodeSpaceMask:afmShowHomeSnapshots:
+            # afmNumReadThreads:afmNumReadGWs:afmReadBufferSize:afmWriteBufferSize:afmReadSparseThreshold:
+            # afmParallelReadChunkSize:afmParallelReadThreshold:snapId:
             self.log.debug("list_filesets res keys = %s " % (res.keys()))
             for (key, value) in res.items():
                 info[key] = value
@@ -594,7 +603,8 @@ class GpfsOperations(PosixOperations):
             items = line.split(":")
             if len(items) == 1:
                 items.append('')  # fix anomalies
-            res[items[0]] = ":".join(items[1:])  # creationtime has : in value as well eg creationtime:ThuAug2313:04:202012
+            # creationtime has : in value as well eg creationtime:ThuAug2313:04:202012
+            res[items[0]] = ":".join(items[1:])
 
         return res
 
@@ -609,7 +619,7 @@ class GpfsOperations(PosixOperations):
         if res['exists']:
             realpath = obj
         else:
-            realpath = self._largest_existing_path()
+            realpath = self._largest_existing_path(obj)
             res['parent'] = realpath
 
         fs = self._what_filesystem(obj)
