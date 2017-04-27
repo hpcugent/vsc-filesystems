@@ -171,3 +171,29 @@ class ToolsTest(TestCase):
         self.assertTrue(isinstance(args[0], list))
         self.assertTrue(all([isinstance(a, str) for a in args[0]]))
         self.assertTrue(all([len(s.split(" ")) == 1 for s in args[0]]))
+
+    @mock.patch('vsc.filesystem.gpfs.GpfsOperations._execute')
+    def test_get_mmhealth(self, mock_exec):
+
+        gpfsi = gpfs.GpfsOperations()
+
+        mmhealth_output = """mmhealth:State:HEADER:version:reserved:reserved:node:component:entityname:entitytype:status:
+mmhealth:Event:HEADER:version:reserved:reserved:node:component:entityname:entitytype:event:arguments:
+mmhealth:State:0:1:::storage2206.shuppet.gent.vsc:NODE:storage2206.shuppet.gent.vsc:NODE:FAILED:
+mmhealth:State:0:1:::storage2206.shuppet.gent.vsc:GPFS:storage2206.shuppet.gent.vsc:NODE:FAILED:
+mmhealth:Event:0:1:::storage2206.shuppet.gent.vsc:GPFS:storage2206.shuppet.gent.vsc:NODE:gpfs_down::
+mmhealth:Event:0:1:::storage2206.shuppet.gent.vsc:GPFS:storage2206.shuppet.gent.vsc:NODE:quorum_down::
+mmhealth:Event:0:1:::storage2206.shuppet.gent.vsc:GPFS:storage2206.shuppet.gent.vsc:NODE:gpfsport_up:1191,1191:
+mmhealth:State:0:1:::storage2206.shuppet.gent.vsc:NETWORK:storage2206.shuppet.gent.vsc:NODE:HEALTHY:
+mmhealth:Event:0:1:::storage2206.shuppet.gent.vsc:NETWORK:storage2206.shuppet.gent.vsc:NODE:network_ips_up::
+mmhealth:State:0:1:::storage2206.shuppet.gent.vsc:FILESYSTEM:storage2206.shuppet.gent.vsc:NODE:DEPEND:
+mmhealth:State:0:1:::storage2206.shuppet.gent.vsc:DISK:storage2206.shuppet.gent.vsc:NODE:HEALTHY:
+mmhealth:State:0:1:::storage2206.shuppet.gent.vsc:CES:storage2206.shuppet.gent.vsc:NODE:DEPEND:
+mmhealth:State:0:1:::storage2206.shuppet.gent.vsc:HADOOPCONNECTOR:storage2206.shuppet.gent.vsc:NODE:DEGRADED:"""
+
+        mock_exec.return_value = (0, mmhealth_output)
+        res = gpfsi.get_mmhealth_state()
+        expected_res =  {'NODE': 'FAILED', 'HADOOPCONNECTOR': 'DEGRADED', 'NETWORK': 'HEALTHY', 'GPFS': 'FAILED', 'CES': 'DEPEND', 'FILESYSTEM': 'DEPEND', 'DISK': 'HEALTHY'}
+        mock_exec.assert_called_once_with('mmhealth', ['node', 'show', '-Y'])
+        self.assertEqual(res, expected_res)
+

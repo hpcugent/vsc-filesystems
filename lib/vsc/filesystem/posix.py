@@ -1,6 +1,6 @@
 # -*- coding: latin-1 -*-
 #
-# Copyright 2009-2016 Ghent University
+# Copyright 2009-2017 Ghent University
 #
 # This file is part of vsc-filesystems,
 # originally created by the HPC team of Ghent University (http://ugent.be/hpc/en),
@@ -128,7 +128,8 @@ class PosixOperations(object):
 
         if self.forceabsolutepath:
             if not os.path.isabs(obj):  # other test: obj.startswith(os.path.sep)
-                self.log.raiseException("_sanity_check check absolute path: obj %s is not an absolute path" % obj, PosixOperationError)
+                self.log.raiseException("_sanity_check check absolute path: obj %s is not an absolute path" % obj, 
+                    PosixOperationError)
                 return
 
         # check if filesystem matches current class
@@ -144,7 +145,10 @@ class PosixOperations(object):
                 if tmpfs[0] in self.supportedfilesystems:
                     filesystem = tmpfs[0]
                 else:
-                    self.log.raiseException("_sanity_check found filesystem %s for subpath %s of obj %s is not a supported filesystem (supported %s)" % (tmpfs[0], fp, obj, self.supportedfilesystems), PosixOperationError)
+                    self.log.raiseException(
+                        ("_sanity_check found filesystem %s for subpath %s of obj %s is "
+                            "not a supported filesystem (supported %s)")
+                            % (tmpfs[0], fp, obj, self.supportedfilesystems), PosixOperationError)
 
         if filesystem is None:
             self.log.raiseException("_sanity_check no valid filesystem found for obj %s" % obj, PosixOperationError)
@@ -153,9 +157,11 @@ class PosixOperations(object):
         if not obj == os.path.realpath(obj):
             # some part of the path is a symlink
             if self.ignorerealpathmismatch:
-                self.log.debug("_sanity_check obj %s doesn't correspond with realpath %s" % (obj, os.path.realpath(obj)))
+                self.log.debug("_sanity_check obj %s doesn't correspond with realpath %s" % (obj, 
+                    os.path.realpath(obj)))
             else:
-                self.log.raiseException("_sanity_check obj %s doesn't correspond with realpath %s" % (obj, os.path.realpath(obj)), PosixOperationError)
+                self.log.raiseException("_sanity_check obj %s doesn't correspond with realpath %s" 
+                    % (obj, os.path.realpath(obj)), PosixOperationError)
                 return
 
         return obj
@@ -230,8 +236,8 @@ class PosixOperations(object):
             self.log.raiseException("No matching filesystem found for obj %s with id %s (localfilesystems: %s)" %
                                     (obj, fsid, self.localfilesystems), PosixOperationError)
         elif len(fss) > 1:
-            self.log.raiseException("More than one matching filesystem found for obj %s with id %s (matched localfilesystems: %s)" %
-                                    (obj, fsid, fss), PosixOperationError)
+            self.log.raiseException("More than one matching filesystem found for obj %s with "
+                "id %s (matched localfilesystems: %s)" % (obj, fsid, fss), PosixOperationError)
         else:
             self.log.debug("Found filesystem for obj %s: %s" % (obj, fss[0]))
             return fss[0]
@@ -242,11 +248,13 @@ class PosixOperations(object):
         if not os.path.isfile(OS_LINUX_MOUNTS):
             self.log.raiseException("Missing Linux OS overview of mounts %s" % OS_LINUX_MOUNTS, PosixOperationError)
         if not os.path.isfile(OS_LINUX_FILESYSTEMS):
-            self.log.raiseException("Missing Linux OS overview of filesystems %s" % OS_LINUX_FILESYSTEMS, PosixOperationError)
+            self.log.raiseException("Missing Linux OS overview of filesystems %s" % OS_LINUX_FILESYSTEMS, 
+                PosixOperationError)
 
         try:
             currentmounts = [x.strip().split(" ") for x in open(OS_LINUX_MOUNTS).readlines()]
-            # returns [('rootfs', '/', 2051L, 'rootfs'), ('ext4', '/', 2051L, '/dev/root'), ('tmpfs', '/dev', 17L, '/dev'), ...
+            # returns [('rootfs', '/', 2051L, 'rootfs'), ('ext4', '/', 2051L, '/dev/root'), 
+            # ('tmpfs', '/dev', 17L, '/dev'), ...
             self.localfilesystemnaming = ['type', 'mountpoint', 'id', 'device']
             self.localfilesystems = [[y[2], y[1], os.stat(y[1]).st_dev, y[0]] for y in currentmounts]
         except (IOError, OSError):
@@ -342,7 +350,8 @@ class PosixOperations(object):
         obj = self._sanity_check(obj)
         try:
             if self.dry_run:
-                self.log.info("Making directory %s. Dry-run, so not really doing anything. Pretending it did succeed though. Returning True." % (obj))
+                self.log.info("Making directory %s." % (obj), 
+                    "Dry-run, so not really doing anything. Pretending it did succeed though. Returning True.")
                 return True
             else:
                 os.makedirs(obj)
@@ -470,7 +479,8 @@ class PosixOperations(object):
         self.log.info("Changing ownership of %s to %s:%s" % (obj, owner, group))
         try:
             if self.dry_run:
-                self.log.info("Chown on %s to %s:%s. Dry-run, so not actually changing this ownership" % (obj, owner, group))
+                self.log.info("Chown on %s to %s:%s. Dry-run, so not actually changing this ownership" 
+                    % (obj, owner, group))
             else:
                 os.chown(obj, owner, group)
         except OSError:
@@ -489,7 +499,8 @@ class PosixOperations(object):
 
         try:
             if self.dry_run:
-                self.log.info("Chmod on %s to %s. Dry-run, so not actually changing access permissions" % (obj, permissions))
+                self.log.info("Chmod on %s to %s. Dry-run, so not actually changing access permissions" 
+                    % (obj, permissions))
             else:
                 os.chmod(obj, permissions)
         except OSError:
