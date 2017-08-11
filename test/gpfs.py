@@ -193,7 +193,69 @@ mmhealth:State:0:1:::storage2206.shuppet.gent.vsc:HADOOPCONNECTOR:storage2206.sh
 
         mock_exec.return_value = (0, mmhealth_output)
         res = gpfsi.get_mmhealth_state()
-        expected_res =  {'NODE': 'FAILED', 'HADOOPCONNECTOR': 'DEGRADED', 'NETWORK': 'HEALTHY', 'GPFS': 'FAILED', 'CES': 'DEPEND', 'FILESYSTEM': 'DEPEND', 'DISK': 'HEALTHY'}
+        expected_res = {
+            'CES_storage2206.shuppet.gent.vsc': 'DEPEND',
+            'DISK_storage2206.shuppet.gent.vsc': 'HEALTHY',
+            'FILESYSTEM_storage2206.shuppet.gent.vsc': 'DEPEND',
+            'GPFS_storage2206.shuppet.gent.vsc': 'FAILED',
+            'HADOOPCONNECTOR_storage2206.shuppet.gent.vsc': 'DEGRADED',
+            'NETWORK_storage2206.shuppet.gent.vsc': 'HEALTHY',
+            'NODE_storage2206.shuppet.gent.vsc': 'FAILED'}
+        
         mock_exec.assert_called_once_with('mmhealth', ['node', 'show', '-Y'])
         self.assertEqual(res, expected_res)
+
+        mmhealth_more_out = """mmhealth:State:HEADER:version:reserved:reserved:node:component:entityname:entitytype:status:laststatuschange:
+mmhealth:Event:HEADER:version:reserved:reserved:node:component:entityname:entitytype:event:arguments:activesince:identifier:ishidden:
+mmhealth:State:0:1:::nsd03.gastly.data:NODE:nsd03.gastly.data:NODE:HEALTHY:2017-08-11 14%3A47%3A09.717896 CEST:
+mmhealth:State:0:1:::nsd03.gastly.data:DISK:nsd03.gastly.data:NODE:HEALTHY:2017-08-11 14%3A47%3A09.710337 CEST:
+mmhealth:State:0:1:::nsd03.gastly.data:DISK:f1v07e0p0_S15o1:NSD:HEALTHY:2017-08-08 15%3A47%3A56.794469 CEST:
+mmhealth:State:0:1:::nsd03.gastly.data:DISK:f1v01e0p0_D25o1:NSD:HEALTHY:2017-08-08 15%3A47%3A56.799986 CEST:
+mmhealth:State:0:1:::nsd03.gastly.data:DISK:f1v05e0p0_H21o0:NSD:HEALTHY:2017-08-08 15%3A47%3A56.803198 CEST:
+mmhealth:State:0:1:::nsd03.gastly.data:DISK:f1v01e0p0_D09o1:NSD:HEALTHY:2017-08-08 15%3A47%3A56.803266 CEST:
+mmhealth:State:0:1:::nsd03.gastly.data:GPFS:nsd03.gastly.data:NODE:HEALTHY:2017-08-11 14%3A47%3A09.717276 CEST:
+mmhealth:State:0:1:::nsd03.gastly.data:NETWORK:nsd03.gastly.data:NODE:HEALTHY:2017-08-03 15%3A02%3A47.508757 CEST:
+mmhealth:State:0:1:::nsd03.gastly.data:NETWORK:bond0:NIC:HEALTHY:2017-08-03 15%3A02%3A47.508897 CEST:
+mmhealth:State:0:1:::nsd03.gastly.data:NETWORK:ib0:NIC:HEALTHY:2017-08-03 15%3A02%3A47.508812 CEST:
+mmhealth:State:0:1:::nsd03.gastly.data:NETWORK:em1:NIC:HEALTHY:2017-08-03 15%3A02%3A47.508938 CEST:
+mmhealth:State:0:1:::nsd03.gastly.data:NETWORK:mlx5_0:NIC:HEALTHY:2017-08-03 15%3A07%3A47.822473 CEST:
+mmhealth:State:0:1:::nsd03.gastly.data:NETWORK:mlx5_1:NIC:HEALTHY:2017-08-03 15%3A07%3A47.822373 CEST:
+mmhealth:State:0:1:::nsd03.gastly.data:NETWORK:ib1:NIC:HEALTHY:2017-08-03 15%3A02%3A47.508856 CEST:
+mmhealth:State:0:1:::nsd03.gastly.data:FILESYSTEM:nsd03.gastly.data:NODE:DEGRADED:2017-08-11 16%3A32%3A11.509018 CEST:
+mmhealth:State:0:1:::nsd03.gastly.data:FILESYSTEM:kyukonpilot:FILESYSTEM:HEALTHY:2017-08-11 12%3A02%3A41.096460 CEST:
+mmhealth:State:0:1:::nsd03.gastly.data:FILESYSTEM:kyukonhome:FILESYSTEM:DEGRADED:2017-08-11 16%3A32%3A11.509173 CEST:
+mmhealth:Event:0:1:::nsd03.gastly.data:FILESYSTEM:kyukonhome:FILESYSTEM:unmounted_fs_check:kyukonhome:2017-08-11 16%3A32%3A11.497114 CEST:kyukonhome:no:
+mmhealth:State:0:1:::nsd03.gastly.data:FILESYSTEM:kyukonscratch:FILESYSTEM:HEALTHY:2017-08-08 15%3A47%3A56.804124 CEST:
+mmhealth:State:0:1:::nsd03.gastly.data:FILESYSTEM:kyukondata:FILESYSTEM:HEALTHY:2017-08-11 12%3A02%3A41.096584 CEST:
+mmhealth:State:0:1:::test01.gastly.data:CES:test01.gastly.data:NODE:HEALTHY:2017-08-11 16%3A28%3A45.603602 CEST:
+mmhealth:State:0:1:::test01.gastly.data:OBJECT:test01.gastly.data:NODE:DISABLED:2017-08-11 12%3A02%3A59.957044 CEST:"""
+
+        expected_res = {
+            'CES_test01.gastly.data': 'HEALTHY',
+            'DISK_f1v01e0p0_D09o1': 'HEALTHY',
+            'DISK_f1v01e0p0_D25o1': 'HEALTHY',
+            'DISK_f1v05e0p0_H21o0': 'HEALTHY',
+            'DISK_f1v07e0p0_S15o1': 'HEALTHY',
+            'DISK_nsd03.gastly.data': 'HEALTHY',
+            'FILESYSTEM_kyukondata': 'HEALTHY',
+            'FILESYSTEM_kyukonhome': 'DEGRADED',
+            'FILESYSTEM_kyukonpilot': 'HEALTHY',
+            'FILESYSTEM_kyukonscratch': 'HEALTHY',
+            'FILESYSTEM_nsd03.gastly.data': 'DEGRADED',
+            'GPFS_nsd03.gastly.data': 'HEALTHY',
+            'NETWORK_bond0': 'HEALTHY',
+            'NETWORK_em1': 'HEALTHY',
+            'NETWORK_ib0': 'HEALTHY',
+            'NETWORK_ib1': 'HEALTHY',
+            'NETWORK_mlx5_0': 'HEALTHY',
+            'NETWORK_mlx5_1': 'HEALTHY',
+            'NETWORK_nsd03.gastly.data': 'HEALTHY',
+            'NODE_nsd03.gastly.data': 'HEALTHY',
+            'OBJECT_test01.gastly.data': 'DISABLED'
+        }
+        mock_exec.return_value = (0, mmhealth_more_out)
+        res = gpfsi.get_mmhealth_state()
+        print res
+        self.assertEqual(res, expected_res)
+
 

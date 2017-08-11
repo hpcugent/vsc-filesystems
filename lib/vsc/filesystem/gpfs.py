@@ -39,7 +39,7 @@ GPFS_BIN_PATH = '/usr/lpp/mmfs/bin'
 GpfsQuota = namedtuple('GpfsQuota', (',name,blockUsage,blockQuota,blockLimit,blockInDoubt,blockGrace,filesUsage,'
     'filesQuota,filesLimit,filesInDoubt,filesGrace,remarks,quota,defQuota,fid,filesetname'))
 
-GPFS_OK_STATES = ['HEALTHY']
+GPFS_OK_STATES = ['HEALTHY', 'DISABLED']
 GPFS_WARNING_STATES = ['DEGRADED']
 GPFS_ERROR_STATES = ['FAILED', 'DEPEND']
 GPFS_UNKNOWN_STATES = ['CHECKING', 'UNKNOWN']
@@ -966,7 +966,8 @@ class GpfsOperations(PosixOperations):
         opts = ['node', 'show']
         res = self._executeY('mmhealth', opts)
         states = res['State']
-        return dict(zip(states['component'], states['status']))
+        comp_entities = ['%s_%s' % ident for ident in zip(states['component'], states['entityname'])]
+        return dict(zip(comp_entities, states['status']))
 
 
 if __name__ == '__main__':
