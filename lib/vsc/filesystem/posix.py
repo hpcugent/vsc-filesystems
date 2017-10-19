@@ -418,18 +418,22 @@ class PosixOperations(object):
             '    . /etc/bashrc',
             'fi',
         ]
+        bashrc_path = os.path.join(home_dir, '.bashrc')
         if self.dry_run:
             self.log.info("Writing .bashrc an .bash_profile. Dry-run, so not really doing anything.")
             if not os.path.exists(os.path.join(home_dir, '.bash_profile')):
                 self.log.info(".bash_profile will contain: %s" % ("\n".join(bashprofile_text)))
-            if not os.path.exists(os.path.join(home_dir, '.bashrc')):
+            if not os.path.exists(bashrc_path):
                 self.log.info(".bashrc will contain: %s" % ("\n".join(bashrc_text)))
         else:
-            if os.path.exists(os.path.join(home_dir, '.bashrc')):
+            if os.path.exists(bashrc_path):
                 self.log.info(".bashrc already exists for user %s. Not overwriting." % (user_id))
             else:
                 self.log.info(".bashrc not found for user %s. Writing default." % (user_id))
-                fp = open(os.path.join(home_dir, '.bashrc'), 'w')
+                if os.path.islink(bashrc_path):
+                    self.log.info(".bashrc is symlinked to non-existing target %s ", os.path.realpath(bashrc_path))
+                    os.unlink(bashrc_path)
+                fp = open(bashrc_path, 'w')
                 fp.write("\n".join(bashrc_text + ['']))
                 fp.close()
 
