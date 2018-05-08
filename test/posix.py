@@ -62,6 +62,11 @@ class PosixTest(TestCase):
         mock_realpath.assert_not_called()
 
         # else + if branch
+        mock_exists.reset_mock()
+        mock_islink.reset_mock()
+        mock_unlink.reset_mock()
+        mock_open.reset_mock()
+        mock_realpath.reset_mock()
         mock_exists.return_value = False
         mock_islink.return_value = True
         self.po._deploy_dot_file(path, "test_tempfile", "vsc40075", ["huppel"])
@@ -70,6 +75,11 @@ class PosixTest(TestCase):
         mock_realpath.assert_called_with(path)
 
         # else + else branch
+        mock_exists.reset_mock()
+        mock_islink.reset_mock()
+        mock_unlink.reset_mock()
+        mock_open.reset_mock()
+        mock_realpath.reset_mock()
         mock_exists.return_value = False
         mock_islink.return_value = False
         self.po._deploy_dot_file(path, "test_tempfile", "vsc40075", ["huppel"])
