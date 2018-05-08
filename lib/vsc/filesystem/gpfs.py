@@ -1,6 +1,6 @@
 # -*- coding: latin-1 -*-
 #
-# Copyright 2009-2017 Ghent University
+# Copyright 2009-2018 Ghent University
 #
 # This file is part of vsc-filesystems,
 # originally created by the HPC team of Ghent University (http://ugent.be/hpc/en),
@@ -286,9 +286,9 @@ class GpfsOperations(PosixOperations):
                     rest[typ] = res
 
                 else:
-                    self.log.raiseException("No valid lines of header type %s for output: %s" % (typ, out), 
+                    self.log.raiseException("No valid lines of header type %s for output: %s" % (typ, out),
                         GpfsOperationError)
-                
+
             return rest
 
     def list_filesystems(self, device='all', update=False, fs_filter=_automatic_mount_only):
