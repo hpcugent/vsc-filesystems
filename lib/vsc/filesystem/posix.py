@@ -1,6 +1,6 @@
 # -*- coding: latin-1 -*-
 #
-# Copyright 2009-2017 Ghent University
+# Copyright 2009-2018 Ghent University
 #
 # This file is part of vsc-filesystems,
 # originally created by the HPC team of Ghent University (http://ugent.be/hpc/en),
@@ -128,7 +128,7 @@ class PosixOperations(object):
 
         if self.forceabsolutepath:
             if not os.path.isabs(obj):  # other test: obj.startswith(os.path.sep)
-                self.log.raiseException("_sanity_check check absolute path: obj %s is not an absolute path" % obj, 
+                self.log.raiseException("_sanity_check check absolute path: obj %s is not an absolute path" % obj,
                     PosixOperationError)
                 return
 
@@ -157,10 +157,10 @@ class PosixOperations(object):
         if not obj == os.path.realpath(obj):
             # some part of the path is a symlink
             if self.ignorerealpathmismatch:
-                self.log.debug("_sanity_check obj %s doesn't correspond with realpath %s" % (obj, 
+                self.log.debug("_sanity_check obj %s doesn't correspond with realpath %s" % (obj,
                     os.path.realpath(obj)))
             else:
-                self.log.raiseException("_sanity_check obj %s doesn't correspond with realpath %s" 
+                self.log.raiseException("_sanity_check obj %s doesn't correspond with realpath %s"
                     % (obj, os.path.realpath(obj)), PosixOperationError)
                 return
 
@@ -248,12 +248,12 @@ class PosixOperations(object):
         if not os.path.isfile(OS_LINUX_MOUNTS):
             self.log.raiseException("Missing Linux OS overview of mounts %s" % OS_LINUX_MOUNTS, PosixOperationError)
         if not os.path.isfile(OS_LINUX_FILESYSTEMS):
-            self.log.raiseException("Missing Linux OS overview of filesystems %s" % OS_LINUX_FILESYSTEMS, 
+            self.log.raiseException("Missing Linux OS overview of filesystems %s" % OS_LINUX_FILESYSTEMS,
                 PosixOperationError)
 
         try:
             currentmounts = [x.strip().split(" ") for x in open(OS_LINUX_MOUNTS).readlines()]
-            # returns [('rootfs', '/', 2051L, 'rootfs'), ('ext4', '/', 2051L, '/dev/root'), 
+            # returns [('rootfs', '/', 2051L, 'rootfs'), ('ext4', '/', 2051L, '/dev/root'),
             # ('tmpfs', '/dev', 17L, '/dev'), ...
             self.localfilesystemnaming = ['type', 'mountpoint', 'id', 'device']
             self.localfilesystems = [[y[2], y[1], os.stat(y[1]).st_dev, y[0]] for y in currentmounts]
@@ -350,7 +350,7 @@ class PosixOperations(object):
         obj = self._sanity_check(obj)
         try:
             if self.dry_run:
-                self.log.info("Making directory %s." % (obj), 
+                self.log.info("Making directory %s." % (obj),
                     "Dry-run, so not really doing anything. Pretending it did succeed though. Returning True.")
                 return True
             else:
@@ -418,29 +418,17 @@ class PosixOperations(object):
             '    . /etc/bashrc',
             'fi',
         ]
+        bashrc_path = os.path.join(home_dir, '.bashrc')
+        bashprofile_path = os.path.join(home_dir, '.bash_profile')
         if self.dry_run:
             self.log.info("Writing .bashrc an .bash_profile. Dry-run, so not really doing anything.")
-            if not os.path.exists(os.path.join(home_dir, '.bash_profile')):
+            if not os.path.exists(bashprofile_path):
                 self.log.info(".bash_profile will contain: %s" % ("\n".join(bashprofile_text)))
-            if not os.path.exists(os.path.join(home_dir, '.bashrc')):
+            if not os.path.exists(bashrc_path):
                 self.log.info(".bashrc will contain: %s" % ("\n".join(bashrc_text)))
         else:
-            if os.path.exists(os.path.join(home_dir, '.bashrc')):
-                self.log.info(".bashrc already exists for user %s. Not overwriting." % (user_id))
-            else:
-                self.log.info(".bashrc not found for user %s. Writing default." % (user_id))
-                fp = open(os.path.join(home_dir, '.bashrc'), 'w')
-                fp.write("\n".join(bashrc_text + ['']))
-                fp.close()
-
-            if os.path.exists(os.path.join(home_dir, '.bash_profile')):
-                self.log.info(".bash_profile already exists for user %s. Not overwriting." % (user_id))
-            else:
-                self.log.info(".bash_profile not found for user %s. Writing default." % (user_id))
-                fp = open(os.path.join(home_dir, '.bash_profile'), 'w')
-                fp.write("\n".join(bashprofile_text + ['']))
-                fp.close()
-
+            self._deploy_dot_file(bashrc_path, ".bashrc", user_id, bashrc_text)
+            self._deploy_dot_file(bashprofile_path, ".bash_profile", user_id, bashprofile_text)
         for f in [home_dir,
                   os.path.join(home_dir, '.ssh'),
                   os.path.join(home_dir, '.ssh', 'authorized_keys'),
@@ -452,6 +440,23 @@ class PosixOperations(object):
             except OSError:
                 self.log.raiseException("Cannot change ownership of file %s to %s:%s" %
                                         (f, user_id, group_id), PosixOperationError)
+
+    def _deploy_dot_file(self, path, filename, user_id, contents):
+        """
+        Deploy a .dot file
+
+        Checks for symlinks, only overwrites these if the target is missing.
+        """
+
+        if os.path.exists(path):
+            self.log.info("%s already exists for user %s. Not overwriting.", filename, user_id)
+        else:
+            self.log.info("%s not found for user %s. Writing default.", filename, user_id)
+            if os.path.islink(path):
+                self.log.info("%s is symlinked to non-existing target %s ", filename, os.path.realpath(path))
+                os.unlink(path)
+            with open(path, 'w') as fp:
+                fp.write("\n".join(contents + ['']))
 
     def list_quota(self, obj=None):
         """Report on quota"""
@@ -479,7 +484,7 @@ class PosixOperations(object):
         self.log.info("Changing ownership of %s to %s:%s" % (obj, owner, group))
         try:
             if self.dry_run:
-                self.log.info("Chown on %s to %s:%s. Dry-run, so not actually changing this ownership" 
+                self.log.info("Chown on %s to %s:%s. Dry-run, so not actually changing this ownership"
                     % (obj, owner, group))
             else:
                 os.chown(obj, owner, group)
@@ -499,7 +504,7 @@ class PosixOperations(object):
 
         try:
             if self.dry_run:
-                self.log.info("Chmod on %s to %s. Dry-run, so not actually changing access permissions" 
+                self.log.info("Chmod on %s to %s. Dry-run, so not actually changing access permissions"
                     % (obj, permissions))
             else:
                 os.chmod(obj, permissions)
