@@ -36,8 +36,11 @@ from vsc.utils.patterns import Singleton
 
 GPFS_BIN_PATH = '/usr/lpp/mmfs/bin'
 
-GpfsQuota = namedtuple('GpfsQuota', (',name,blockUsage,blockQuota,blockLimit,blockInDoubt,blockGrace,filesUsage,'
-    'filesQuota,filesLimit,filesInDoubt,filesGrace,remarks,quota,defQuota,fid,filesetname'))
+GpfsQuota = namedtuple('GpfsQuota', 
+    ['name',
+     'blockUsage', 'blockQuota', 'blockLimit', 'blockInDoubt', 'blockGrace',
+     'filesUsage', 'filesQuota', 'filesLimit', 'filesInDoubt', 'filesGrace',
+     'remarks', 'quota', 'defQuota', 'fid', 'filesetname'])
 
 GPFS_OK_STATES = ['HEALTHY', 'DISABLED']
 GPFS_WARNING_STATES = ['DEGRADED']

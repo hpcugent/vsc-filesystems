@@ -28,6 +28,11 @@ QuotaInformation = namedtuple('QuotaInformation',
                                'hard',  # hard quota limit in KiB
                                'doubt',  # the KiB GPFS is not sure about
                                'expired',  # tuple (boolean, grace period expressed in seconds)
+                               'files_used',  # used number of inodes
+                               'files_soft',  # soft limit for inodes
+                               'files_hard',  # hard limit for inodes
+                               'files_doubt',  # the inodes GPFS is not sure about
+                               'files_expired',  # tuple (boolean, grace period expressed in seconds)
                               ])
 
 
@@ -48,7 +53,9 @@ class QuotaEntity(object):
         self.exceed_map = {}
         self.exceed = False
 
-    def update(self, fileset, used=0, soft=0, hard=0, doubt=0, expired=(False, None), timestamp=None):
+    def update(self, fileset, used=0, soft=0, hard=0, doubt=0, expired=(False, None), 
+               files_used=0, files_soft=0, files_hard=0, files_doubt=0, files_expired=(False, None), 
+               timestamp=None):
         """Store the quota for a given device.
 
         The arguments to this function are turned into a recursive
@@ -61,10 +68,15 @@ class QuotaEntity(object):
             soft=soft,
             hard=hard,
             doubt=doubt,
-            expired=expired
+            expired=expired,
+            files_used=files_used,
+            files_soft=files_soft,
+            files_hard=files_hard,
+            files_doubt=files_doubt,
+            files_expired=files_expired,
         )
 
-        self.exceed = self.exceed or expired[0]
+        self.exceed = self.exceed or expired[0] or files_expired[0]
 
     def exceeds(self):
         """Is the soft limit exceeded for some device?"""
