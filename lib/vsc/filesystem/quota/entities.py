@@ -21,19 +21,19 @@ devices an entity (user, vo, ...) uses on the VSC storage.
 from collections import namedtuple
 
 
-QuotaInformation = namedtuple('QuotaInformation',
-                              ['timestamp',  # timestamp of the recording moment
-                               'used',  # used quota in KiB
-                               'soft',  # soft quota limit in KiB
-                               'hard',  # hard quota limit in KiB
-                               'doubt',  # the KiB GPFS is not sure about
-                               'expired',  # tuple (boolean, grace period expressed in seconds)
-                               'files_used',  # used number of inodes
-                               'files_soft',  # soft limit for inodes
-                               'files_hard',  # hard limit for inodes
-                               'files_doubt',  # the inodes GPFS is not sure about
-                               'files_expired',  # tuple (boolean, grace period expressed in seconds)
-                              ])
+QuotaInformation = namedtuple('QuotaInformation', [
+    'timestamp',  # timestamp of the recording moment
+    'used',  # used quota in KiB
+    'soft',  # soft quota limit in KiB
+    'hard',  # hard quota limit in KiB
+    'doubt',  # the KiB GPFS is not sure about
+    'expired',  # tuple (boolean, grace period expressed in seconds)
+    'files_used',  # used number of inodes
+    'files_soft',  # soft limit for inodes
+    'files_hard',  # hard limit for inodes
+    'files_doubt',  # the inodes GPFS is not sure about
+    'files_expired',  # tuple (boolean, grace period expressed in seconds)
+])
 
 
 class QuotaEntity(object):
@@ -110,11 +110,13 @@ class QuotaUser(QuotaEntity):
                 percentage = int(100.0 * quota_info.used / quota_info.soft)
             else:
                 percentage = 0
-            s = "%s%s: used %dMiB (%d%%) quota %dMiB" % (self.storage,
-                                                         suffix,
-                                                         quota_info.used / 1024,
-                                                         percentage,
-                                                         quota_info.soft / 1024)
+            s = "%s%s: used %dMiB (%d%%) quota %dMiB for %d used files" % (
+                self.storage,
+                suffix,
+                quota_info.used / 1024,
+                percentage,
+                quota_info.soft / 1024,
+                quota_info.files_used)
             if quota_info.expired[0]:
                 s += " grace: %d hours" % (quota_info.expired[1] / 3600)
 
