@@ -110,13 +110,20 @@ class QuotaUser(QuotaEntity):
                 percentage = int(100.0 * quota_info.used / quota_info.soft)
             else:
                 percentage = 0
-            s = "%s%s: used %dMiB (%d%%) quota %dMiB for %d used files" % (
+            inode_limit = quota_info.hard / 1000
+            if quota_info.hard == 0:
+                inode_limit = "without limit"
+            else:
+                inode_limit = "with %d (*1000) files limit" % inode_limit
+
+            s = "%s%s: used %dMiB (%d%%) quota %dMiB for %d (*1000) used files %s" % (
                 self.storage,
                 suffix,
                 quota_info.used / 1024,
                 percentage,
                 quota_info.soft / 1024,
-                quota_info.files_used)
+                quota_info.files_used / 1000,
+                inode_limit,)
             if quota_info.expired[0]:
                 s += " grace: %d hours" % (quota_info.expired[1] / 3600)
 
