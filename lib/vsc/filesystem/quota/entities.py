@@ -114,9 +114,9 @@ class QuotaUser(QuotaEntity):
             if quota_info.hard == 0:
                 inode_limit = "without limit"
             else:
-                inode_limit = "with %d (*1000) files limit" % (quota_info.hard / 1000,)
+                inode_limit = "with %d k files limit" % (quota_info.hard / 1000,)
 
-            s = "%s%s: used %dMiB (%d%%) quota %dMiB for %d (*1000) used files %s" % (
+            s = "%s%s: used %dMiB (%d%%) quota %dMiB for %d k used files %s" % (
                 self.storage,
                 suffix,
                 quota_info.used / 1024,
