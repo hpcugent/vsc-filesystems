@@ -17,10 +17,6 @@ Unit tests for vsc.filesystems.quota.*
 
 @author: Andy Georges (Ghent University)
 """
-import mock
-import os
-import tempfile
-
 from vsc.install.testing import TestCase
 from vsc.filesystem.quota.entities import QuotaUser
 
