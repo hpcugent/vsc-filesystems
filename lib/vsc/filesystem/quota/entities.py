@@ -112,16 +112,21 @@ class QuotaUser(QuotaEntity):
                 percentage = 0
             
             if quota_info.hard == 0:
+                block_limit = "no quota set"
+            else:
+                block_limit = "quota %dMiB" % quota_info.hard / 1024
+
+            if quota_info.files_hard == 0:
                 inode_limit = "without limit"
             else:
-                inode_limit = "with %d k files limit" % (quota_info.hard / 1000,)
+                inode_limit = "with %d k files limit" % (quota_info.files_hard / 1000,)
 
-            s = "%s%s: used %dMiB (%d%%) quota %dMiB for %d k used files %s" % (
+            s = "%s%s: used %dMiB (%d%%) %s for %d k used files %s" % (
                 self.storage,
                 suffix,
                 quota_info.used / 1024,
                 percentage,
-                quota_info.soft / 1024,
+                block_limit,
                 quota_info.files_used / 1000,
                 inode_limit,)
             if quota_info.expired[0]:
