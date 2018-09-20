@@ -21,14 +21,19 @@ devices an entity (user, vo, ...) uses on the VSC storage.
 from collections import namedtuple
 
 
-QuotaInformation = namedtuple('QuotaInformation',
-                              ['timestamp',  # timestamp of the recording moment
-                               'used',  # used quota in KiB
-                               'soft',  # soft quota limit in KiB
-                               'hard',  # hard quota limit in KiB
-                               'doubt',  # the KiB GPFS is not sure about
-                               'expired',  # tuple (boolean, grace period expressed in seconds)
-                              ])
+QuotaInformation = namedtuple('QuotaInformation', [
+    'timestamp',  # timestamp of the recording moment
+    'used',  # used quota in KiB
+    'soft',  # soft quota limit in KiB
+    'hard',  # hard quota limit in KiB
+    'doubt',  # the KiB GPFS is not sure about
+    'expired',  # tuple (boolean, grace period expressed in seconds)
+    'files_used',  # used number of inodes
+    'files_soft',  # soft limit for inodes
+    'files_hard',  # hard limit for inodes
+    'files_doubt',  # the inodes GPFS is not sure about
+    'files_expired',  # tuple (boolean, grace period expressed in seconds)
+])
 
 
 class QuotaEntity(object):
@@ -48,7 +53,9 @@ class QuotaEntity(object):
         self.exceed_map = {}
         self.exceed = False
 
-    def update(self, fileset, used=0, soft=0, hard=0, doubt=0, expired=(False, None), timestamp=None):
+    def update(self, fileset, used=0, soft=0, hard=0, doubt=0, expired=(False, None), 
+               files_used=0, files_soft=0, files_hard=0, files_doubt=0, files_expired=(False, None), 
+               timestamp=None):
         """Store the quota for a given device.
 
         The arguments to this function are turned into a recursive
@@ -61,10 +68,15 @@ class QuotaEntity(object):
             soft=soft,
             hard=hard,
             doubt=doubt,
-            expired=expired
+            expired=expired,
+            files_used=files_used,
+            files_soft=files_soft,
+            files_hard=files_hard,
+            files_doubt=files_doubt,
+            files_expired=files_expired,
         )
 
-        self.exceed = self.exceed or expired[0]
+        self.exceed = self.exceed or expired[0] or files_expired[0]
 
     def exceeds(self):
         """Is the soft limit exceeded for some device?"""
@@ -98,11 +110,25 @@ class QuotaUser(QuotaEntity):
                 percentage = int(100.0 * quota_info.used / quota_info.soft)
             else:
                 percentage = 0
-            s = "%s%s: used %dMiB (%d%%) quota %dMiB" % (self.storage,
-                                                         suffix,
-                                                         quota_info.used / 1024,
-                                                         percentage,
-                                                         quota_info.soft / 1024)
+            
+            if quota_info.hard == 0:
+                block_limit = "no quota set"
+            else:
+                block_limit = "quota %dMiB" % quota_info.hard / 1024
+
+            if quota_info.files_hard == 0:
+                inode_limit = "without limit"
+            else:
+                inode_limit = "with %d k files limit" % (quota_info.files_hard / 1000,)
+
+            s = "%s%s: used %dMiB (%d%%) %s for %d k used files %s" % (
+                self.storage,
+                suffix,
+                quota_info.used / 1024,
+                percentage,
+                block_limit,
+                quota_info.files_used / 1000,
+                inode_limit,)
             if quota_info.expired[0]:
                 s += " grace: %d hours" % (quota_info.expired[1] / 3600)
 
