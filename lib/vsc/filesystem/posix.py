@@ -383,7 +383,7 @@ class PosixOperations(object):
         @type ssh_public_keys: list of strings representing the public ssh keys
         """
         # ssh
-        self.log.info("Populating home %s for user %s:%s" % (home_dir, user_id, group_id))
+        self.log.info("Populating home %s for user %s:%s", home_dir, user_id, group_id)
         ssh_path = os.path.join(home_dir, '.ssh')
         self.make_dir(ssh_path)
 
