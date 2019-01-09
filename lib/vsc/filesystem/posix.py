@@ -1,6 +1,6 @@
 # -*- coding: latin-1 -*-
 #
-# Copyright 2009-2018 Ghent University
+# Copyright 2009-2019 Ghent University
 #
 # This file is part of vsc-filesystems,
 # originally created by the HPC team of Ghent University (http://ugent.be/hpc/en),
@@ -39,6 +39,7 @@ OS_LINUX_IGNORE_FILESYSTEMS = ('rootfs',  # special initramfs filesystem
                                'ipathfs',  # qlogic IB
                                'binfmt_misc',  # ?
                                'rpc_pipefs',  # NFS RPC
+                               'fusefs',  # Fused stuff
                                )
 
 
