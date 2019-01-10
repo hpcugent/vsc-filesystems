@@ -114,7 +114,7 @@ class QuotaUser(QuotaEntity):
             if quota_info.hard == 0:
                 block_limit = "no quota set"
             else:
-                block_limit = "quota %dMiB" % quota_info.hard / 1024
+                block_limit = "quota %dMiB" % (quota_info.hard / 1024,)
 
             if quota_info.files_hard == 0:
                 inode_limit = "without limit"
