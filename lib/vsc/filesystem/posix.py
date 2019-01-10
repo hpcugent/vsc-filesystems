@@ -350,7 +350,7 @@ class PosixOperations(object):
         obj = self._sanity_check(obj)
         try:
             if self.dry_run:
-                self.log.info("Dry-run: pretending to create directory %s" % obj)
+                self.log.info("Dry-run: pretending to create directory %s", obj)
                 return True
             else:
                 os.makedirs(obj)
