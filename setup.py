@@ -30,7 +30,7 @@ PACKAGE = {
     'tests_require': ['mock'],
     'install_requires': [
         'vsc-base >= 2.4.16',
-        'vsc-config >= 1.10',
+        'vsc-config >= 2.0.2',
         'vsc-utils >= 1.4.6',
     ],
 }

@@ -351,8 +351,7 @@ class PosixOperations(object):
         obj = self._sanity_check(obj)
         try:
             if self.dry_run:
-                self.log.info("Making directory %s." % (obj),
-                    "Dry-run, so not really doing anything. Pretending it did succeed though. Returning True.")
+                self.log.info("Dry-run: pretending to create directory %s", obj)
                 return True
             else:
                 os.makedirs(obj)
@@ -412,7 +411,7 @@ class PosixOperations(object):
             'if [ -f ~/.bashrc ]; then',
             '    . ~/.bashrc',
             'fi',
-            ]
+        ]
         bashrc_text = [
             '# do NOT remove the following lines:',
             'if [ -f /etc/bashrc ]; then',

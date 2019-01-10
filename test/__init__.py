@@ -1,5 +1,5 @@
 #
-# Copyright 2016-2016 Ghent University
+# Copyright 2016-2019 Ghent University
 #
 # This file is part of vsc-filesystems,
 # originally created by the HPC team of Ghent University (http://ugent.be/hpc/en),
@@ -12,4 +12,5 @@
 #
 # All rights reserved.
 #
-
+"""
+"""

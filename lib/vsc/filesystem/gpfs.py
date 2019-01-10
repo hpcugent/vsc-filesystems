@@ -591,7 +591,7 @@ class GpfsOperations(PosixOperations):
         obj = self._sanity_check(obj)
 
         if not self.exists(obj):
-            self.raiseException("getAttr: obj %s does not exist", GpfsOperationError)
+            self.log.raiseException("getAttr: obj %s does not exist", GpfsOperationError)
 
         ec, out = self._execute('mmlsattr', ["-L", obj])
         if ec > 0:
@@ -825,8 +825,8 @@ class GpfsOperations(PosixOperations):
         """
 
         obj = self._sanity_check(obj)
-        if not self.exists(obj):
-            self.raiseException("setQuota: can't set quota on none-existing obj %s" % obj, GpfsOperationError)
+        if not self.dry_run and not self.exists(obj):
+            self.log.raiseException("setQuota: can't set quota on none-existing obj %s" % obj, GpfsOperationError)
 
         # FIXME: this should be some constant or such
         typ2opt = {'user': 'u',
@@ -901,7 +901,7 @@ class GpfsOperations(PosixOperations):
         if hard is None:
             hard = int(soft * soft2hard_factor)
         elif hard < soft:
-            self.raiseException("setQuota: can't set hard limit %s lower then soft limit %s" %
+            self.log.raiseException("setQuota: can't set hard limit %s lower then soft limit %s" %
                                 (hard, soft), GpfsOperationError)
 
         opts += ["-%s" % typ2opt[typ], "%s" % who]
