@@ -39,7 +39,7 @@ OS_LINUX_IGNORE_FILESYSTEMS = ('rootfs',  # special initramfs filesystem
                                'ipathfs',  # qlogic IB
                                'binfmt_misc',  # ?
                                'rpc_pipefs',  # NFS RPC
-                               'fusefs',  # Fused stuff
+                               'fuse.sshfs',  # X2GO sshfs over fuse
                                )
 
 
