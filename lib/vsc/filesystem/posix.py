@@ -257,15 +257,13 @@ class PosixOperations(object):
             # returns [('rootfs', '/', 2051L, 'rootfs'), ('ext4', '/', 2051L, '/dev/root'),
             # ('tmpfs', '/dev', 17L, '/dev'), ...
             self.localfilesystemnaming = ['type', 'mountpoint', 'id', 'device']
+            # do we need further parsing, eg of autofs types or remove pseudo filesystems ?
+            if self.ignorefilesystems:
+                currentmounts = [x for x in currentmounts if not x[2] in OS_LINUX_IGNORE_FILESYSTEMS]
             self.localfilesystems = [[y[2], y[1], os.stat(y[1]).st_dev, y[0]] for y in currentmounts]
         except (IOError, OSError):
             self.log.exception("Failed to create the list of current mounted filesystems")
             raise
-
-        # do we need further parsing, eg of autofs types or remove pseudo filesystems ?
-        if self.ignorefilesystems:
-            self.localfilesystems = [x for x in self.localfilesystems
-                                     if not x[self.localfilesystemnaming.index('type')] in OS_LINUX_IGNORE_FILESYSTEMS]
 
     def _largest_existing_path(self, obj):
         """Given obj /a/b/c/d, check which subpath exists and will determine eg filesystem type of obj.
