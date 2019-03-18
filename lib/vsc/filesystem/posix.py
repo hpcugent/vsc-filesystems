@@ -387,17 +387,24 @@ class PosixOperations(object):
 
         self.log.info("Placing %d ssh public keys in the authorized keys file." % (len(ssh_public_keys)))
         authorized_keys = os.path.join(home_dir, '.ssh', 'authorized_keys')
-        default_key = os.path.join(home_dir, '.ssh', 'id_dsa.pub')
+        default_dsa_key = os.path.join(home_dir, '.ssh', 'id_dsa.pub')
+        default_rsa_key = os.path.join(home_dir, '.ssh', 'id_rsa.pub')
+        default_public_keys = []
         if self.dry_run:
             self.log.info("Writing ssh keys. Dry-run, so not really doing anything.")
         else:
-            if os.path.exists(default_key):
-                fp = open(default_key, 'r')
-                ssh_public_keys.append(fp.readline())
-                fp.close()
+            for default_key in [default_dsa_key, default_rsa_key]:
+                if os.path.exists(default_key):
+                    fp = open(default_key, 'r')
+                    default_public_keys.append(fp.readline())
+                    fp.close()
+
+            if default_public_keys:
                 self.log.info("Default key exists, adding to authorized_keys")
+                ssh_public_keys.extend(default_public_keys)
             else:
                 self.log.info("No default key found, not adding to authorized_keys")
+
             fp = open(authorized_keys, 'w')
             fp.write("\n".join(ssh_public_keys + ['']))
             fp.close()
