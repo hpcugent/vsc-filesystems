@@ -19,6 +19,8 @@ GPFS specialised interface
 @author: Stijn De Weirdt (Ghent University)
 @author: Andy Georges (Ghent University)
 """
+from __future__ import print_function
+from future.utils import with_metaclass
 
 import copy
 import os
@@ -36,7 +38,7 @@ from vsc.utils.patterns import Singleton
 
 GPFS_BIN_PATH = '/usr/lpp/mmfs/bin'
 
-GpfsQuota = namedtuple('GpfsQuota', 
+GpfsQuota = namedtuple('GpfsQuota',
     ['name',
      'blockUsage', 'blockQuota', 'blockLimit', 'blockInDoubt', 'blockGrace',
      'filesUsage', 'filesQuota', 'filesLimit', 'filesInDoubt', 'filesGrace',
@@ -78,9 +80,7 @@ class GpfsOperationError(PosixOperationError):
     pass
 
 
-class GpfsOperations(PosixOperations):
-
-    __metaclass__ = Singleton
+class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
 
     def __init__(self):
         super(GpfsOperations, self).__init__()
@@ -977,13 +977,13 @@ if __name__ == '__main__':
     g = GpfsOperations()
 
     g.list_filesystems()
-    print "fs", g.gpfslocalfilesystems
+    print("fs", g.gpfslocalfilesystems)
 
     g.list_quota()
-    print "quota", g.gpfslocalquotas
+    print("quota", g.gpfslocalquotas)
 
     g.list_filesets()
-    print "filesets", g.gpfslocalfilesets
+    print("filesets", g.gpfslocalfilesets)
 
     g.list_disks()
-    print "disks", g.gpfsdisks
+    print("disks", g.gpfsdisks)

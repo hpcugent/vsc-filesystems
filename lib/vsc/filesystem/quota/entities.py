@@ -53,8 +53,8 @@ class QuotaEntity(object):
         self.exceed_map = {}
         self.exceed = False
 
-    def update(self, fileset, used=0, soft=0, hard=0, doubt=0, expired=(False, None), 
-               files_used=0, files_soft=0, files_hard=0, files_doubt=0, files_expired=(False, None), 
+    def update(self, fileset, used=0, soft=0, hard=0, doubt=0, expired=(False, None),
+               files_used=0, files_soft=0, files_hard=0, files_doubt=0, files_expired=(False, None),
                timestamp=None):
         """Store the quota for a given device.
 
@@ -110,7 +110,7 @@ class QuotaUser(QuotaEntity):
                 percentage = int(100.0 * quota_info.used / quota_info.soft)
             else:
                 percentage = 0
-            
+
             if quota_info.hard == 0:
                 block_limit = "no quota set"
             else:
@@ -169,4 +169,3 @@ class QuotaGroup(QuotaEntity):
 
     def __repr__(self):
         return self.__str__()
-
