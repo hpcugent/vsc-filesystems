@@ -28,6 +28,7 @@ import subprocess
 
 from vsc.utils import fancylogger
 from vsc.utils.patterns import Singleton
+from future.utils import with_metaclass
 
 OS_LINUX_MOUNTS = '/proc/mounts'
 OS_LINUX_FILESYSTEMS = '/proc/filesystems'
@@ -47,12 +48,10 @@ class PosixOperationError(Exception):
     pass
 
 
-class PosixOperations(object):
+class PosixOperations(with_metaclass(Singleton, object)):
     """
     Class to create objects in filesystem, with various properties
     """
-
-    __metaclass__ = Singleton
 
     def __init__(self):
         self.log = fancylogger.getLogger(name=self.__class__.__name__, fname=False)
@@ -408,8 +407,8 @@ class PosixOperations(object):
             fp = open(authorized_keys, 'w')
             fp.write("\n".join(ssh_public_keys + ['']))
             fp.close()
-        self.chmod(0644, authorized_keys)
-        self.chmod(0700, ssh_path)
+        self.chmod(0o644, authorized_keys)
+        self.chmod(0o700, ssh_path)
 
         # bash
         bashprofile_text = [
