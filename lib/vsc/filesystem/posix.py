@@ -120,7 +120,7 @@ class PosixOperations(with_metaclass(Singleton, object)):
         if obj is None:
             if self.obj is None:
                 self.log.raiseException("_sanity_check no obj passed and self.obj not set.", PosixOperationError)
-                return
+                return None
             else:
                 obj = self.obj
 
@@ -130,7 +130,7 @@ class PosixOperations(with_metaclass(Singleton, object)):
             if not os.path.isabs(obj):  # other test: obj.startswith(os.path.sep)
                 self.log.raiseException("_sanity_check check absolute path: obj %s is not an absolute path" % obj,
                     PosixOperationError)
-                return
+                return None
 
         # check if filesystem matches current class
         filesystem = None
@@ -162,7 +162,7 @@ class PosixOperations(with_metaclass(Singleton, object)):
             else:
                 self.log.raiseException("_sanity_check obj %s doesn't correspond with realpath %s"
                     % (obj, os.path.realpath(obj)), PosixOperationError)
-                return
+                return None
 
         return obj
 
@@ -219,7 +219,7 @@ class PosixOperations(with_metaclass(Singleton, object)):
         """Determine which filesystem a given obj belongs to."""
         if not self._exists(obj):  # obj is sanitised
             self.log.error("_whatFilesystem: obj %s does not exist" % obj)
-            return
+            return None
 
         if self.localfilesystems is None:
             self._local_filesystems()
@@ -228,7 +228,7 @@ class PosixOperations(with_metaclass(Singleton, object)):
             fsid = os.stat(obj).st_dev  # this resolves symlinks
         except OSError:
             self.log.exception("Failed to get fsid from obj %s" % obj)
-            return
+            return None
 
         fss = [x for x in self.localfilesystems if x[self.localfilesystemnaming.index('id')] == fsid]
 
@@ -241,6 +241,7 @@ class PosixOperations(with_metaclass(Singleton, object)):
         else:
             self.log.debug("Found filesystem for obj %s: %s" % (obj, fss[0]))
             return fss[0]
+        return None
 
     def _local_filesystems(self):
         """What filesystems are mounted / available atm"""
@@ -388,11 +389,12 @@ class PosixOperations(with_metaclass(Singleton, object)):
         authorized_keys = os.path.join(home_dir, '.ssh', 'authorized_keys')
         default_dsa_key = os.path.join(home_dir, '.ssh', 'id_dsa.pub')
         default_rsa_key = os.path.join(home_dir, '.ssh', 'id_rsa.pub')
+        default_ed25519_key = os.path.join(home_dir, '.ssh', 'id_ed25519.pub')
         default_public_keys = []
         if self.dry_run:
             self.log.info("Writing ssh keys. Dry-run, so not really doing anything.")
         else:
-            for default_key in [default_dsa_key, default_rsa_key]:
+            for default_key in [default_dsa_key, default_rsa_key, default_ed25519_key]:
                 if os.path.exists(default_key):
                     fp = open(default_key, 'r')
                     default_public_keys.append(fp.readline())
