@@ -197,6 +197,8 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
                 self.log.raiseException(("Failed to find the initial field of the line: %s after fixup and "
                                          "splitting line into [%s, %s]") % (first_field, line, remainder))
 
+        return None
+
     def _assemble_fields(self, fields, out):
         """Assemble executeY output fields """
 
@@ -244,7 +246,7 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
             opts = list(opts)
         else:
             self.log.error("_executeY: have to use a list or tuple for options: name %s opts %s" % (name, opts))
-            return
+            return None
 
         if prefix:
             opts.insert(0, '-Y')
