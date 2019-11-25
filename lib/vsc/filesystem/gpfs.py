@@ -754,16 +754,18 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
         # at the end, rescan the filesets and force update the info
         self.list_filesets(update=True)
 
-    def set_user_quota(self, soft, user, obj=None, hard=None):
+    def set_user_quota(self, soft, user, obj=None, hard=None, inode_soft=None, inode_hard=None):
         """Set quota for a user.
 
         @type soft: integer representing the soft limit expressed in bytes
         @type user: string identifying the user
         @type grace: integer representing the grace period expressed in days
+        @type inode_soft: integer representing the soft files limit
+        @type inode_soft: integer representing the hard files quota
         """
-        self._set_quota(soft, who=user, obj=obj, typ='user', hard=hard)
+        self._set_quota(soft, who=user, obj=obj, typ='user', hard=hard, inode_soft=inode_soft, inode_hard=inode_hard)
 
-    def set_group_quota(self, soft, group, obj=None, hard=None):
+    def set_group_quota(self, soft, group, obj=None, hard=None, inode_soft=None, inode_hard=None):
         """Set quota for a group on a given object (e.g., a path in the filesystem, which may correpond to a fileset)
 
         @type soft: integer representing the soft limit expressed in bytes
@@ -771,16 +773,20 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
         @type obj: the object, whatever it is
         @type hard: integer representing the hard limit expressed in bytes. If None, then 1.05 * soft.
         @type grace: integer representing the grace period expressed in days
+        @type inode_soft: integer representing the soft files limit
+        @type inode_soft: integer representing the hard files quota
         """
-        self._set_quota(soft, who=group, obj=obj, typ='group', hard=hard)
+        self._set_quota(soft, who=group, obj=obj, typ='group', hard=hard, inode_soft=inode_soft, inode_hard=inode_hard)
 
-    def set_fileset_quota(self, soft, fileset_path, fileset_name=None, hard=None):
+    def set_fileset_quota(self, soft, fileset_path, fileset_name=None, hard=None, inode_soft=None, inode_hard=None):
         """Set quota on a fileset.
 
         @type soft: integer representing the soft limit expressed in bytes
         @type fileset_path: the linked path to the fileset
         @type hard: integer representing the hard limit expressed in bytes. If None, then 1.05 * soft.
         @type grace: integer representing the grace period expressed in days
+        @type inode_soft: integer representing the soft files limit
+        @type inode_soft: integer representing the hard files quota
         """
         # we need the corresponding fileset name
         if fileset_name is None:
@@ -792,7 +798,8 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
                 self.log.raiseException(("set_fileset_quota: attrs for obj %s don't have filestename property "
                                          "(attr: %s)") % (fileset_path, attr), GpfsOperationError)
 
-        self._set_quota(soft, who=fileset_name, obj=fileset_path, typ='fileset', hard=hard)
+        self._set_quota(soft, who=fileset_name, obj=fileset_path, typ='fileset', hard=hard,
+                        inode_soft=inode_soft, inode_hard=inode_hard)
 
     def set_user_grace(self, obj, grace=0):
         """Set the grace period for user data.
