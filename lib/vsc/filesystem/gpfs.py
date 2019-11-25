@@ -754,16 +754,18 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
         # at the end, rescan the filesets and force update the info
         self.list_filesets(update=True)
 
-    def set_user_quota(self, soft, user, obj=None, hard=None):
+    def set_user_quota(self, soft, user, obj=None, hard=None, inode_soft=None, inode_hard=None):
         """Set quota for a user.
 
         @type soft: integer representing the soft limit expressed in bytes
         @type user: string identifying the user
         @type grace: integer representing the grace period expressed in days
+        @type inode_soft: integer representing the soft files limit
+        @type inode_soft: integer representing the hard files quota
         """
-        self._set_quota(soft, who=user, obj=obj, typ='user', hard=hard)
+        self._set_quota(soft, who=user, obj=obj, typ='user', hard=hard, inode_soft=inode_soft, inode_hard=inode_hard)
 
-    def set_group_quota(self, soft, group, obj=None, hard=None):
+    def set_group_quota(self, soft, group, obj=None, hard=None, inode_soft=None, inode_hard=None):
         """Set quota for a group on a given object (e.g., a path in the filesystem, which may correpond to a fileset)
 
         @type soft: integer representing the soft limit expressed in bytes
@@ -771,16 +773,20 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
         @type obj: the object, whatever it is
         @type hard: integer representing the hard limit expressed in bytes. If None, then 1.05 * soft.
         @type grace: integer representing the grace period expressed in days
+        @type inode_soft: integer representing the soft files limit
+        @type inode_soft: integer representing the hard files quota
         """
-        self._set_quota(soft, who=group, obj=obj, typ='group', hard=hard)
+        self._set_quota(soft, who=group, obj=obj, typ='group', hard=hard, inode_soft=inode_soft, inode_hard=inode_hard)
 
-    def set_fileset_quota(self, soft, fileset_path, fileset_name=None, hard=None):
+    def set_fileset_quota(self, soft, fileset_path, fileset_name=None, hard=None, inode_soft=None, inode_hard=None):
         """Set quota on a fileset.
 
         @type soft: integer representing the soft limit expressed in bytes
         @type fileset_path: the linked path to the fileset
         @type hard: integer representing the hard limit expressed in bytes. If None, then 1.05 * soft.
         @type grace: integer representing the grace period expressed in days
+        @type inode_soft: integer representing the soft files limit
+        @type inode_soft: integer representing the hard files quota
         """
         # we need the corresponding fileset name
         if fileset_name is None:
@@ -792,7 +798,8 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
                 self.log.raiseException(("set_fileset_quota: attrs for obj %s don't have filestename property "
                                          "(attr: %s)") % (fileset_path, attr), GpfsOperationError)
 
-        self._set_quota(soft, who=fileset_name, obj=fileset_path, typ='fileset', hard=hard)
+        self._set_quota(soft, who=fileset_name, obj=fileset_path, typ='fileset', hard=hard,
+                        inode_soft=inode_soft, inode_hard=inode_hard)
 
     def set_user_grace(self, obj, grace=0):
         """Set the grace period for user data.
@@ -846,7 +853,7 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
         if ec > 0:
             self.log.raiseException("_set_grace: tssetquota with opts %s failed" % (opts), GpfsOperationError)
 
-    def _set_quota(self, soft, who, obj=None, typ='user', hard=None):
+    def _set_quota(self, soft, who, obj=None, typ='user', hard=None, inode_soft=None, inode_hard=None):
         """Set quota on the given object.
 
         @type soft: integer representing the soft limit expressed in bytes
@@ -856,8 +863,8 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
 
         @type who: identifier (eg username or userid) (is redefined with filesetname from mmlsattr for typ=fileset)
         @type grace: integer representing the grace period expressed in seconds.
-
-            current implementation only sets block limits, not on the inodes
+        @type inode_soft: integer representing the soft inodes quota
+        @type inode_hard: integer representing the hard inodes quota. If None, then 1.05 * inode_soft
         """
         """
         Usage:
@@ -888,10 +895,11 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
             self.log.raiseException("setQuota: can't set quota on none-existing obj %s" % obj, GpfsOperationError)
 
         # FIXME: this should be some constant or such
-        typ2opt = {'user': 'u',
-                   'group': 'g',
-                   'fileset': 'j',
-                   }
+        typ2opt = {
+            'user': 'u',
+            'group': 'g',
+            'fileset': 'j',
+        }
 
         soft2hard_factor = 1.05
 
@@ -904,11 +912,21 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
             hard = int(soft * soft2hard_factor)
         elif hard < soft:
             self.log.raiseException("setQuota: can't set hard limit %s lower then soft limit %s" %
-                                (hard, soft), GpfsOperationError)
+                                    (hard, soft), GpfsOperationError)
 
         opts += ["-%s" % typ2opt[typ], "%s" % who]
         opts += ["-s", "%sm" % int(soft / 1024 ** 2)]  # round to MB
         opts += ["-h", "%sm" % int(hard / 1024 ** 2)]  # round to MB
+
+        if inode_soft is not None:
+            if inode_hard is None:
+                inode_hard = int(inode_soft * soft2hard_factor)
+            elif inode_hard < inode_soft:
+                self.log.raiseException("setQuota: can't set hard inode limit %s lower then soft inode limit %s" %
+                                        (inode_hard, inode_soft), GpfsOperationError)
+
+            opts += ["-S", str(inode_soft)]
+            opts += ["-H", str(inode_hard)]
 
         opts.append(obj)
 
