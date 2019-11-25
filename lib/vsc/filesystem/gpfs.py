@@ -846,7 +846,7 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
         if ec > 0:
             self.log.raiseException("_set_grace: tssetquota with opts %s failed" % (opts), GpfsOperationError)
 
-    def _set_quota(self, soft, who, obj=None, typ='user', hard=None):
+    def _set_quota(self, soft, who, obj=None, typ='user', hard=None, inode_soft=None, inode_hard=None):
         """Set quota on the given object.
 
         @type soft: integer representing the soft limit expressed in bytes
@@ -856,8 +856,8 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
 
         @type who: identifier (eg username or userid) (is redefined with filesetname from mmlsattr for typ=fileset)
         @type grace: integer representing the grace period expressed in seconds.
-
-            current implementation only sets block limits, not on the inodes
+        @type inode_soft: integer representing the soft inodes quota
+        @type inode_hard: integer representing the hard inodes quota. If None, then 1.05 * inode_soft
         """
         """
         Usage:
@@ -888,10 +888,11 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
             self.log.raiseException("setQuota: can't set quota on none-existing obj %s" % obj, GpfsOperationError)
 
         # FIXME: this should be some constant or such
-        typ2opt = {'user': 'u',
-                   'group': 'g',
-                   'fileset': 'j',
-                   }
+        typ2opt = {
+            'user': 'u',
+            'group': 'g',
+            'fileset': 'j',
+        }
 
         soft2hard_factor = 1.05
 
@@ -904,11 +905,21 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
             hard = int(soft * soft2hard_factor)
         elif hard < soft:
             self.log.raiseException("setQuota: can't set hard limit %s lower then soft limit %s" %
-                                (hard, soft), GpfsOperationError)
+                                    (hard, soft), GpfsOperationError)
 
         opts += ["-%s" % typ2opt[typ], "%s" % who]
         opts += ["-s", "%sm" % int(soft / 1024 ** 2)]  # round to MB
         opts += ["-h", "%sm" % int(hard / 1024 ** 2)]  # round to MB
+
+        if inode_soft is not None:
+            if inode_hard is None:
+                inode_hard = int(inode_soft * soft2hard_factor)
+            elif inode_hard < inode_soft:
+                self.log.raiseException("setQuota: can't set hard inode limit %s lower then soft inode limit %s" %
+                                        (inode_hard, inode_soft), GpfsOperationError)
+
+            opts += ["-S", str(inode_soft)]
+            opts += ["-H", str(inode_hard)]
 
         opts.append(obj)
 

@@ -172,6 +172,16 @@ class ToolsTest(TestCase):
         self.assertTrue(all([isinstance(a, str) for a in args[0]]))
         self.assertTrue(all([len(s.split(" ")) == 1 for s in args[0]]))
 
+        gpfsi._set_quota(1024, 2540075, test_path, inode_soft=1000)
+        (args, _) = mock_execute.call_args
+        self.assertTrue("-S 1000" in ' '.join(args[0]))
+        self.assertTrue("-H 1050" in ' '.join(args[0]))
+
+        gpfsi._set_quota(1024, 2540075, test_path, inode_soft=2000, inode_hard=2123)
+        (args, _) = mock_execute.call_args
+        self.assertTrue("-S 2000" in ' '.join(args[0]))
+        self.assertTrue("-H 2123" in ' '.join(args[0]))
+
     @mock.patch('vsc.filesystem.gpfs.GpfsOperations._execute')
     def test_get_mmhealth(self, mock_exec):
 
