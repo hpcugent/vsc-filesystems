@@ -95,7 +95,7 @@ class PosixOperations(with_metaclass(Singleton, object)):
             try:
                 out = subprocess.check_output(cmd, shell=shell)
                 ec = 0
-            except subprocess.CalledProcessError, err:
+            except subprocess.CalledProcessError as err:
                 ec = err.returncode
                 out = "%s" % err
                 self.log.exception("_execute command [%s] failed: ec %s" % (cmd, ec))
@@ -320,7 +320,7 @@ class PosixOperations(with_metaclass(Singleton, object)):
                         self.log.info("Unlinking existing symlink. Dry-run so not really doing anything.")
                     else:
                         os.unlink(obj)
-                except OSError, _:
+                except OSError:
                     self.log.raiseException("Cannot unlink existing symlink from %s to %s" % (obj, target),
                                             PosixOperationError)
             else:
@@ -331,7 +331,7 @@ class PosixOperations(with_metaclass(Singleton, object)):
                 self.log.info("Linking %s to %s. Dry-run, so not really doing anything" % (obj, target))
             else:
                 os.symlink(target, obj)
-        except OSError, _:
+        except OSError:
             self.log.raiseException("Cannot create symlink from %s to %s" % (obj, target), PosixOperationError)
 
     def is_dir(self, obj=None):
