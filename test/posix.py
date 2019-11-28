@@ -20,6 +20,7 @@ Unit tests for vsc.filesystems.posix
 import mock
 import os
 import tempfile
+from collections import namedtuple
 
 from vsc.install.testing import TestCase
 
@@ -88,3 +89,123 @@ class PosixTest(TestCase):
         mock_unlink.assert_not_called()
 
         os.close(handle)
+
+    @mock.patch('vsc.filesystem.posix.os.stat')
+    @mock.patch('vsc.filesystem.posix.os.makedirs')
+    @mock.patch('vsc.filesystem.posix.os.chown')
+    @mock.patch('vsc.filesystem.posix.os.chmod')
+    def test_create_stat_dir_new(self, mock_chmod, mock_chown, mock_makedirs, mock_os_stat):
+        """
+        Test to see what happens if the dir already exists
+        """
+        mock_os_stat.side_effect = OSError('dir not found')
+        mock_chmod.result_value = True
+        mock_chown.result_value = True
+        mock_makedirs.result_value = None
+
+        test_uid = 2048
+        test_gid = 4096
+        test_path = '/tmp/test'
+        test_permissions = 0o711
+
+        self.po.create_stat_directory(test_path, test_permissions, test_uid, test_gid, False)
+
+        mock_os_stat.assert_called_with(test_path)
+        mock_makedirs.assert_called_with(test_path)
+        mock_chmod.assert_called_with(test_path, test_permissions)
+        mock_chown.assert_called_with(test_path, test_uid, test_gid)
+
+    @mock.patch('vsc.filesystem.posix.os.stat')
+    @mock.patch('vsc.filesystem.posix.os.makedirs')
+    @mock.patch('vsc.filesystem.posix.os.chown')
+    @mock.patch('vsc.filesystem.posix.os.chmod')
+    def test_create_stat_dir_existing_no_override_same_id(self, mock_chmod, mock_chown, mock_makedirs, mock_os_stat):
+        """
+        Test to see what happens if the dir already exists
+        """
+
+        test_uid = 2048
+        test_gid = 4096
+        test_path = '/tmp/test'
+        test_permissions = 0o711
+
+        Statinfo = namedtuple("Statinfo", ["st_uid", "st_gid"])
+        mock_os_stat.result_value = Statinfo(test_uid, test_gid)
+
+        self.po.create_stat_directory(test_path, test_permissions, test_uid, test_gid, False)
+
+        mock_os_stat.assert_called_with(test_path)
+        mock_makedirs.assert_not_called
+        mock_chmod.assert_not_called
+
+    @mock.patch('vsc.filesystem.posix.os.stat')
+    @mock.patch('vsc.filesystem.posix.os.makedirs')
+    @mock.patch('vsc.filesystem.posix.os.chown')
+    @mock.patch('vsc.filesystem.posix.os.chmod')
+    def test_create_stat_dir_existing_no_override_diff_uid(self, mock_chmod, mock_chown, mock_makedirs, mock_os_stat):
+
+        """
+        Test to see what happens if the dir already exists
+        """
+
+        test_uid = 2048
+        test_gid = 4096
+        test_path = '/tmp/test'
+        test_permissions = 0o711
+
+        Statinfo = namedtuple("Statinfo", ["st_uid", "st_gid"])
+        mock_os_stat.result_value = Statinfo(test_uid + 1, test_gid)
+
+        self.po.create_stat_directory(test_path, test_permissions, test_uid, test_gid, False)
+
+        mock_os_stat.assert_called_with(test_path)
+        mock_makedirs.assert_not_called
+        mock_chown.assert_called_with(test_path, test_uid, test_gid)
+
+    @mock.patch('vsc.filesystem.posix.os.stat')
+    @mock.patch('vsc.filesystem.posix.os.makedirs')
+    @mock.patch('vsc.filesystem.posix.os.chown')
+    @mock.patch('vsc.filesystem.posix.os.chmod')
+    def test_create_stat_dir_existing_no_override_diff_gid(self, mock_chmod, mock_chown, mock_makedirs, mock_os_stat):
+        """
+        Test to see what happens if the dir already exists
+        """
+
+        test_uid = 2048
+        test_gid = 4096
+        test_path = '/tmp/test'
+        test_permissions = 0o711
+
+        Statinfo = namedtuple("Statinfo", ["st_uid", "st_gid"])
+        mock_os_stat.result_value = Statinfo(test_uid, test_gid+1)
+
+        self.po.create_stat_directory(test_path, test_permissions, test_uid, test_gid, False)
+
+        mock_os_stat.assert_called_with(test_path)
+        mock_makedirs.assert_not_called
+        mock_chown.assert_called_with(test_path, test_uid, test_gid)
+
+    @mock.patch('vsc.filesystem.posix.os.stat')
+    @mock.patch('stat.S_IMODE')
+    @mock.patch('vsc.filesystem.posix.os.makedirs')
+    @mock.patch('vsc.filesystem.posix.os.chown')
+    @mock.patch('vsc.filesystem.posix.os.chmod')
+    def test_create_stat_dir_existing_override(self, mock_chmod, mock_chown, mock_makedirs, mock_stat_s_imode, mock_os_stat):
+        """
+        Test to see what happens if the dir already exists
+        """
+
+        test_uid = 2048
+        test_gid = 4096
+        test_path = '/tmp/test'
+        test_permissions = 0o711
+
+        Statinfo = namedtuple("Statinfo", ["st_uid", "st_gid"])
+        mock_os_stat.result_value = Statinfo(test_uid, test_gid)
+        mock_stat_s_imode.return_value = 0o755
+
+        self.po.create_stat_directory(test_path, test_permissions, test_uid, test_gid, True)
+
+        mock_os_stat.assert_called_with(test_path)
+        mock_makedirs.assert_not_called
+        mock_chmod.assert_called_with(test_path, test_permissions)
