@@ -23,8 +23,9 @@ General POSIX filesystem interaction (sort of replacement for linux_utils)
 import commands
 import errno
 import os
-import sys
+import stat
 import subprocess
+import sys
 
 from vsc.utils import fancylogger
 from vsc.utils.patterns import Singleton
@@ -544,3 +545,31 @@ class PosixOperations(with_metaclass(Singleton, object)):
         obj = self._sanity_check(obj)
         # if backup, take backup
         # if real, rename
+
+    def create_stat_directory(self, path, permissions, uid, gid, override_permissions=True):
+        """
+        Create a new directory if it does not exist and set permissions, ownership. Otherwise,
+        check the permissions and ownership and change if needed.
+        """
+        created = False
+        path = self._sanity_check(path)
+        try:
+            statinfo = os.stat(path)
+            self.log.debug("Path %s found.", path)
+        except OSError:
+            created = self.make_dir(path)
+            self.log.info("Created directory at %s" % (path,))
+
+        if created or (override_permissions and stat.S_IMODE(statinfo.st_mode) != permissions):
+            self.chmod(permissions, path)
+            self.log.info("Permissions changed for path %s to %s", path, permissions)
+        else:
+            self.log.debug("Path %s already exists with correct permissions" % (path,))
+
+        if created or statinfo.st_uid != uid or statinfo.st_gid != gid:
+            self.chown(uid, gid, path)
+            self.log.info("Ownership changed for path %s to %d, %d", path, uid, gid)
+        else:
+            self.log.debug("Path %s already exists with correct ownership" % (path,))
+
+        return created
