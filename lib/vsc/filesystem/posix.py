@@ -129,7 +129,7 @@ class PosixOperations(with_metaclass(Singleton, object)):
         if self.forceabsolutepath:
             if not os.path.isabs(obj):  # other test: obj.startswith(os.path.sep)
                 self.log.raiseException("_sanity_check check absolute path: obj %s is not an absolute path" % obj,
-                    PosixOperationError)
+                                        PosixOperationError)
                 return None
 
         # check if filesystem matches current class
@@ -147,8 +147,8 @@ class PosixOperations(with_metaclass(Singleton, object)):
                 else:
                     self.log.raiseException(
                         ("_sanity_check found filesystem %s for subpath %s of obj %s is "
-                            "not a supported filesystem (supported %s)")
-                            % (tmpfs[0], fp, obj, self.supportedfilesystems), PosixOperationError)
+                         "not a supported filesystem (supported %s)")
+                        % (tmpfs[0], fp, obj, self.supportedfilesystems), PosixOperationError)
 
         if filesystem is None:
             self.log.raiseException("_sanity_check no valid filesystem found for obj %s" % obj, PosixOperationError)
@@ -157,11 +157,11 @@ class PosixOperations(with_metaclass(Singleton, object)):
         if not obj == os.path.realpath(obj):
             # some part of the path is a symlink
             if self.ignorerealpathmismatch:
-                self.log.debug("_sanity_check obj %s doesn't correspond with realpath %s" % (obj,
-                    os.path.realpath(obj)))
+                self.log.debug("_sanity_check obj %s doesn't correspond with realpath %s"
+                               % (obj, os.path.realpath(obj)))
             else:
                 self.log.raiseException("_sanity_check obj %s doesn't correspond with realpath %s"
-                    % (obj, os.path.realpath(obj)), PosixOperationError)
+                                        % (obj, os.path.realpath(obj)), PosixOperationError)
                 return None
 
         return obj
@@ -237,7 +237,7 @@ class PosixOperations(with_metaclass(Singleton, object)):
                                     (obj, fsid, self.localfilesystems), PosixOperationError)
         elif len(fss) > 1:
             self.log.raiseException("More than one matching filesystem found for obj %s with "
-                "id %s (matched localfilesystems: %s)" % (obj, fsid, fss), PosixOperationError)
+                                    "id %s (matched localfilesystems: %s)" % (obj, fsid, fss), PosixOperationError)
         else:
             self.log.debug("Found filesystem for obj %s: %s" % (obj, fss[0]))
             return fss[0]
@@ -250,7 +250,7 @@ class PosixOperations(with_metaclass(Singleton, object)):
             self.log.raiseException("Missing Linux OS overview of mounts %s" % OS_LINUX_MOUNTS, PosixOperationError)
         if not os.path.isfile(OS_LINUX_FILESYSTEMS):
             self.log.raiseException("Missing Linux OS overview of filesystems %s" % OS_LINUX_FILESYSTEMS,
-                PosixOperationError)
+                                    PosixOperationError)
 
         try:
             currentmounts = [x.strip().split(" ") for x in open(OS_LINUX_MOUNTS).readlines()]
@@ -491,7 +491,7 @@ class PosixOperations(with_metaclass(Singleton, object)):
         try:
             if self.dry_run:
                 self.log.info("Chown on %s to %s:%s. Dry-run, so not actually changing this ownership"
-                    % (obj, owner, group))
+                              % (obj, owner, group))
             else:
                 os.chown(obj, owner, group)
         except OSError:
@@ -511,7 +511,7 @@ class PosixOperations(with_metaclass(Singleton, object)):
         try:
             if self.dry_run:
                 self.log.info("Chmod on %s to %s. Dry-run, so not actually changing access permissions"
-                    % (obj, permissions))
+                              % (obj, permissions))
             else:
                 os.chmod(obj, permissions)
         except OSError:
