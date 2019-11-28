@@ -29,6 +29,9 @@ setup.cfg
 #Mr Developer
 .mr.developer.cfg
 
+# Vim
+.*.sw[op]
+
 html
 test-reports
 
