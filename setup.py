@@ -27,6 +27,7 @@ PACKAGE = {
     'version': '0.50.0',
     'author': [sdw, ag, kh],
     'maintainer': [sdw, ag, kh, kw, wdp],
+    'setup_requires': ['vsc-install >= 0.15.2'],
     'tests_require': ['mock'],
     'install_requires': [
         'vsc-base >= 3.0.3',
