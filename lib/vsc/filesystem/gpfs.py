@@ -27,7 +27,7 @@ import os
 import re
 
 from collections import namedtuple
-from urllib import unquote as percentdecode
+from vsc.utils.py2vs3 import unquote as percentdecode
 from socket import gethostname
 from itertools import dropwhile
 

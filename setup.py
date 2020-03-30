@@ -29,9 +29,9 @@ PACKAGE = {
     'maintainer': [sdw, ag, kh, kw, wdp],
     'tests_require': ['mock'],
     'install_requires': [
-        'vsc-base >= 2.4.16',
-        'vsc-config >= 2.0.2',
-        'vsc-utils >= 1.4.6',
+        'vsc-base >= 3.0.3',
+        'vsc-config >= 3.0.0',
+        'vsc-utils >= 2.0.0',
         'future >= 0.16.0',
     ],
 }

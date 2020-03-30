@@ -18,6 +18,8 @@ Tests for the gpfs library.
 
 @author: Andy Georges (Ghent University)
 """
+from __future__ import print_function
+
 import mock
 import os
 import vsc.filesystem.gpfs as gpfs
@@ -265,7 +267,7 @@ mmhealth:State:0:1:::test01.gastly.data:OBJECT:test01.gastly.data:NODE:DISABLED:
         }
         mock_exec.return_value = (0, mmhealth_more_out)
         res = gpfsi.get_mmhealth_state()
-        print res
+        print(res)
         self.assertEqual(res, expected_res)
 
 
