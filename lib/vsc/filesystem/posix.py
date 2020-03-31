@@ -296,7 +296,7 @@ class PosixOperations(with_metaclass(Singleton, object)):
                     target_ = os.path.realpath(target)
                     os.unlink(target)
                     target = self._sanity_check(target_)
-        else:
+        elif not self.dry_run:
             self.log.raiseException("Target %s does not exist, cannot make symlink to it" % (target),
                                     PosixOperationError)
 
