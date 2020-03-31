@@ -24,14 +24,15 @@ from vsc.install.shared_setup import ag, kh, sdw, kw, wdp
 
 
 PACKAGE = {
-    'version': '0.40.1',
+    'version': '1.0.1',
     'author': [sdw, ag, kh],
     'maintainer': [sdw, ag, kh, kw, wdp],
+    'setup_requires': ['vsc-install >= 0.15.2'],
     'tests_require': ['mock'],
     'install_requires': [
-        'vsc-base >= 2.4.16',
-        'vsc-config >= 2.0.2',
-        'vsc-utils >= 1.4.6',
+        'vsc-base >= 3.0.3',
+        'vsc-config >= 3.0.0',
+        'vsc-utils >= 2.0.0',
         'future >= 0.16.0',
     ],
 }

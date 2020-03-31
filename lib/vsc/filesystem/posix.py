@@ -1,6 +1,6 @@
 # -*- coding: latin-1 -*-
 #
-# Copyright 2009-2019 Ghent University
+# Copyright 2009-2020 Ghent University
 #
 # This file is part of vsc-filesystems,
 # originally created by the HPC team of Ghent University (http://ugent.be/hpc/en),
@@ -20,12 +20,10 @@ General POSIX filesystem interaction (sort of replacement for linux_utils)
 """
 
 
-import commands
 import errno
 import os
 import stat
 import subprocess
-import sys
 
 from vsc.utils import fancylogger
 from vsc.utils.patterns import Singleton
@@ -92,24 +90,13 @@ class PosixOperations(with_metaclass(Singleton, object)):
             return 0, ""
 
         # Executes and captures the output of a succesful run.
-        if sys.hexversion >= 0x020700F0:
-            try:
-                out = subprocess.check_output(cmd, shell=shell)
-                ec = 0
-            except subprocess.CalledProcessError as err:
-                ec = err.returncode
-                out = "%s" % err
-                self.log.exception("_execute command [%s] failed: ec %s" % (cmd, ec))
-        else:
-            if shell:
-                cmdtxt = cmd
-            else:
-                cmdtxt = " ".join(["%s" % x for x in cmd])
-                self.log.debug("_execute converted cmd %s in cmdtxt %s" % (cmd, cmdtxt))
-
-            (ec, out) = commands.getstatusoutput("%s" % cmdtxt)
-            if ec > 0:
-                self.log.exception("_execute command [%s] failed: ec %s" % (cmd, ec))
+        try:
+            out = subprocess.check_output(cmd, shell=shell)
+            ec = 0
+        except subprocess.CalledProcessError as err:
+            ec = err.returncode
+            out = "%s" % err
+            self.log.exception("_execute command [%s] failed: ec %s" % (cmd, ec))
 
         return ec, out
 

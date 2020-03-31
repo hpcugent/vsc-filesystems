@@ -1,6 +1,6 @@
 # -*- coding: latin-1 -*-
 #
-# Copyright 2009-2019 Ghent University
+# Copyright 2009-2020 Ghent University
 #
 # This file is part of vsc-filesystems,
 # originally created by the HPC team of Ghent University (http://ugent.be/hpc/en),
@@ -27,9 +27,9 @@ import os
 import re
 
 from collections import namedtuple
-from urllib import unquote as percentdecode
+from vsc.utils.py2vs3 import unquote as percentdecode
 from socket import gethostname
-from itertools import dropwhile, ifilter
+from itertools import dropwhile
 
 from vsc.config.base import GPFS_DEFAULT_INODE_LIMIT
 from vsc.filesystem.posix import PosixOperations, PosixOperationError
@@ -282,8 +282,7 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
             rest = {}
             for typ in ('State', 'Event'):
                 try:
-                    filt = ifilter(lambda x: x[1] == typ, what)
-                    fields = [(len(x), x) for x in filt]
+                    fields = [(len(x), x) for x in what if x[1] == typ]
                 except IndexError:
                     self.log.raiseException("No valid lines for output: %s" % (out), GpfsOperationError)
                 if len(fields):
