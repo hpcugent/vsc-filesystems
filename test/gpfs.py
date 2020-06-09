@@ -20,8 +20,8 @@ Tests for the gpfs library.
 """
 from __future__ import print_function
 
-import mock
 import os
+import mock
 import vsc.filesystem.gpfs as gpfs
 
 from vsc.install.testing import TestCase
@@ -115,11 +115,11 @@ class ToolsTest(TestCase):
     def test_create_filesystem_snapshot(self, mock_list, mock_exec):
         mock_list.return_value = ['autumn_20151012', 'okt_20151028']
         gpfsi = gpfs.GpfsOperations()
-        self.assertEqual(gpfsi.create_filesystem_snapshot('fstest', 'okt_20151028'),0)
+        self.assertEqual(gpfsi.create_filesystem_snapshot('fstest', 'okt_20151028'), 0)
         mock_exec.return_value = (1, 'mocked!')
         self.assertRaises(gpfs.GpfsOperationError, gpfsi.create_filesystem_snapshot, 'fstest', '@backup')
         mock_exec.assert_called_once_with('mmcrsnapshot', ['fstest', '@backup'], True)
-        mock_exec.return_value =( 0, 'mocked!')
+        mock_exec.return_value = (0, 'mocked!')
         self.assertTrue(gpfsi.create_filesystem_snapshot('fstest', 'backup'))
 
     @mock.patch('vsc.filesystem.gpfs.GpfsOperations._execute')
@@ -127,7 +127,7 @@ class ToolsTest(TestCase):
     def test_delete_filesystem_snapshot(self, mock_list, mock_exec):
         mock_list.return_value = ['autumn_20151012', 'okt_20151028']
         gpfsi = gpfs.GpfsOperations()
-        self.assertEqual(gpfsi.delete_filesystem_snapshot('fstest', 'backup'),0)
+        self.assertEqual(gpfsi.delete_filesystem_snapshot('fstest', 'backup'), 0)
         mock_exec.return_value = (1, 'mocked!')
         self.assertRaises(gpfs.GpfsOperationError, gpfsi.delete_filesystem_snapshot, 'fstest', 'autumn_20151012')
         mock_exec.assert_called_once_with('mmdelsnapshot', ['fstest', 'autumn_20151012'], True)
@@ -147,7 +147,7 @@ class ToolsTest(TestCase):
         gpfsi = gpfs.GpfsOperations()
         mock_execute.return_value = (0, "")
 
-        gpfsi._set_grace(test_path, 'user', 7*24*60*60)
+        gpfsi._set_grace(test_path, 'user', 7 * 24 * 60 * 60)
 
         (args, _) = mock_execute.call_args
         self.assertTrue(isinstance(args[0], list))
@@ -213,7 +213,7 @@ mmhealth:State:0:1:::storage2206.shuppet.gent.vsc:HADOOPCONNECTOR:storage2206.sh
             'HADOOPCONNECTOR_storage2206.shuppet.gent.vsc': 'DEGRADED',
             'NETWORK_storage2206.shuppet.gent.vsc': 'HEALTHY',
             'NODE_storage2206.shuppet.gent.vsc': 'FAILED'}
-        
+
         mock_exec.assert_called_once_with('mmhealth', ['node', 'show', '-Y'])
         self.assertEqual(res, expected_res)
 
@@ -269,5 +269,3 @@ mmhealth:State:0:1:::test01.gastly.data:OBJECT:test01.gastly.data:NODE:DISABLED:
         res = gpfsi.get_mmhealth_state()
         print(res)
         self.assertEqual(res, expected_res)
-
-
