@@ -65,6 +65,7 @@ def split_output_lines(out):
     Takes into acount that some lines may end in a :, some might not. If the header exhibits no colon,
     the field count might be off and we might not be able to parse the output as expected.
     """
+    out = out.strip().split('\n')
     header_ends_in_colon = out[0][-1] == ":"
 
     def clean(line):
@@ -73,7 +74,7 @@ def split_output_lines(out):
         else:
             return line
 
-    return [[percentdecode(y) for y in clean(x).strip().split(':')] for x in out.strip().split('\n')]
+    return [[percentdecode(y) for y in clean(x).strip().split(':')] for x in out]
 
 
 class GpfsOperationError(PosixOperationError):
@@ -379,7 +380,7 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
             for (key, value) in res.items():
                 info[key] = value
 
-        datakeys = info.keys()
+        datakeys = list(info.keys())
         datakeys.remove('filesystemName')
         datakeys.remove('quotaType')
         datakeys.remove('id')
@@ -456,7 +457,7 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
             for (key, value) in res.items():
                 info[key] = value
 
-        datakeys = info.keys()
+        datakeys = list(info.keys())
         datakeys.remove('filesystemName')
         datakeys.remove('id')
 
@@ -516,10 +517,10 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
         shorthn = gethostname().split('.')[0]
 
         infoL = self._executeY('mmlsdisk', [device, '-L'])
-        keysL = infoL.keys()
+        keysL = list(infoL.keys())
         keysL.remove('nsdName')
         infoM = self._executeY('mmlsdisk', [device, '-M'])
-        keysM = infoM.keys()
+        keysM = list(infoM.keys())
         keysM.remove('nsdName')
 
         # sanity check
