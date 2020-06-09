@@ -26,7 +26,7 @@ import stat
 
 from vsc.utils import fancylogger
 from vsc.utils.patterns import Singleton
-from vsc.utils.run import run
+from vsc.utils.run import asyncloop
 from future.utils import with_metaclass
 
 OS_LINUX_MOUNTS = '/proc/mounts'
@@ -77,7 +77,7 @@ class PosixOperations(with_metaclass(Singleton, object)):
             return 0, ""
 
         # Executes and captures the output of a succesful run.
-        ec, out = run(cmd)
+        ec, out = asyncloop(cmd)
 
         if ec:
             self.log.exception("_execute command [%s] failed: ec %s, out=%s", cmd, ec, out)
