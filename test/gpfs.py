@@ -38,16 +38,16 @@ class ToolsTest(TestCase):
         """
 
         test_lines = "\n".join([
-            "this:is:the:header:line"
-            "and:here:is:line:1"
-            "and:here:is:line:2"
-            "and:here:is:line:3"
-            "and:here:is:line:4"
+            "this:is:the:header:line",
+            "and:here:is:line:1",
+            "and:here:is:line:2",
+            "and:here:is:line:3",
+            "and:here:is:line:4",
         ])
 
         split_lines = gpfs.split_output_lines(test_lines)
 
-        self.assertTrue(len(set(map(len, split_lines))) == 1)  # all lines have the same number of fields
+        self.assertEqual(set(map(len, split_lines)), {5})  # all lines have the same number of fields
 
     def test_split_output_lines_with_header_colon(self):
         """
@@ -55,16 +55,16 @@ class ToolsTest(TestCase):
         """
 
         test_lines = "\n".join([
-            "this:is:the:header:line:"
-            "and:here:is:line:1"
-            "and:here:is:line:2"
-            "and:here:is:line:3"
-            "and:here:is:line:4"
+            "this:is:the:header:line:",
+            "and:here:is:line:1",
+            "and:here:is:line:2",
+            "and:here:is:line:3",
+            "and:here:is:line:4",
         ])
 
         split_lines = gpfs.split_output_lines(test_lines)
 
-        self.assertTrue(len(set(map(len, split_lines))) == 1)  # all lines have the same number of fields
+        self.assertEqual(set(map(len, split_lines)), {6})  # all lines have the same number of fields
 
     def test_split_output_lines_with_header_colon_colons(self):
         """
@@ -72,16 +72,16 @@ class ToolsTest(TestCase):
         """
 
         test_lines = "\n".join([
-            "this:is:the:header:line:"
-            "and:here:is:line:1:"
-            "and:here:is:line:2:"
-            "and:here:is:line:3:"
-            "and:here:is:line:4:"
+            "this:is:the:header:line:",
+            "and:here:is:line:1:",
+            "and:here:is:line:2:",
+            "and:here:is:line:3:",
+            "and:here:is:line:4:",
         ])
 
         split_lines = gpfs.split_output_lines(test_lines)
 
-        self.assertTrue(len(set(map(len, split_lines))) == 1)  # all lines have the same number of fields
+        self.assertEqual(set(map(len, split_lines)), {6})  # all lines have the same number of fields
 
     def test_split_output_lines_without_header_colon_colons(self):
         """
@@ -89,16 +89,16 @@ class ToolsTest(TestCase):
         """
 
         test_lines = "\n".join([
-            "this:is:the:header:line"
-            "and:here:is:line:1:"
-            "and:here:is:line:2:"
-            "and:here:is:line:3:"
-            "and:here:is:line:4:"
+            "this:is:the:header:line",
+            "and:here:is:line:1:",
+            "and:here:is:line:2:",
+            "and:here:is:line:3:",
+            "and:here:is:line:4:",
         ])
 
         split_lines = gpfs.split_output_lines(test_lines)
 
-        self.assertTrue(len(set(map(len, split_lines))) == 1)  # all lines have the same number of fields
+        self.assertEqual(set(map(len, split_lines)), {5})  # all lines have the same number of fields
 
     @mock.patch('vsc.filesystem.gpfs.GpfsOperations._execute')
     def test_list_snapshots(self, mock_exec):
