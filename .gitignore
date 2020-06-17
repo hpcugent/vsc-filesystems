@@ -31,7 +31,7 @@ setup.cfg
 .mr.developer.cfg
 
 # Vim
-.*.sw[op]
+*.sw[op]
 
 html
 test-reports
