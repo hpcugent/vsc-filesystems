@@ -43,9 +43,9 @@ typ2opt = {
     'project': 'p',
 }
 typ2param = {
-    'user': 'usr',
-    'group': 'grp',
-    'fileset': 'prj',
+    'USR': 'usr',
+    'GRP': 'grp',
+    'FILESET': 'prj',
 }
 quotyp2param = {
     'block': 'dt',
@@ -55,12 +55,50 @@ quotyp2param = {
 class LustreOperationError(PosixOperationError):
     pass
 
+class LustreVscFsError(Exception):
+    pass
+
+class LustreVscFS():
+    """Default class for a vsc managed Lustre file system
+        Since Lustre doesn't have a 'lsfileset' kind of command,
+        we need some hints to defining names, ids and mappings
+        This can be a regular mapping function/hash,saved in some special file on lustre,..
+        Alternatively we could replace this by changing the API
+    """
+
+    def __init__(self, mountpoint, project_locations, projectid_maps):
+
+        self.mountpoint = mountpoint
+        self.project_locations = project_locations
+        self.projectid_maps = projectid_maps
+        self.pjparser = re.compile("([a-zA-Z]+)([0-9]+)")
+
+        def pjid_from_name(self, name):
+            """ This only generates an id based on name and should be sanity_checked before using """
+            prefix, pjid = self.pjparser.match(name).groups()
+            if prefix in self.projectid_maps.keys():
+                return self.projectid_maps[prefix] + int(pjid)
+            else:
+                self.log.raiseException("_pjid_from_name: project prefix %s not recognized" % prefix, LustreVscFSError)
+
+
+
+class LustreVscGhentScratchFs(LustreVscFs):
+    """ Make some assumptions on where to find filesets
+        This could also be extended to be done by importing config files """
+    def __init__(self, mountpoint):
+
+        project_locations = ['gent/vo/*']
+        projectid_maps = { 'gvo' : 900000 }
+        super(LustreVscGhentScratchFs, self).__init__(mountpoint, project_locations, projectid_maps)
+
 
 class LustreOperations(with_metaclass(Singleton, PosixOperations)):
 
     def __init__(self):
         super(LustreOperations, self).__init__()
         self.supportedfilesystems = ['lustre']
+        self.filesystems = {}
 
 
     # pylint: disable=arguments-differ
@@ -99,7 +137,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
 
         """
         if typ not in typ2param:
-            self.log.raiseException("_execute_lctl_get_param_qmt_yaml: unsupported type %s. Use user,group or project"
+            self.log.raiseException("_execute_lctl_get_param_qmt_yaml: unsupported type %s. Use USR,GRP or FILESET"
                     % typ, LustreOperationError)
         if quotyp not in quotyp2param:
             self.log.raiseException("_execute_lctl_get_param_qmt_yaml: unsupported type %s. Use 'block' or 'inode'" %
@@ -131,15 +169,56 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
 
         return ec, res
 
+    def list_filesystems(self):
 
-    def _get_fileset_name(self, projectid):
-        return projectid
+    def get_fs_for_path(self, path):
 
-    def get_project_id(self, fileset_name):
-        pass
+        fs = self.what_filesystem(path)
+        fsname = fs[3].split(':/')[1]
+        fsmount = fs[1]
+        if not self.filesystems[fsname]:
+            # TODO: Ideally this is set up from immutable config of some sorts instead of hard coded
+            # Or need API change)
+            self.filesystems[fsname] = LustreVscGhentScratchFs(fsmount)
+        return self.filesystems[fsname]
+
+    def map_project_id(self, project_path, fileset_name):
+        fs = self.get_fs_for_path(project_path)
+        return fs.pjid_from_name(fileset_name)
+
+    def set_new_project_id(self, project_path, fileset_name):
+
+        if not self.get_project_id(project_path, False):
+            pjid = self.map_project_id(project_path, fileset_name)
+            # recursive and inheritance flag set
+            opts = ['-p', pjid, '-r', '-s', project_path]
+            ec, res = self._execute_lfs('project', opts)
+            if ec == 0:
+                return pjid
+            else:
+                self.log.raiseException("Could not set new projectid %s for path %s" % (pjid, project_path),
+                    LustreOperationError)
+        else:
+            self.log.raiseException("Path %s already has a projectid" % project_path, LustreOperationError)
+
+    def get_project_id(self, project_path, existing=True):
+        opts = ['-d', project_path]
+
+        ec, res = self._execute_lfs('project', opts)
+        pjid, flag, path = res.split()
+        if flag == 'P' and path == project_path:
+            return pjid
+        elif existing:
+            self.log.raiseException("Something went wrong fetching project id for %s. Output was %s"
+                    % (project_path, res), LustreOperationError)
+        else:
+            self.log.debug('path has no pjid set')
+            return None
+
 
     def list_quota(self, devices):
         """get quota info for filesystems for all user,group,project
+            Output has been remapped to format of gpfs.py
                 dict: key = deviceName, value is
                     dict with key quotaType (user | group | fileset) value is dict with
                         key = id, value dict with
@@ -154,14 +233,12 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         quota = {}
         for fsname in devices:
             quota[fsname] = {}
-            for typ in ('user', 'group', 'fileset'):
+            for typ in typ2param.keys():
                 quota[fsname][typ] = {};
                 blockres = self._execute_lctl_get_param_qmt_yaml(fsname, typ, 'block')
                 inoderes = self._execute_lctl_get_param_qmt_yaml(fsname, typ, 'inode')
                 for qentry in blockres:
                     qid = qentry['id']
-                    if typ == 'fileset':
-                        qid = self._get_fileset_name(qid)
                     qlim = qentry['limits']
                     qinfo = {
                         'name': qid,
@@ -182,10 +259,10 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
                     })
                     quota[fsname][typ][qid] = [LustreQuota(**quota[fsname][typ][qid])]
 
-
+        self.quota_cached = quota
         return quota
 
-    def list_filesets(self, devices, filesetnames=None):
+    def list_filesets(self, devices=None,  ):
         """
         Get all the filesets for one or more specific devices
 
@@ -199,26 +276,19 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         if isinstance(devices, str):
             devices = [devices]
 
-        if filesetnames is not None:
-            if isinstance(filesetnames, str):
-                filesetnames = [filesetnames]
-
-            filesetnamestxt = ','.join(filesetnames)
-            opts.append(filesetnamestxt)
-
         self.log.debug("Looking up filesets for devices %s" % (devices))
 
         return res
 
 
-    def make_fileset(self, new_fileset_path, fileset_name=None, inodes_max=None):
+    def make_fileset(self, new_fileset_path, fileset_name=None, inodes_max=1048576):
         """
-        Given path, create a new fileset and link it to said path
+        Given path, create a new directory and set file quota
           - check uniqueness
 
-        @type new_fileset_path: string representing the full path where the new fileset should be linked to
+        @type new_fileset_path: string representing the full path where the new fileset should be
         @type fileset_name: string representing the name of the new fileset
-        @type inodes_max: int representing maximal number of inodes to allocate for this fileset
+        @type inodes_max: int representing file quota
 
         """
 
@@ -229,35 +299,31 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
             self.log.raiseException(("makeFileset for new_fileset_path %s returned sane fsetpath %s,"
                                      " but it already exists.") % (new_fileset_path, fsetpath), LustreOperationError)
 
-        # choose unique name
         parentfsetpath = os.path.dirname(fsetpath)
         if not self.exists(parentfsetpath):
             self.log.raiseException(("parent dir %s of fsetpath %s does not exist. Not going to create it "
                                      "automatically.") % (parentfsetpath, fsetpath), LustreOperationError)
 
-        fs = self.what_filesystem(parentfsetpath)
-
         if fileset_name is None:
-            # guess the device from the pathname
-            mntpt = fs[self.localfilesystemnaming.index('mountpoint')]
-            if fsetpath.startswith(mntpt):
-                lastpart = fsetpath.split(os.sep)[len(mntpt.split(os.sep)):]
-                fileset_name = "_".join(lastpart)
-            else:
-                fileset_name = os.path.basedir(fsetpath)
-                self.log.error("fsetpath %s doesn't start with mntpt %s. using basedir %s" %
-                               (fsetpath, mntpt, fileset_name))
+            self.log.raiseException('fileset name is mandatory')
 
-        # bail if there is a fileset with the same name or the same link location, i.e., path
-        for efset in self.localfilesets[founddevice].values():
-            efsetpath = efset.get('path', None)
-            efsetname = efset.get('filesetName', None)
-            if efsetpath == fsetpath or efsetname == fileset_name:
-                self.log.raiseException(("Found existing fileset %s that has same path %s or same name %s as new "
-                                         "path %s or new name %s") %
-                                        (efset, efsetpath, efsetname, fsetpath, fileset_name), LustreOperationError)
-        # create the fileset: dir and project
-        # set the inodes quota
+        fs = self.what_filesystem(parentfsetpath)
+        fsname = fs[3].split(':/')[1]
+
+        fsinfo = self.get_fileset_info(fsname, fileset_name)
+        if not fsinfo:
+            self.make_dir(fsetpath)
+            project = self.set_new_project_id(fsetpath, fileset_name)
+            # set inode quota
+            self._set_quota(who=project, obj=fileset_path, typ='project',inode_soft=inodes_max, inode_hard=inodes_max)
+
+            pass
+            # create the fileset: dir and project
+        else:
+        # bail if there is a fileset with the same name
+            self.log.raiseException(("Found existing fileset %s with the same name at %s ") %
+                                        (fileset_name, fsinfo['path']), LustreOperationError)
+
 
 
     def set_user_quota(self, soft, user, obj=None, hard=None, inode_soft=None, inode_hard=None):
@@ -270,7 +336,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         @type inode_soft: integer representing the soft files limit
         @type inode_soft: integer representing the hard files quota
         """
-        self._set_quota(soft, who=user, obj=obj, typ='user', hard=hard, inode_soft=inode_soft, inode_hard=inode_hard)
+        self._set_quota(who=user, obj=obj, typ='user', soft=soft, hard=hard, inode_soft=inode_soft, inode_hard=inode_hard)
 
     def set_group_quota(self, soft, group, obj=None, hard=None, inode_soft=None, inode_hard=None):
         """Set quota for a group on a given object (e.g., a path in the filesystem, which may correpond to a fileset)
@@ -282,7 +348,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         @type inode_soft: integer representing the soft files limit
         @type inode_soft: integer representing the hard files quota
         """
-        self._set_quota(soft, who=group, obj=obj, typ='group', hard=hard, inode_soft=inode_soft, inode_hard=inode_hard)
+        self._set_quota(who=group, obj=obj, typ='group', soft=soft, hard=hard, inode_soft=inode_soft, inode_hard=inode_hard)
 
     def set_fileset_quota(self, soft, fileset_path, hard=None, inode_soft=None, inode_hard=None):
         """Set quota on a fileset. This maps to projects in Lustre
@@ -295,7 +361,10 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         """
         # we need the corresponding project id
         project = self._get_project_id(fileset_path)
-        self._set_quota(soft, who=project, obj=fileset_path, typ='project', hard=hard,
+        if int(project) == 0:
+            self.log.raiseException("Can not set quota for fileset with projectid 0", LustreOperationError)
+        else:
+            self._set_quota(who=project, obj=fileset_path, typ='project', soft=soft, hard=hard,
                         inode_soft=inode_soft, inode_hard=inode_hard)
 
     def set_user_grace(self, obj, grace=0):
@@ -368,7 +437,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         return res
 
 
-    def _set_quota(self, soft, who, obj, typ='user', hard=None, inode_soft=None, inode_hard=None):
+    def _set_quota(self, who, obj, typ='user', soft=None, hard=None, inode_soft=None, inode_hard=None):
         """Set quota on the given object.
 
         @type soft: integer representing the soft limit expressed in bytes
