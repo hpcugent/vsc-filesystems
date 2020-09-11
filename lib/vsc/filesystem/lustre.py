@@ -19,44 +19,44 @@ LUSTRE specialised interface
 @author: Kenneth Waegeman (Ghent University)
 """
 from __future__ import print_function
-from future.utils import with_metaclass
 
-import copy
 import os
 import re
-import yaml
 
 from collections import namedtuple
-from vsc.utils.py2vs3 import unquote as percentdecode
 
 from vsc.filesystem.posix import PosixOperations, PosixOperationError
 from vsc.utils.patterns import Singleton
+from vsc.utils import fancylogger
+
+from future.utils import with_metaclass
+import yaml
 
 LustreQuota = namedtuple('LustreQuota',
     ['name',
-     'blockUsage', 'blockQuota', 'blockLimit', 'blockGrace',
-     'filesUsage', 'filesQuota', 'filesLimit', 'filesGrace',])
+        'blockUsage', 'blockQuota', 'blockLimit', 'blockGrace', 'blockInDoubt',
+        'filesUsage', 'filesQuota', 'filesLimit', 'filesGrace', 'filesInDoubt'])
 
-typ2opt = {
+TYP2OPT = {
     'user': 'u',
     'group': 'g',
     'project': 'p',
 }
-typ2param = {
+TYP2PARAM = {
     'USR': 'usr',
     'GRP': 'grp',
     'FILESET': 'prj',
 }
-quotyp2param = {
+QUOTYP2PARAM = {
     'block': 'dt',
     'inode': 'md',
 }
 
 class LustreOperationError(PosixOperationError):
-    pass
+    """ Lustre Error """
 
-class LustreVscFsError(Exception):
-    pass
+class LustreVscFSError(Exception):
+    """ LustreVSCFS Error """
 
 class LustreVscFS():
     """Default class for a vsc managed Lustre file system
@@ -68,37 +68,43 @@ class LustreVscFS():
 
     def __init__(self, mountpoint, project_locations, projectid_maps):
 
+        self.log = fancylogger.getLogger(name=self.__class__.__name__, fname=False)
         self.mountpoint = mountpoint
         self.project_locations = project_locations
         self.projectid_maps = projectid_maps
         self.pjparser = re.compile("([a-zA-Z]+)([0-9]+)")
 
-        def pjid_from_name(self, name):
-            """ This only generates an id based on name and should be sanity_checked before using """
-            prefix, pjid = self.pjparser.match(name).groups()
-            if prefix in self.projectid_maps.keys():
-                return self.projectid_maps[prefix] + int(pjid)
-            else:
-                self.log.raiseException("_pjid_from_name: project prefix %s not recognized" % prefix, LustreVscFSError)
-
-        def get_search_paths(self):
-            res = []
-            for loc in self.project_locations:
-                res.append(os.path.join(self.mountpoint, loc))
+    def pjid_from_name(self, name):
+        """ This only generates an id based on name and should be sanity_checked before using """
+        prefix, pjid = self.pjparser.match(name).groups()
+        if prefix in self.projectid_maps.keys():
+            res = self.projectid_maps[prefix] + int(pjid)
             return res
+        else:
+            self.log.raiseException("_pjid_from_name: project prefix %s not recognized" % prefix, LustreVscFSError)
+            return None
+
+    def get_search_paths(self):
+        """ Get all the paths we should look for projects """
+        res = []
+        for loc in self.project_locations:
+            res.append(os.path.join(self.mountpoint, loc))
+        return res
 
 
-class LustreVscGhentScratchFs(LustreVscFs):
+class LustreVscGhentScratchFs(LustreVscFS):
     """ Make some assumptions on where to find filesets
         This could also be extended to be done by importing config files """
+
     def __init__(self, mountpoint):
 
         project_locations = ['gent', 'gent/vo/*']
-        projectid_maps = { 'gvo' : 900000 }
+        projectid_maps = {'gvo' : 900000}
         super(LustreVscGhentScratchFs, self).__init__(mountpoint, project_locations, projectid_maps)
 
 
 class LustreOperations(with_metaclass(Singleton, PosixOperations)):
+    """ Lustre Operations """
 
     def __init__(self):
         super(LustreOperations, self).__init__()
@@ -119,7 +125,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
                 cmd += list(opts)
             else:
                 self.log.raiseException("_execute_lfs: please use a list or tuple for options: cmd %s opts %s" %
-                                        (cmdname, opts), LustreOperationError)
+                                        (cmd, opts), LustreOperationError)
 
         ec, out = self._execute(cmd, changes)
 
@@ -142,21 +148,22 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
           limits:  { hard:   0, soft:   0, granted:  0, time: 281474976710656 }
 
         """
-        if typ not in typ2param:
+        if typ not in TYP2PARAM:
             self.log.raiseException("_execute_lctl_get_param_qmt_yaml: unsupported type %s. Use USR,GRP or FILESET"
-                    % typ, LustreOperationError)
-        if quotyp not in quotyp2param:
+                % typ, LustreOperationError)
+        if quotyp not in QUOTYP2PARAM:
             self.log.raiseException("_execute_lctl_get_param_qmt_yaml: unsupported type %s. Use 'block' or 'inode'" %
-                    quotyp, LustreOperationError)
+                quotyp, LustreOperationError)
 
-        param = 'qmt.%s-*.%s-*.glb-%s' % (device, quotyp2param[quotyp], typ2param[typ])
-        opts =['get_param', param]
-        ec, res = self._execute_lctl(opts)
-        quota_info = res.split("\n",2)
+        param = 'qmt.%s-*.%s-*.glb-%s' % (device, QUOTYP2PARAM[quotyp], TYP2PARAM[typ])
+        opts = ['get_param', param]
+        _ec, res = self._execute_lctl(opts)
+        quota_info = res.split("\n", 2)
         try:
             newres = yaml.safe_load(quota_info[2])
         except yaml.YAMLError as exc:
-            self.log.raiseException("_execute_lctl_get_param_qmt_yaml: Error in yaml output: %s" % exc, LustreOperationError)
+            self.log.raiseException("_execute_lctl_get_param_qmt_yaml: Error in yaml output: %s"
+                % exc, LustreOperationError)
 
         return newres
 
@@ -169,13 +176,14 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
                 cmd += list(opts)
             else:
                 self.log.raiseException("_execute_lctl: please use a list or tuple for options: cmd %s opts %s" %
-                                        (cmdname, opts), LustreOperationError)
+                                        (cmd, opts), LustreOperationError)
 
         ec, res = self._execute(cmd, changes)
 
         return ec, res
 
     def list_filesystems(self, device=None):
+        """ List all Lustre file systems """
         if not self.localfilesystems:
             self._local_filesystems()
 
@@ -203,12 +211,12 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         elif not all(elem in lustrefss.keys() for elem in devices):
             self.log.raiseException("Not all Lustre Filesystems of %s found, found %s" % (devices, lustrefss.keys()),
                 LustreOperationError)
-        else:
-            return lustrefss
+
+        return lustrefss
 
     def _get_fsname_for_path(self, path):
-          fs = self.what_filesystem(path)
-          return fs[3].split(':/')[1]
+        fs = self.what_filesystem(path)
+        return fs[3].split(':/')[1]
 
     def _get_fshint_for_path(self, path):
 
@@ -225,12 +233,12 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         fs = self._get_fshint_for_path(project_path)
         return fs.pjid_from_name(fileset_name)
 
-    def _set_new_project_id(self, project_path, fileset_namei, pjid):
+    def _set_new_project_id(self, project_path, pjid):
 
         if not self.get_project_id(project_path, False):
             # recursive and inheritance flag set
             opts = ['-p', pjid, '-r', '-s', project_path]
-            ec, res = self._execute_lfs('project', opts)
+            ec, _res = self._execute_lfs('project', opts)
             if ec == 0:
                 return pjid
             else:
@@ -239,10 +247,13 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         else:
             self.log.raiseException("Path %s already has a projectid" % project_path, LustreOperationError)
 
+        return None
+
     def get_project_id(self, project_path, existing=True):
+        """ Parse lfs project output to get the project id for fileset """
         opts = ['-d', project_path]
 
-        ec, res = self._execute_lfs('project', opts)
+        _ec, res = self._execute_lfs('project', opts)
         pjid, flag, path = res.split()
         if flag == 'P' and path == project_path:
             return pjid
@@ -251,8 +262,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
                     % (project_path, res), LustreOperationError)
         else:
             self.log.debug('path has no pjid set')
-            return None
-
+        return None
 
     def list_quota(self, devices):
         """get quota info for filesystems for all user,group,project
@@ -271,8 +281,8 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         quota = {}
         for fsname in devices:
             quota[fsname] = {}
-            for typ in typ2param.keys():
-                quota[fsname][typ] = {};
+            for typ in TYP2PARAM.keys():
+                quota[fsname][typ] = {}
                 blockres = self._execute_lctl_get_param_qmt_yaml(fsname, typ, 'block')
                 inoderes = self._execute_lctl_get_param_qmt_yaml(fsname, typ, 'inode')
                 for qentry in blockres:
@@ -300,14 +310,13 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
                     })
                     quota[fsname][typ][qid] = [LustreQuota(**quota[fsname][typ][qid])]
 
-        self.quota_cached = quota
         return quota
 
     def _list_filesets(self, device):
         """ Get all filesets for a Lustre device"""
 
         path = device['defaultMountPoint']
-        fs = self._get_fs_for_path(path)
+        fs = self._get_fsname_for_path(path)
 
         filesets = {}
         for upath in fs.get_search_paths():
@@ -322,18 +331,32 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
                     continue
                 else:
                     if filesets[pjid]:
-                        self.log.raiseException("We don't support projectids mapping multiple filesets", LustreOperationError)
+                        self.log.raiseException("We don't support projectids mapping multiple filesets",
+                            LustreOperationError)
                     elif flag != 'P':
                         # Not sure yet if this should raise Exception
-                        self.log.raiseException("Project inheritance flag not set for project %s: %s" % (pjid, path),
-                                LustreOperationError)
+                        self.log.raiseException("Project inheritance flag not set for project %s: %s"
+                            % (pjid, path), LustreOperationError)
                     else:
                         path = self._sanity_check(path)
-                        filesets[pjid] = { 'path': path, 'filesetName': os.path.basename(path) }
+                        filesets[pjid] = {'path': path, 'filesetName': os.path.basename(path)}
 
 
         return filesets
 
+    def set_fs_update_flag(self, device):
+        """ Update this FS next run of list_filesets """
+
+        self.filesets[device]['UPDATE'] = True
+
+    def get_fileset_info(self, filesystem_name, fileset_name):
+        """ get the info of a specific fileset """
+        fsets = self.list_filesets(filesystem_name)
+        for fileset in fsets[filesystem_name]:
+            if fileset['filesetName'] == fileset_name:
+                return fileset
+
+        return None
 
     def list_filesets(self, devices=None):
         """
@@ -341,11 +364,9 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
 
         @type devices: list of devices (if string: 1 device)
         @type filesetnames: report only on specific filesets (if string: 1 filesetname)
-
         """
 
-        self.log.debug("Looking up filesets for devices %s" % (devices))
-        opts = []
+        self.log.debug("Looking up filesets for devices %s" % devices)
 
         devices = self.list_filesystems(devices)
 
@@ -398,14 +419,15 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
 
             # create the fileset: dir and project
             self.make_dir(fsetpath)
-            self._set_new_project_id(fsetpath, fileset_name, pjid)
+            self._set_new_project_id(fsetpath, pjid)
             # set inode quota
-            self._set_quota(who=project, obj=fileset_path, typ='project',inode_soft=inodes_max, inode_hard=inodes_max)
+            self._set_quota(who=pjid, obj=fsetpath, typ='project', inode_soft=inodes_max, inode_hard=inodes_max)
+            self.set_fs_update_flag(fsname)
 
         else:
         # bail if there is a fileset with the same name
             self.log.raiseException(("Found existing fileset %s with the same name at %s ") %
-                                        (fileset_name, fsinfo['path']), LustreOperationError)
+                                    (fileset_name, fsinfo['path']), LustreOperationError)
 
 
 
@@ -419,7 +441,8 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         @type inode_soft: integer representing the soft files limit
         @type inode_soft: integer representing the hard files quota
         """
-        self._set_quota(who=user, obj=obj, typ='user', soft=soft, hard=hard, inode_soft=inode_soft, inode_hard=inode_hard)
+        self._set_quota(who=user, obj=obj, typ='user', soft=soft, hard=hard,
+                inode_soft=inode_soft, inode_hard=inode_hard)
 
     def set_group_quota(self, soft, group, obj=None, hard=None, inode_soft=None, inode_hard=None):
         """Set quota for a group on a given object (e.g., a path in the filesystem, which may correpond to a fileset)
@@ -431,7 +454,8 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         @type inode_soft: integer representing the soft files limit
         @type inode_soft: integer representing the hard files quota
         """
-        self._set_quota(who=group, obj=obj, typ='group', soft=soft, hard=hard, inode_soft=inode_soft, inode_hard=inode_hard)
+        self._set_quota(who=group, obj=obj, typ='group', soft=soft, hard=hard,
+                inode_soft=inode_soft, inode_hard=inode_hard)
 
     def set_fileset_quota(self, soft, fileset_path, hard=None, inode_soft=None, inode_hard=None):
         """Set quota on a fileset. This maps to projects in Lustre
@@ -448,7 +472,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
             self.log.raiseException("Can not set quota for fileset with projectid 0", LustreOperationError)
         else:
             self._set_quota(who=project, obj=fileset_path, typ='project', soft=soft, hard=hard,
-                        inode_soft=inode_soft, inode_hard=inode_hard)
+                inode_soft=inode_soft, inode_hard=inode_hard)
 
     def set_user_grace(self, obj, grace=0):
         """Set the grace period for user data.
@@ -487,7 +511,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
             self.log.raiseException("setQuota: can't set quota on none-existing obj %s" % obj, LustreOperationError)
 
         opts = ['-t']
-        opts += ["-%s" % typ2opt[typ]]
+        opts += ["-%s" % TYP2OPT[typ]]
         opts += ["-b", "%s" % int(grace)]
         opts += ["-i", "%s" % int(grace)]
 
@@ -509,14 +533,14 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         if not self.dry_run and not self.exists(obj):
             self.log.raiseException("setQuota: can't set quota on none-existing obj %s" % obj, LustreOperationError)
 
-        if typ not in typ2opt:
+        if typ not in TYP2OPT:
             self.log.raiseException("_set_quota: unsupported type %s" % typ, LustreOperationError)
 
         opts = []
-        opts += ["-%s" % typ2opt[typ], "%s" % who]
+        opts += ["-%s" % TYP2OPT[typ], "%s" % who]
         opts.append(obj)
 
-        ec, res = self._execute_lfs('quota', opts)
+        _ec, res = self._execute_lfs('quota', opts)
         return res
 
 
@@ -539,7 +563,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
 
         soft2hard_factor = 1.05
 
-        if typ not in typ2opt:
+        if typ not in TYP2OPT:
             self.log.raiseException("_set_quota: unsupported type %s" % typ, LustreOperationError)
 
         opts = []
@@ -550,7 +574,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
             self.log.raiseException("setQuota: can't set hard limit %s lower then soft limit %s" %
                                     (hard, soft), LustreOperationError)
 
-        opts += ["-%s" % typ2opt[typ], "%s" % who]
+        opts += ["-%s" % TYP2OPT[typ], "%s" % who]
         opts += ["-b", "%sm" % int(soft / 1024 ** 2)]  # round to MB
         opts += ["-B", "%sm" % int(hard / 1024 ** 2)]  # round to MB
 
@@ -578,4 +602,3 @@ if __name__ == '__main__':
     print(lust.list_quota('lustrefs'))
 
     print(lust.list_filesets('lustrefs'))
-
