@@ -278,12 +278,14 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
                 for qentry in blockres:
                     qid = qentry['id']
                     qlim = qentry['limits']
+                    # map quota fields to same names as for GPFS
                     qinfo = {
                         'name': qid,
                         'blockUsage' : qlim['granted'],
                         'blockQuota' : qlim['soft'],
                         'blockLimit' : qlim['hard'],
                         'blockGrace' : qlim['time'],
+                        'blockInDoubt': 0, # non-existent in Lustre
                     }
                     quota[fsname][typ][qid] = qinfo
                 for qentry in inoderes:
@@ -294,6 +296,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
                         'filesQuota' : qlim['soft'],
                         'filesLimit' : qlim['hard'],
                         'filesGrace' : qlim['time'],
+                        'filesInDoubt': 0 # non-existent in Lustre
                     })
                     quota[fsname][typ][qid] = [LustreQuota(**quota[fsname][typ][qid])]
 
