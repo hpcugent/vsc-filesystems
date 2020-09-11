@@ -81,6 +81,11 @@ class LustreVscFS():
             else:
                 self.log.raiseException("_pjid_from_name: project prefix %s not recognized" % prefix, LustreVscFSError)
 
+        def get_search_paths(self):
+            res = []
+            for loc in self.project_locations:
+                res.append(os.path.join(self.mountpoint, loc))
+            return res
 
 
 class LustreVscGhentScratchFs(LustreVscFs):
@@ -88,7 +93,7 @@ class LustreVscGhentScratchFs(LustreVscFs):
         This could also be extended to be done by importing config files """
     def __init__(self, mountpoint):
 
-        project_locations = ['gent/vo/*']
+        project_locations = ['gent', 'gent/vo/*']
         projectid_maps = { 'gvo' : 900000 }
         super(LustreVscGhentScratchFs, self).__init__(mountpoint, project_locations, projectid_maps)
 
@@ -99,6 +104,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         super(LustreOperations, self).__init__()
         self.supportedfilesystems = ['lustre']
         self.filesystems = {}
+        self.filesets = {}
 
 
     # pylint: disable=arguments-differ
@@ -169,9 +175,42 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
 
         return ec, res
 
-    def list_filesystems(self):
+    def list_filesystems(self, device=None):
+        if not self.localfilesystems:
+            self._local_filesystems()
 
-    def get_fs_for_path(self, path):
+        if device is None:
+            devices = []
+        elif not isinstance(device, list):
+            devices = [device]
+        else:
+            devices = device
+
+        lustrefss = {}
+        for fs in self.localfilesystems:
+            if fs[0] == 'lustre':
+                location, fsname = fs[3].split(':/')
+                if fsname:
+                    if not devices or fsname in devices:
+                        # keeping gpfs terminology
+                        lustrefss[fsname] = {
+                            'defaultMountPoint': fs[1],
+                            'location': location
+                        }
+
+        if not devices and not lustrefss:
+            self.log.raiseException("No Lustre Filesystems found", LustreOperationError)
+        elif not all(elem in lustrefss.keys() for elem in devices):
+            self.log.raiseException("Not all Lustre Filesystems of %s found, found %s" % (devices, lustrefss.keys()),
+                LustreOperationError)
+        else:
+            return lustrefss
+
+    def _get_fsname_for_path(self, path):
+          fs = self.what_filesystem(path)
+          return fs[3].split(':/')[1]
+
+    def _get_fshint_for_path(self, path):
 
         fs = self.what_filesystem(path)
         fsname = fs[3].split(':/')[1]
@@ -182,14 +221,13 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
             self.filesystems[fsname] = LustreVscGhentScratchFs(fsmount)
         return self.filesystems[fsname]
 
-    def map_project_id(self, project_path, fileset_name):
-        fs = self.get_fs_for_path(project_path)
+    def _map_project_id(self, project_path, fileset_name):
+        fs = self._get_fshint_for_path(project_path)
         return fs.pjid_from_name(fileset_name)
 
-    def set_new_project_id(self, project_path, fileset_name):
+    def _set_new_project_id(self, project_path, fileset_namei, pjid):
 
         if not self.get_project_id(project_path, False):
-            pjid = self.map_project_id(project_path, fileset_name)
             # recursive and inheritance flag set
             opts = ['-p', pjid, '-r', '-s', project_path]
             ec, res = self._execute_lfs('project', opts)
@@ -262,7 +300,39 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         self.quota_cached = quota
         return quota
 
-    def list_filesets(self, devices=None,  ):
+    def _list_filesets(self, device):
+        """ Get all filesets for a Lustre device"""
+
+        path = device['defaultMountPoint']
+        fs = self._get_fs_for_path(path)
+
+        filesets = {}
+        for upath in fs.get_search_paths():
+            spath = self._sanity_check(upath)
+            ec, res = self._execute_lfs('project', spath)
+            if ec == 0:
+                self.log.raiseException("Unable to get projects for path %s" % spath, LustreOperationError)
+
+            for pjline in res.splitlines():
+                pjid, flag, path = pjline.split()
+                if pjid == 0:
+                    continue
+                else:
+                    if filesets[pjid]:
+                        self.log.raiseException("We don't support projectids mapping multiple filesets", LustreOperationError)
+                    elif flag != 'P':
+                        # Not sure yet if this should raise Exception
+                        self.log.raiseException("Project inheritance flag not set for project %s: %s" % (pjid, path),
+                                LustreOperationError)
+                    else:
+                        path = self._sanity_check(path)
+                        filesets[pjid] = { 'path': path, 'filesetName': os.path.basename(path) }
+
+
+        return filesets
+
+
+    def list_filesets(self, devices=None):
         """
         Get all the filesets for one or more specific devices
 
@@ -271,14 +341,19 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
 
         """
 
+        self.log.debug("Looking up filesets for devices %s" % (devices))
         opts = []
 
-        if isinstance(devices, str):
-            devices = [devices]
+        devices = self.list_filesystems(devices)
 
-        self.log.debug("Looking up filesets for devices %s" % (devices))
+        filesetsres = {}
+        for dev in devices.keys():
+            if self.filesets[dev] and not self.filesets[dev]['UPDATE']:
+                filesetsres[dev] = self.filesets[dev]
+            else:
+                filesetsres[dev] = self._list_filesets(devices[dev])
 
-        return res
+        return filesetsres
 
 
     def make_fileset(self, new_fileset_path, fileset_name=None, inodes_max=1048576):
@@ -312,13 +387,18 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
 
         fsinfo = self.get_fileset_info(fsname, fileset_name)
         if not fsinfo:
+            pjid = self._map_project_id(fsetpath, fileset_name)
+            filesets = self.list_filesets(fsname)
+            if filesets[pjid]:
+                self.log.raiseException("Found existing projectid %s in file system %s: %s"
+                    % (pjid, fsname, filesets[pjid]), LustreOperationError)
+
+            # create the fileset: dir and project
             self.make_dir(fsetpath)
-            project = self.set_new_project_id(fsetpath, fileset_name)
+            self._set_new_project_id(fsetpath, fileset_name, pjid)
             # set inode quota
             self._set_quota(who=project, obj=fileset_path, typ='project',inode_soft=inodes_max, inode_hard=inodes_max)
 
-            pass
-            # create the fileset: dir and project
         else:
         # bail if there is a fileset with the same name
             self.log.raiseException(("Found existing fileset %s with the same name at %s ") %
