@@ -113,7 +113,6 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         self.filesets = {}
 
 
-    # pylint: disable=arguments-differ
     def _execute_lfs(self, name, opts=None, changes=False):
         """Return and check the LUSTRE lfs command.
         """
@@ -197,13 +196,14 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         lustrefss = {}
         for fs in self.localfilesystems:
             if fs[0] == 'lustre':
-                location, fsname = fs[3].split(':/')
-                if fsname:
+                fsloc = fs[3].split(':/')
+                if len(fsloc) == 2:
+                    fsname = fsloc[1]
                     if not devices or fsname in devices:
                         # keeping gpfs terminology
                         lustrefss[fsname] = {
                             'defaultMountPoint': fs[1],
-                            'location': location
+                            'location': fsloc[0]
                         }
 
         if not devices and not lustrefss:
@@ -251,10 +251,13 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
 
     def get_project_id(self, project_path, existing=True):
         """ Parse lfs project output to get the project id for fileset """
+
+        project_path = self._sanity_check(project_path)
         opts = ['-d', project_path]
 
         _ec, res = self._execute_lfs('project', opts)
         pjid, flag, path = res.split()
+        self.log.info('got pjid %s, flag %s, path %s' % (pjid, flag, path))
         if flag == 'P' and path == project_path:
             return pjid
         elif existing:
@@ -264,6 +267,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
             self.log.debug('path has no pjid set')
         return None
 
+    # pylint: disable=arguments-differ
     def list_quota(self, devices):
         """get quota info for filesystems for all user,group,project
             Output has been remapped to format of gpfs.py
@@ -467,7 +471,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         @type inode_soft: integer representing the hard files quota
         """
         # we need the corresponding project id
-        project = self._get_project_id(fileset_path)
+        project = self.get_project_id(fileset_path)
         if int(project) == 0:
             self.log.raiseException("Can not set quota for fileset with projectid 0", LustreOperationError)
         else:
@@ -566,19 +570,27 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         if typ not in TYP2OPT:
             self.log.raiseException("_set_quota: unsupported type %s" % typ, LustreOperationError)
 
-        opts = []
+        opts = ["-%s" % TYP2OPT[typ], "%s" % who]
 
-        if hard is None:
-            hard = int(soft * soft2hard_factor)
-        elif hard < soft:
-            self.log.raiseException("setQuota: can't set hard limit %s lower then soft limit %s" %
+        if soft is None and inode_soft is None:
+            self.log.raiseException("setQuota: At least one type of quota (block,inode) should be specified",
+                    LustreOperationError)
+
+        if soft:
+            if hard is None:
+                hard = int(soft * soft2hard_factor)
+            elif hard < soft:
+                self.log.raiseException("setQuota: can't set hard limit %s lower then soft limit %s" %
                                     (hard, soft), LustreOperationError)
+            softm = int(soft / 1024 ** 2) # round to MB
+            hardm = int(hard / 1024 ** 2) # round to MB
+            if softm == 0 or hardm == 0:
+                self.log.raiseException("setQuota: setting quota to 0 would be infinite quota", LustreOperationError)
+            else:
+                opts += ["-b", "%sm" % softm]
+                opts += ["-B", "%sm" % hardm]
 
-        opts += ["-%s" % TYP2OPT[typ], "%s" % who]
-        opts += ["-b", "%sm" % int(soft / 1024 ** 2)]  # round to MB
-        opts += ["-B", "%sm" % int(hard / 1024 ** 2)]  # round to MB
-
-        if inode_soft is not None:
+        if inode_soft:
             if inode_hard is None:
                 inode_hard = int(inode_soft * soft2hard_factor)
             elif inode_hard < inode_soft:
