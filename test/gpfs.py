@@ -41,7 +41,7 @@ class ToolsTest(TestCase):
             "this:is:the:header:line",
             "and:here:is:line:1",
             "and:here:is:line:2",
-            "and:here:is:line:3",
+            "and:here:is:line:3:",
             "and:here:is:line:4",
         ]
 
@@ -65,42 +65,41 @@ class ToolsTest(TestCase):
 
         split_lines = gpfs.split_output_lines(test_lines)
 
-        self.assertEqual(set(map(len, split_lines)), {6})  # all lines have the same number of fields
-        self.assertTrue(len(split_lines) == 5)
+        self.assertEqual(map(len, split_lines), [6, 5, 5, 5, 5])   # all lines have the same number of fields
 
     def test_split_output_lines_with_header_colon_colons(self):
         """
         Check the split of lines without any colon at the end.
         """
 
-        test_lines = "\n".join([
+        test_lines = [
             "this:is:the:header:line:",
             "and:here:is:line:1:",
             "and:here:is:line:2:",
             "and:here:is:line:3:",
             "and:here:is:line:4:",
-        ])
+        ]
 
         split_lines = gpfs.split_output_lines(test_lines)
 
-        self.assertEqual(set(map(len, split_lines)), {6})  # all lines have the same number of fields
+        self.assertEqual(map(len, split_lines), [6, 6, 6, 6, 6])   # all lines have the same number of fields
 
     def test_split_output_lines_without_header_colon_colons(self):
         """
         Check the split of lines without any colon at the end.
         """
 
-        test_lines = "\n".join([
+        test_lines = [
             "this:is:the:header:line",
             "and:here:is:line:1:",
             "and:here:is:line:2:",
             "and:here:is:line:3:",
             "and:here:is:line:4:",
-        ])
+        ]
 
         split_lines = gpfs.split_output_lines(test_lines)
 
-        self.assertEqual(set(map(len, split_lines)), {5})  # all lines have the same number of fields
+        self.assertEqual(map(len, split_lines), [5, 5, 5, 5, 5])   # all lines have the same number of fields
 
     @mock.patch('vsc.filesystem.gpfs.GpfsOperations._execute')
     def test_list_snapshots(self, mock_exec):
