@@ -48,6 +48,8 @@ class ToolsTest(TestCase):
         split_lines = gpfs.split_output_lines(test_lines)
 
         self.assertTrue(len(set(map(len, split_lines))) == 1)  # all lines have the same number of fields
+        self.assertTrue(len(split_lines) == 5)
+
 
     def test_split_output_lines_with_header_colon(self):
         """
@@ -65,6 +67,7 @@ class ToolsTest(TestCase):
         split_lines = gpfs.split_output_lines(test_lines)
 
         self.assertTrue(len(set(map(len, split_lines))) == 1)  # all lines have the same number of fields
+        self.assertTrue(len(split_lines) == 5)
 
     def test_split_output_lines_with_header_colon_colons(self):
         """
@@ -213,7 +216,7 @@ mmhealth:State:0:1:::storage2206.shuppet.gent.vsc:HADOOPCONNECTOR:storage2206.sh
             'HADOOPCONNECTOR_storage2206.shuppet.gent.vsc': 'DEGRADED',
             'NETWORK_storage2206.shuppet.gent.vsc': 'HEALTHY',
             'NODE_storage2206.shuppet.gent.vsc': 'FAILED'}
-        
+
         mock_exec.assert_called_once_with('mmhealth', ['node', 'show', '-Y'])
         self.assertEqual(res, expected_res)
 
