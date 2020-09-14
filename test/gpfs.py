@@ -37,13 +37,13 @@ class ToolsTest(TestCase):
         Check the split of lines without any colon at the end.
         """
 
-        test_lines = "\n".join([
+        test_lines = [
             "this:is:the:header:line",
             "and:here:is:line:1",
             "and:here:is:line:2",
             "and:here:is:line:3",
             "and:here:is:line:4",
-        ])
+        ]
 
         split_lines = gpfs.split_output_lines(test_lines)
 
@@ -55,13 +55,13 @@ class ToolsTest(TestCase):
         Check the split of lines without any colon at the end.
         """
 
-        test_lines = "\n".join([
+        test_lines = [
             "this:is:the:header:line:",
             "and:here:is:line:1",
             "and:here:is:line:2",
             "and:here:is:line:3",
             "and:here:is:line:4",
-        ])
+        ]
 
         split_lines = gpfs.split_output_lines(test_lines)
 
