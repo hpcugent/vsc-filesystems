@@ -74,7 +74,7 @@ def split_output_lines(out):
         else:
             return line
 
-    return [[percentdecode(y) for y in clean(x).strip().split(':')] for x in out]
+    return [[percentdecode(y) for y in clean(x).split(':')] for x in out]
 
 
 class GpfsOperationError(PosixOperationError):
