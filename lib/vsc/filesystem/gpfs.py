@@ -65,6 +65,7 @@ def split_output_lines(out):
     Takes into acount that some lines may end in a :, some might not. If the header exhibits no colon,
     the field count might be off and we might not be able to parse the output as expected.
     """
+
     header_ends_in_colon = out[0][-1] == ":"
 
     def clean(line):
@@ -73,7 +74,7 @@ def split_output_lines(out):
         else:
             return line
 
-    return [[percentdecode(y) for y in clean(x).strip().split(':')] for x in out.strip().split('\n')]
+    return [[percentdecode(y) for y in clean(x).strip().split(':')] for x in out]
 
 
 class GpfsOperationError(PosixOperationError):
@@ -264,7 +265,7 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
         # it's percent encoded: first split in :, then decode
         b = [[percentdecode(y) for y in  x.split(':')] for x in a]
         """
-        what = split_output_lines(out)
+        what = split_output_lines(out.splitlines())
         expectedheader = [name, '', 'HEADER', 'version', 'reserved', 'reserved']
 
         # verify result and remove all items that do not match the expected output data
