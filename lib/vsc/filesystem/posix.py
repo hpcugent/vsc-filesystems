@@ -23,10 +23,10 @@ General POSIX filesystem interaction (sort of replacement for linux_utils)
 import errno
 import os
 import stat
-import subprocess
 
 from vsc.utils import fancylogger
 from vsc.utils.patterns import Singleton
+from vsc.utils.run import asyncloop
 from future.utils import with_metaclass
 
 OS_LINUX_MOUNTS = '/proc/mounts'
@@ -72,31 +72,15 @@ class PosixOperations(with_metaclass(Singleton, object)):
 
     def _execute(self, cmd, changes=False):
         """Run command cmd, return exitcode,output"""
-        ec = None
-        res = None
-
-        shell = False
-        if isinstance(cmd, (tuple, list,)):
-            # cmd in non-shell
-            shell = False
-        elif isinstance(cmd, str):
-            shell = True
-        else:
-            self.log.error("_execute unsupported type %s of cmd %s" % (type(cmd), cmd))
-            return ec, res
-
         if changes and self.dry_run:
-            self.log.info("Dry run: not really executing cmd %s" % (cmd))
+            self.log.info("Dry run: not really executing cmd %s", cmd)
             return 0, ""
 
         # Executes and captures the output of a succesful run.
-        try:
-            out = subprocess.check_output(cmd, shell=shell)
-            ec = 0
-        except subprocess.CalledProcessError as err:
-            ec = err.returncode
-            out = "%s" % err
-            self.log.exception("_execute command [%s] failed: ec %s" % (cmd, ec))
+        ec, out = asyncloop(cmd)
+
+        if ec:
+            self.log.exception("_execute command [%s] failed: ec %s, out=%s", cmd, ec, out)
 
         return ec, out
 
