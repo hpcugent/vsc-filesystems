@@ -43,10 +43,10 @@ class ToolsTest(TestCase):
         mock_sanity_check.return_value = test_path
         mock_exists.return_value = True
 
-        llops= lustre.LustreOperations()
+        llops = lustre.LustreOperations()
         mock_execute.return_value = (0, "")
 
-        ll._set_grace(test_path, 'user', 7 * 24 * 60 * 60)
+        llops._set_grace(test_path, 'user', 7 * 24 * 60 * 60)
 
         (args, _) = mock_execute.call_args
         self.assertEqual(args[0], ['/usr/bin/lfs', 'setquota', '-t', '-u',
@@ -62,10 +62,10 @@ class ToolsTest(TestCase):
         mock_sanity_check.return_value = test_path
         mock_exists.return_value = True
 
-        llops= lustre.LustreOperations()
+        llops = lustre.LustreOperations()
         mock_execute.return_value = (0, "")
 
-        ll._set_quota(2540075, test_path, 'user', 10240000)
+        llops._set_quota(2540075, test_path, 'user', 10240000)
 
         (args, _) = mock_execute.call_args
         self.assertEqual(args[0], [
@@ -73,14 +73,14 @@ class ToolsTest(TestCase):
             '-b', '9m', '-B', '10m',
             '/lustre/scratch/gent/vsc406/vsc40605'])
 
-        ll._set_quota(2540075, test_path, 'user', 10240000, inode_soft=1000)
+        llops._set_quota(2540075, test_path, 'user', 10240000, inode_soft=1000)
         (args, _) = mock_execute.call_args
         self.assertEqual(args[0], [
             '/usr/bin/lfs', 'setquota', '-u', '2540075',
             '-b', '9m', '-B', '10m', '-i', '1000', '-I', '1050',
             '/lustre/scratch/gent/vsc406/vsc40605'])
 
-        ll._set_quota(2540075, test_path, 'user', inode_soft=2000, inode_hard=2123)
+        llops._set_quota(2540075, test_path, 'user', inode_soft=2000, inode_hard=2123)
         (args, _) = mock_execute.call_args
         self.assertEqual(args[0], [
             '/usr/bin/lfs', 'setquota', '-u', '2540075',
@@ -93,12 +93,12 @@ class ToolsTest(TestCase):
         test_path = os.path.join("/lustre", "scratch", "gent", "vsc406", "vsc40605")
         mock_sanity_check.return_value = test_path
 
-        llops= lustre.LustreOperations()
+        llops = lustre.LustreOperations()
         mock_execute.return_value = (0, '    1 P /lustre/scratch/gent/vsc406/vsc40605')
-        self.assertEqual(ll.get_project_id(test_path), '1')
+        self.assertEqual(llops.get_project_id(test_path), '1')
         mock_execute.return_value = (0, '    0 - /lustre/scratch/gent/vsc406/vsc40605')
-        self.assertEqual(ll.get_project_id(test_path, False), None)
-        self.assertRaises(lustre.LustreOperationError, ll.get_project_id, test_path)
+        self.assertEqual(llops.get_project_id(test_path, False), None)
+        self.assertRaises(lustre.LustreOperationError, llops.get_project_id, test_path)
 
     @mock.patch('vsc.filesystem.lustre.LustreOperations.get_project_id')
     @mock.patch('vsc.filesystem.posix.PosixOperations._execute')
@@ -110,20 +110,20 @@ class ToolsTest(TestCase):
         mock_execute.return_value = (0, "")
 
         mock_get_project_id.return_value = '1'
-        llops= lustre.LustreOperations()
-        ll.set_fileset_quota(None, test_path, inode_soft=1000)
+        llops = lustre.LustreOperations()
+        llops.set_fileset_quota(None, test_path, inode_soft=1000)
         mock_get_project_id.assert_called_with(test_path)
         (args, _) = mock_execute.call_args
         self.assertEqual(args[0], ['/usr/bin/lfs', 'setquota', '-p', '1', '-i', '1000', '-I', '1050', '/lustre/scratch/gent/vsc406/vsc40605'])
         mock_get_project_id.return_value = '0'
-        self.assertRaises(lustre.LustreOperationError, ll.set_fileset_quota, None, '/gent', inode_soft=1000)
+        self.assertRaises(lustre.LustreOperationError, llops.set_fileset_quota, None, '/gent', inode_soft=1000)
         mock_get_project_id.assert_called_with('/gent')
 
     def test_list_filesystems(self):
 
-        llops= lustre.LustreOperations()
+        llops = lustre.LustreOperations()
 
-        ll.localfilesystems = [ #posix.py _local_filesystems sets this...
+        llops.localfilesystems = [ #posix.py _local_filesystems sets this...
                 ['ext2', '/boot', 64769, '/dev/vda1'],
                 ['ext4', '/var', 64513, '/dev/mapper/vg0-var'],
                 ['ext4', '/tmp', 64512, '/dev/mapper/vg0-scratch'],
@@ -134,9 +134,9 @@ class ToolsTest(TestCase):
                 ['lustre', '/lustre/mylfs', 452646254, '10.141.21.204@tcp:/mylfs'],
                 ['tmpfs', '/run/user/2006', 40, 'tmpfs']
                 ]
-        self.assertEqual(ll.list_filesystems(), {'mylfs': {'defaultMountPoint': '/lustre/mylfs', 'location': '10.141.21.204@tcp'}})
-        self.assertEqual(ll.list_filesystems('mylfs'), {'mylfs': {'defaultMountPoint': '/lustre/mylfs', 'location': '10.141.21.204@tcp'}})
-        self.assertRaises(lustre.LustreOperationError, ll.list_filesystems, 'nofs')
+        self.assertEqual(llops.list_filesystems(), {'mylfs': {'defaultMountPoint': '/lustre/mylfs', 'location': '10.141.21.204@tcp'}})
+        self.assertEqual(llops.list_filesystems('mylfs'), {'mylfs': {'defaultMountPoint': '/lustre/mylfs', 'location': '10.141.21.204@tcp'}})
+        self.assertRaises(lustre.LustreOperationError, llops.list_filesystems, 'nofs')
 
     def test__execute_lctl_get_param_qmt_yaml(self):
         output_dt_prj = '''qmt.mylfs-QMT0000.dt-0x0.glb-prj=
@@ -165,12 +165,12 @@ global_pool0_md_usr
 '''
 
         mock_execute.return_vakue = output_dt_prj
-        llops= LustreOperations()
+        llops = LustreOperations()
 
     def test_list_quota(self, mock_exists, mock_sanity_check, mock_execute):
 
-        llops= lustre.LustreOperations()
-        #ll.list_quota()
+        llops = lustre.LustreOperations()
+        #llops.list_quota()
         pass
 
     def test__set_new_project_id(self, mock_exists, mock_sanity_check, mock_execute):
