@@ -23,8 +23,39 @@ from __future__ import print_function
 import mock
 import os
 import vsc.filesystem.lustre as lustre
+from vsc.filesystem.lustre import LustreQuota
 
 from vsc.install.testing import TestCase
+
+LUSTRE_QUOTA_OUTPUT = {
+    'USR': {
+        'block':[
+            {'id': 0, 'limits': {'hard': 0, 'soft': 0, 'granted': 0, 'time': 604800}},
+            {'id': 2006, 'limits': {'hard': 50000000, 'soft': 45000000, 'granted': 10240000, 'time': 281474976710656}}],
+        'inode':[
+            {'id': 0, 'limits': {'hard': 0, 'soft': 0, 'granted': 0, 'time': 604800}},
+            {'id': 2006, 'limits': {'hard': 1200000, 'soft': 1000000, 'granted': 200, 'time': 281474976710656}}],
+        },
+    'GRP': {
+        'block':[
+            {'id': 0, 'limits': {'hard': 0, 'soft': 0, 'granted': 0, 'time': 604800}},
+            {'id': 2006, 'limits': {'hard': 3584000, 'soft': 3072000, 'granted': 4285456, 'time': 1600685548}}],
+        'inode':[
+            {'id': 0, 'limits': {'hard': 0, 'soft': 0, 'granted': 0, 'time': 604800}},
+            {'id': 2006, 'limits': {'hard': 1200000, 'soft': 1000000, 'granted': 200, 'time': 281474976710656}}],
+        },
+    'FILESET': {
+        'block':[
+            {'id': 0, 'limits': {'hard': 0, 'soft': 0, 'granted': 0, 'time': 604800}},
+            {'id': 1, 'limits': {'hard': 3798016, 'soft': 3591168, 'granted': 3875852, 'time': 1600334880}},
+            {'id': 598, 'limits': {'hard': 1100000, 'soft': 1000000, 'granted': 0, 'time': 281474976710656}}],
+        'inode':[
+            {'id': 0, 'limits': {'hard': 0, 'soft': 0, 'granted': 0, 'time': 604800}},
+            {'id': 1, 'limits': {'hard': 1000, 'soft': 900, 'granted': 950, 'time': 1600334880}},
+            {'id': 598, 'limits': {'hard': 1100000, 'soft': 1000000, 'granted': 0, 'time': 281474976710656}}]
+        },
+    }
+
 
 
 class ToolsTest(TestCase):
@@ -138,40 +169,70 @@ class ToolsTest(TestCase):
         self.assertEqual(llops.list_filesystems('mylfs'), {'mylfs': {'defaultMountPoint': '/lustre/mylfs', 'location': '10.141.21.204@tcp'}})
         self.assertRaises(lustre.LustreOperationError, llops.list_filesystems, 'nofs')
 
-    def test__execute_lctl_get_param_qmt_yaml(self):
+    @mock.patch('vsc.filesystem.posix.PosixOperations._execute')
+    def test__execute_lctl_get_param_qmt_yaml(self, mock_execute):
         output_dt_prj = '''qmt.mylfs-QMT0000.dt-0x0.glb-prj=
 global_pool0_dt_prj
 - id:      0
   limits:  { hard:                    0, soft:                    0, granted:                    0, time:               604800 }
 - id:      1
   limits:  { hard:              3798016, soft:              3591168, granted:              3875852, time:           1600334880 }
-- id:      2
-  limits:  { hard:                    0, soft:                    0, granted:                    0, time:      281474976710656 }
-- id:      3
-  limits:  { hard:                    0, soft:                    0, granted:                    0, time:      281474976710656 }
-- id:      4
-  limits:  { hard:                    0, soft:                    0, granted:                    0, time:      281474976710656 }
-- id:      6
-  limits:  { hard:                    0, soft:                    0, granted:                    0, time:      281474976710656 }
 - id:      598
-  limits:  { hard:                    0, soft:                    0, granted:                    0, time:      281474976710656 }
+  limits:  { hard:              1100000, soft:              1000000, granted:                    0, time:      281474976710656 }
 '''
-        output_md_usr = '''qmt.kwlust-QMT0000.md-0x0.glb-usr=
+        output_md_usr = '''qmt.mylfs-QMT0000.md-0x0.glb-usr=
 global_pool0_md_usr
 - id:      0
   limits:  { hard:                    0, soft:                    0, granted:                    0, time:               604800 }
 - id:      2006
-  limits:  { hard:                    0, soft:                    0, granted:                    0, time:      281474976710656 }
+  limits:  { hard:              1200000, soft:              1000000, granted:                   200, time:      281474976710656 }
 '''
 
-        mock_execute.return_vakue = output_dt_prj
-        llops = LustreOperations()
+        mock_execute.return_value = (0, output_dt_prj)
+        llops = lustre.LustreOperations()
+        quots = llops._execute_lctl_get_param_qmt_yaml('mylfs', 'FILESET', 'block')
+        (args, _) = mock_execute.call_args
+        self.assertEqual(args[0], ['/usr/sbin/lctl', 'get_param', 'qmt.mylfs-*.dt-*.glb-prj'])
+        self.assertEqual( quots, [{
+            'id': 0, 'limits': {'hard': 0, 'soft': 0, 'granted': 0, 'time': 604800}},
+            {'id': 1, 'limits': {'hard': 3798016, 'soft': 3591168, 'granted': 3875852, 'time': 1600334880}},
+            {'id': 598, 'limits': {'hard': 1100000, 'soft': 1000000, 'granted': 0, 'time': 281474976710656}}])
 
-    def test_list_quota(self, mock_exists, mock_sanity_check, mock_execute):
+        mock_execute.return_value = (0, output_md_usr)
+        quots = llops._execute_lctl_get_param_qmt_yaml('mylfs', 'USR', 'inode')
+        (args, _) = mock_execute.call_args
+        self.assertEqual(args[0], ['/usr/sbin/lctl', 'get_param', 'qmt.mylfs-*.md-*.glb-usr'])
+        self.assertEqual(quots, [
+            {'id': 0, 'limits': {'hard': 0, 'soft': 0, 'granted': 0, 'time': 604800}},
+            {'id': 2006, 'limits': {'hard': 1200000, 'soft': 1000000, 'granted': 200, 'time': 281474976710656}}])
+
+
+    @mock.patch('vsc.filesystem.lustre.LustreOperations._execute_lctl_get_param_qmt_yaml')
+    def test_list_quota(self, mock_lctl_yaml):
+
+        quota_result = {'mylfs':{
+            'USR': {
+                0: [LustreQuota(name=0, blockUsage=0, blockQuota=0, blockLimit=0, blockGrace=604800, blockInDoubt=0, filesUsage=0, filesQuota=0, filesLimit=0, filesGrace=604800, filesInDoubt=0)],
+                2006: [LustreQuota(name=2006, blockUsage=10240000, blockQuota=45000000, blockLimit=50000000, blockGrace=281474976710656, blockInDoubt=0, filesUsage=200, filesQuota=1000000, filesLimit=1200000, filesGrace=281474976710656, filesInDoubt=0)]
+            },
+            'GRP': {
+                0: [LustreQuota(name=0, blockUsage=0, blockQuota=0, blockLimit=0, blockGrace=604800, blockInDoubt=0, filesUsage=0, filesQuota=0, filesLimit=0, filesGrace=604800, filesInDoubt=0)],
+                2006: [LustreQuota(name=2006, blockUsage=4285456, blockQuota=3072000, blockLimit=3584000, blockGrace=1600685548, blockInDoubt=0, filesUsage=200, filesQuota=1000000, filesLimit=1200000, filesGrace=281474976710656, filesInDoubt=0)]
+            },
+            'FILESET': {
+                0: [LustreQuota(name=0, blockUsage=0, blockQuota=0, blockLimit=0, blockGrace=604800, blockInDoubt=0, filesUsage=0, filesQuota=0, filesLimit=0, filesGrace=604800, filesInDoubt=0)],
+                1: [LustreQuota(name=1, blockUsage=3875852, blockQuota=3591168, blockLimit=3798016, blockGrace=1600334880, blockInDoubt=0, filesUsage=950, filesQuota=900, filesLimit=1000, filesGrace=1600334880, filesInDoubt=0)],
+                598: [LustreQuota(name=598, blockUsage=0, blockQuota=1000000, blockLimit=1100000, blockGrace=281474976710656, blockInDoubt=0, filesUsage=0, filesQuota=1000000, filesLimit=1100000, filesGrace=281474976710656, filesInDoubt=0)]}
+            }
+        }
+
+        def quota_mock(fs, typ, quotyp):
+            return LUSTRE_QUOTA_OUTPUT[typ][quotyp]
+
+        mock_lctl_yaml.side_effect = quota_mock
 
         llops = lustre.LustreOperations()
-        #llops.list_quota()
-        pass
+        self.assertEqual(llops.list_quota('mylfs'), quota_result)
 
     def test__set_new_project_id(self, mock_exists, mock_sanity_check, mock_execute):
         pass
