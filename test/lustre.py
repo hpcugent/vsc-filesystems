@@ -234,11 +234,29 @@ global_pool0_md_usr
         llops = lustre.LustreOperations()
         self.assertEqual(llops.list_quota('mylfs'), quota_result)
 
-    def test__set_new_project_id(self, mock_exists, mock_sanity_check, mock_execute):
-        pass
 
-    def test__get_fshint_for_path(self, mock_exists, mock_sanity_check, mock_execute, mock_what_filesystem):
-        pass
+    @mock.patch('vsc.filesystem.lustre.LustreOperations.get_project_id')
+    @mock.patch('vsc.filesystem.posix.PosixOperations._execute')
+    @mock.patch('vsc.filesystem.lustre.LustreOperations._sanity_check')
+    def test__set_new_project_id(self, mock_sanity_check, mock_execute, mock_get_projectid):
+        test_path = os.path.join("/lustre", "scratch", "gent", "vsc406", "vsc40605")
+        mock_sanity_check.return_value = test_path
+        mock_execute.return_value = (0, '')
+        mock_get_projectid.return_value = False
+        llops = lustre.LustreOperations()
+
+        llops._set_new_project_id(test_path, 4)
+        (args, _) = mock_execute.call_args
+        self.assertEqual(args[0], ['/usr/bin/lfs', 'project', '-p', 4, '-r', '-s', '/lustre/scratch/gent/vsc406/vsc40605'])
+
+    @mock.patch('vsc.filesystem.posix.PosixOperations.what_filesystem')
+    def test__get_fshint_for_path(self, mock_what_filesystem):
+        mock_what_filesystem.return_value = ['lustre', '/lustre/mylfs', 452646254, '10.141.21.204@tcp:/mylfs']
+        llops = lustre.LustreOperations()
+        fsclass = llops._get_fshint_for_path('/lustre/mylfs/mypath')
+        self.assertEqual(fsclass.get_search_paths(), ['/lustre/mylfs/gent', '/lustre/mylfs/gent/vo/*'])
+        self.assertEqual(fsclass.pjid_from_name('gvo00002'), 900002)
+
 
     def test__list_filesets(self, mock_exists, mock_sanity_check, mock_execute):
         pass

@@ -223,7 +223,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         fs = self.what_filesystem(path)
         fsname = fs[3].split(':/')[1]
         fsmount = fs[1]
-        if not self.filesystems[fsname]:
+        if fsname not in self.filesystems:
             # TODO: Ideally this is set up from immutable config of some sorts instead of hard coded
             # Or need API change)
             self.filesystems[fsname] = LustreVscGhentScratchFs(fsmount)
