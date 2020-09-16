@@ -11,7 +11,7 @@
 #
 # https://github.com/hpcugent/vsc-filesystems
 #
-# All rights reserved.
+# Allopsrights reserved.
 #
 """
 Tests for the lustre library.
@@ -43,10 +43,10 @@ class ToolsTest(TestCase):
         mock_sanity_check.return_value = test_path
         mock_exists.return_value = True
 
-        ll = lustre.LustreOperations()
+        llops= lustre.LustreOperations()
         mock_execute.return_value = (0, "")
 
-        ll._set_grace(test_path, 'user', 7*24*60*60)
+        ll._set_grace(test_path, 'user', 7 * 24 * 60 * 60)
 
         (args, _) = mock_execute.call_args
         self.assertEqual(args[0], ['/usr/bin/lfs', 'setquota', '-t', '-u',
@@ -62,7 +62,7 @@ class ToolsTest(TestCase):
         mock_sanity_check.return_value = test_path
         mock_exists.return_value = True
 
-        ll = lustre.LustreOperations()
+        llops= lustre.LustreOperations()
         mock_execute.return_value = (0, "")
 
         ll._set_quota(2540075, test_path, 'user', 10240000)
@@ -93,7 +93,7 @@ class ToolsTest(TestCase):
         test_path = os.path.join("/lustre", "scratch", "gent", "vsc406", "vsc40605")
         mock_sanity_check.return_value = test_path
 
-        ll = lustre.LustreOperations()
+        llops= lustre.LustreOperations()
         mock_execute.return_value = (0, '    1 P /lustre/scratch/gent/vsc406/vsc40605')
         self.assertEqual(ll.get_project_id(test_path), '1')
         mock_execute.return_value = (0, '    0 - /lustre/scratch/gent/vsc406/vsc40605')
@@ -110,7 +110,7 @@ class ToolsTest(TestCase):
         mock_execute.return_value = (0, "")
 
         mock_get_project_id.return_value = '1'
-        ll = lustre.LustreOperations()
+        llops= lustre.LustreOperations()
         ll.set_fileset_quota(None, test_path, inode_soft=1000)
         mock_get_project_id.assert_called_with(test_path)
         (args, _) = mock_execute.call_args
@@ -121,7 +121,7 @@ class ToolsTest(TestCase):
 
     def test_list_filesystems(self):
 
-        ll = lustre.LustreOperations()
+        llops= lustre.LustreOperations()
 
         ll.localfilesystems = [ #posix.py _local_filesystems sets this...
                 ['ext2', '/boot', 64769, '/dev/vda1'],
@@ -139,11 +139,37 @@ class ToolsTest(TestCase):
         self.assertRaises(lustre.LustreOperationError, ll.list_filesystems, 'nofs')
 
     def test__execute_lctl_get_param_qmt_yaml(self):
-        pass
+        output_dt_prj = '''qmt.mylfs-QMT0000.dt-0x0.glb-prj=
+global_pool0_dt_prj
+- id:      0
+  limits:  { hard:                    0, soft:                    0, granted:                    0, time:               604800 }
+- id:      1
+  limits:  { hard:              3798016, soft:              3591168, granted:              3875852, time:           1600334880 }
+- id:      2
+  limits:  { hard:                    0, soft:                    0, granted:                    0, time:      281474976710656 }
+- id:      3
+  limits:  { hard:                    0, soft:                    0, granted:                    0, time:      281474976710656 }
+- id:      4
+  limits:  { hard:                    0, soft:                    0, granted:                    0, time:      281474976710656 }
+- id:      6
+  limits:  { hard:                    0, soft:                    0, granted:                    0, time:      281474976710656 }
+- id:      598
+  limits:  { hard:                    0, soft:                    0, granted:                    0, time:      281474976710656 }
+'''
+        output_md_usr = '''qmt.kwlust-QMT0000.md-0x0.glb-usr=
+global_pool0_md_usr
+- id:      0
+  limits:  { hard:                    0, soft:                    0, granted:                    0, time:               604800 }
+- id:      2006
+  limits:  { hard:                    0, soft:                    0, granted:                    0, time:      281474976710656 }
+'''
+
+        mock_execute.return_vakue = output_dt_prj
+        llops= LustreOperations()
 
     def test_list_quota(self, mock_exists, mock_sanity_check, mock_execute):
 
-        ll = lustre.LustreOperations()
+        llops= lustre.LustreOperations()
         #ll.list_quota()
         pass
 
