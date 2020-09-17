@@ -56,7 +56,17 @@ LUSTRE_QUOTA_OUTPUT = {
         },
     }
 
-
+LUSTRE_FILESET_TREE = {
+    'mylfs': {
+        '5': {'path': '/lustre/mylfs/gent/archive', 'filesetName': 'archive'},
+        '900006': {'path': '/lustre/mylfs/gent/vo/000/gvo00006', 'filesetName': 'gvo00006'},
+        '900002': {'path': '/lustre/mylfs/gent/vo/000/gvo00002', 'filesetName': 'gvo00002'},
+        '900004': {'path': '/lustre/mylfs/gent/vo/000/gvo00004', 'filesetName': 'gvo00004'},
+        '900110': {'path': '/lustre/mylfs/gent/vo/001/gvo00110', 'filesetName': 'gvo00110'},
+        '900112': {'path': '/lustre/mylfs/gent/vo/001/gvo00112', 'filesetName': 'gvo00112'},
+        '900111': {'path': '/lustre/mylfs/gent/vo/001/gvo00111', 'filesetName': 'gvo00111'}
+        }
+    }
 
 class ToolsTest(TestCase):
     """
@@ -246,7 +256,7 @@ global_pool0_md_usr
     def test__set_new_project_id(self, mock_sanity_check, mock_execute, mock_get_projectid):
         """ Test setting project id on fileset folder """
         test_path = os.path.join("/lustre", "scratch", "gent", "vsc406", "vsc40605")
-        mock_sanity_check.return_value = test_path
+        mock_sanity_check.side_effect = lambda x: x
         mock_execute.return_value = (0, '')
         mock_get_projectid.return_value = False
         llops = lustre.LustreOperations()
@@ -265,13 +275,46 @@ global_pool0_md_usr
         self.assertEqual(fsclass.pjid_from_name('gvo00002'), 900002)
 
 
-    def test__list_filesets(self, mock_exists, mock_sanity_check, mock_execute):
+    @mock.patch('vsc.filesystem.posix.PosixOperations.what_filesystem')
+    @mock.patch('vsc.filesystem.posix.PosixOperations._execute')
+    @mock.patch('vsc.filesystem.lustre.LustreOperations._sanity_check')
+    def test__list_filesets(self, mock_sanity_check, mock_execute, mock_what_filesystem):
         """ Test listing all filesets for a specified file system"""
-        pass
+        mock_sanity_check.side_effect = lambda x: x
+        mock_what_filesystem.return_value = ['lustre', '/lustre/mylfs', 452646254, '10.141.21.204@tcp:/mylfs']
+        mock_execute.side_effect = [
+            (0, '''    0 P /lustre/mylfs/gent/training
+    0 P /lustre/mylfs/gent/stats
+    0 P /lustre/mylfs/gent/tmp
+    0 P /lustre/mylfs/gent/vo
+    5 P /lustre/mylfs/gent/archive
+'''),
+            (0, '''900006 P /lustre/mylfs/gent/vo/000/gvo00006
+900002 P /lustre/mylfs/gent/vo/000/gvo00002
+900004 P /lustre/mylfs/gent/vo/000/gvo00004
+900110 P /lustre/mylfs/gent/vo/001/gvo00110
+900112 P /lustre/mylfs/gent/vo/001/gvo00112
+900111 P /lustre/mylfs/gent/vo/001/gvo00111
+''')]
+        llops = lustre.LustreOperations()
+        fsystems = {'mylfs': {'defaultMountPoint': '/lustre/mylfs', 'location': '10.141.21.204@tcp'}}
+        filesets = llops._list_filesets(fsystems['mylfs'])
+        mock_execute.assert_called_with(['/usr/bin/lfs', 'project', '/lustre/mylfs/gent/vo/*'], False)
+        self.assertEqual(filesets, LUSTRE_FILESET_TREE['mylfs'])
 
-    def test_list_filesets(self, mock):
+
+    @mock.patch('vsc.filesystem.lustre.LustreOperations._list_filesets')
+    @mock.patch('vsc.filesystem.lustre.LustreOperations.list_filesystems')
+    def test_list_filesets(self, mock_list_filesystems, mock__list_filesets):
         """ Test listing or updating all filesets """
-        pass
+        mock_list_filesystems.return_value = {
+            'mylfs': {'defaultMountPoint': '/lustre/mylfs', 'location': '10.141.21.204@tcp'}}
+        mock__list_filesets.return_value = LUSTRE_FILESET_TREE['mylfs']
+
+        llops = lustre.LustreOperations()
+        self.assertEqual(llops.list_filesets(), LUSTRE_FILESET_TREE)
+        self.assertEqual(llops.filesets, LUSTRE_FILESET_TREE)
+        mock__list_filesets.called_with('mylfs')
 
     def test_make_fileset(self, mock_exists, mock_sanity_check, mock_execute):
         """ Test making a new fileset on a specified file system """

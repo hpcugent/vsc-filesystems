@@ -214,15 +214,12 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
 
         return lustrefss
 
-    def _get_fsname_for_path(self, path):
+    def _get_fsinfo_for_path(self, path):
         fs = self.what_filesystem(path)
-        return fs[3].split(':/')[1]
+        return (fs[3].split(':/')[1], fs[1])
 
     def _get_fshint_for_path(self, path):
-
-        fs = self.what_filesystem(path)
-        fsname = fs[3].split(':/')[1]
-        fsmount = fs[1]
+        fsname, fsmount = self._get_fsinfo_for_path(path)
         if fsname not in self.filesystems:
             # TODO: Ideally this is set up from immutable config of some sorts instead of hard coded
             # Or need API change)
@@ -319,26 +316,26 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
     def _list_filesets(self, device):
         """ Get all filesets for a Lustre device"""
 
-        path = device['defaultMountPoint']
-        fs = self._get_fsname_for_path(path)
+        fs = self._get_fshint_for_path(device['defaultMountPoint'])
 
         filesets = {}
         for upath in fs.get_search_paths():
             spath = self._sanity_check(upath)
-            ec, res = self._execute_lfs('project', spath)
-            if ec == 0:
+            ec, res = self._execute_lfs('project', [spath])
+            if ec != 0:
                 self.log.raiseException("Unable to get projects for path %s" % spath, LustreOperationError)
 
             for pjline in res.splitlines():
                 pjid, flag, path = pjline.split()
-                if pjid == 0:
+                if int(pjid) == 0:
+                    self.log.warning("path %s is part of default project", path)
                     continue
                 else:
-                    if filesets[pjid]:
-                        self.log.raiseException("We don't support projectids mapping multiple filesets",
-                            LustreOperationError)
+                    if pjid in filesets:
+                        self.log.raiseException("projectids mapping multiple paths: %s: %s, %s" %
+                            (pjid, filesets[pjid]['path'], path), LustreOperationError)
                     elif flag != 'P':
-                        # Not sure yet if this should raise Exception
+                        # Not sure if this should give error or raise Exception
                         self.log.raiseException("Project inheritance flag not set for project %s: %s"
                             % (pjid, path), LustreOperationError)
                     else:
@@ -348,10 +345,10 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
 
         return filesets
 
-    def set_fs_update_flag(self, device):
+    def set_fs_update(self, device):
         """ Update this FS next run of list_filesets """
 
-        self.filesets[device]['UPDATE'] = True
+        del self.filesets[device]
 
     def get_fileset_info(self, filesystem_name, fileset_name):
         """ get the info of a specific fileset """
@@ -370,16 +367,16 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         @type filesetnames: report only on specific filesets (if string: 1 filesetname)
         """
 
-        self.log.debug("Looking up filesets for devices %s" % devices)
+        self.log.debug("Looking up filesets for devices %s", devices)
 
         devices = self.list_filesystems(devices)
 
         filesetsres = {}
         for dev in devices.keys():
-            if self.filesets[dev] and not self.filesets[dev]['UPDATE']:
-                filesetsres[dev] = self.filesets[dev]
-            else:
-                filesetsres[dev] = self._list_filesets(devices[dev])
+            if dev not in self.filesets:
+                self.filesets[dev] = self._list_filesets(devices[dev])
+
+            filesetsres[dev] = self.filesets[dev]
 
         return filesetsres
 
@@ -410,9 +407,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         if fileset_name is None:
             self.log.raiseException('fileset name is mandatory')
 
-        fs = self.what_filesystem(parentfsetpath)
-        fsname = fs[3].split(':/')[1]
-
+        fsname, _fsmount = self._get_fsinfo_for_path(parentfsetpath)
         fsinfo = self.get_fileset_info(fsname, fileset_name)
         if not fsinfo:
             pjid = self._map_project_id(fsetpath, fileset_name)
@@ -426,7 +421,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
             self._set_new_project_id(fsetpath, pjid)
             # set inode quota
             self._set_quota(who=pjid, obj=fsetpath, typ='project', inode_soft=inodes_max, inode_hard=inodes_max)
-            self.set_fs_update_flag(fsname)
+            self.set_fs_update(fsname)
 
         else:
         # bail if there is a fileset with the same name
