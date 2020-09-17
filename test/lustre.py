@@ -121,6 +121,7 @@ class ToolsTest(TestCase):
     @mock.patch('vsc.filesystem.posix.PosixOperations._execute')
     @mock.patch('vsc.filesystem.lustre.LustreOperations._sanity_check')
     def test_get_project_id(self, mock_sanity_check, mock_execute):
+        """ Test the retrieval of projectid on fs """
         test_path = os.path.join("/lustre", "scratch", "gent", "vsc406", "vsc40605")
         mock_sanity_check.return_value = test_path
 
@@ -136,6 +137,7 @@ class ToolsTest(TestCase):
     @mock.patch('vsc.filesystem.lustre.LustreOperations._sanity_check')
     @mock.patch('vsc.filesystem.lustre.LustreOperations.exists')
     def test_set_fileset_quota(self, mock_exists, mock_sanity_check, mock_execute, mock_get_project_id):
+        """ test setting quota for specified fileset """
         test_path = os.path.join("/lustre", "scratch", "gent", "vsc406", "vsc40605")
         mock_sanity_check.return_value = test_path
         mock_execute.return_value = (0, "")
@@ -151,6 +153,7 @@ class ToolsTest(TestCase):
         mock_get_project_id.assert_called_with('/gent')
 
     def test_list_filesystems(self):
+        """ Test retrieving all Lustre file systems """
 
         llops = lustre.LustreOperations()
 
@@ -171,6 +174,7 @@ class ToolsTest(TestCase):
 
     @mock.patch('vsc.filesystem.posix.PosixOperations._execute')
     def test__execute_lctl_get_param_qmt_yaml(self, mock_execute):
+        """ Test executing lctl get_param output parsing """
         output_dt_prj = '''qmt.mylfs-QMT0000.dt-0x0.glb-prj=
 global_pool0_dt_prj
 - id:      0
@@ -209,6 +213,7 @@ global_pool0_md_usr
 
     @mock.patch('vsc.filesystem.lustre.LustreOperations._execute_lctl_get_param_qmt_yaml')
     def test_list_quota(self, mock_lctl_yaml):
+        """ Test making quota structure """
 
         quota_result = {'mylfs':{
             'USR': {
@@ -239,6 +244,7 @@ global_pool0_md_usr
     @mock.patch('vsc.filesystem.posix.PosixOperations._execute')
     @mock.patch('vsc.filesystem.lustre.LustreOperations._sanity_check')
     def test__set_new_project_id(self, mock_sanity_check, mock_execute, mock_get_projectid):
+        """ Test setting project id on fileset folder """
         test_path = os.path.join("/lustre", "scratch", "gent", "vsc406", "vsc40605")
         mock_sanity_check.return_value = test_path
         mock_execute.return_value = (0, '')
@@ -251,6 +257,7 @@ global_pool0_md_usr
 
     @mock.patch('vsc.filesystem.posix.PosixOperations.what_filesystem')
     def test__get_fshint_for_path(self, mock_what_filesystem):
+        """ Test getting the search paths and pjid mapping for a file system """
         mock_what_filesystem.return_value = ['lustre', '/lustre/mylfs', 452646254, '10.141.21.204@tcp:/mylfs']
         llops = lustre.LustreOperations()
         fsclass = llops._get_fshint_for_path('/lustre/mylfs/mypath')
@@ -259,10 +266,13 @@ global_pool0_md_usr
 
 
     def test__list_filesets(self, mock_exists, mock_sanity_check, mock_execute):
+        """ Test listing all filesets for a specified file system"""
         pass
 
     def test_list_filesets(self, mock):
+        """ Test listing or updating all filesets """
         pass
 
     def test_make_fileset(self, mock_exists, mock_sanity_check, mock_execute):
+        """ Test making a new fileset on a specified file system """
         pass
