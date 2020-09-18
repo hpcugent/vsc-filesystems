@@ -232,7 +232,8 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
 
     def _set_new_project_id(self, project_path, pjid):
 
-        if not self.get_project_id(project_path, False):
+        exid = self.get_project_id(project_path, False)
+        if not exid or int(exid) == 0:
             # recursive and inheritance flag set
             opts = ['-p', pjid, '-r', '-s', project_path]
             ec, _res = self._execute_lfs('project', opts, True)
@@ -242,7 +243,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
                 self.log.raiseException("Could not set new projectid %s for path %s" % (pjid, project_path),
                     LustreOperationError)
         else:
-            self.log.raiseException("Path %s already has a projectid" % project_path, LustreOperationError)
+            self.log.raiseException("Path %s already has a projectid %s" % (project_path, exid), LustreOperationError)
 
         return None
 
@@ -421,6 +422,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
             self._set_new_project_id(fsetpath, pjid)
             # set inode quota
             self._set_quota(who=pjid, obj=fsetpath, typ='project', inode_soft=inodes_max, inode_hard=inodes_max)
+            self.log.info("Created new fileset %s at %s with id %s", fileset_name, fsetpath, pjid)
             self.set_fs_update(fsname)
 
         else:

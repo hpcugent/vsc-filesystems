@@ -324,7 +324,7 @@ global_pool0_md_usr
     @mock.patch('vsc.filesystem.posix.PosixOperations._sanity_check')
     @mock.patch('vsc.filesystem.posix.PosixOperations.exists')
     def test_make_fileset(self, mock_exists, mock_sanity_check, mock_list_filesets,
-            mock_what_filesystem, mock_make_dir, mock_execute, mock__set_quota):
+            mock_what_filesystem, mock_make_dir, mock_execute, mock_set_quota):
         """ Test making a new fileset on a specified file system """
         mock_sanity_check.side_effect = lambda x: x
         mock_execute.return_value = (0, "")
@@ -332,11 +332,16 @@ global_pool0_md_usr
         mock_what_filesystem.return_value = ['lustre', '/lustre/mylfs', 452646254, '10.141.21.204@tcp:/mylfs']
         mock_make_dir.return_value = True
         mock_exists.return_value = True
+        mock_set_quota.return_value = True
         llops = lustre.LustreOperations()
         self.assertRaises(lustre.LustreOperationError, llops.make_fileset, '/lustre/mylfs/gent/vo/000/gvo00002', 'gvo00002')
         mock_exists.return_value = False
         self.assertRaises(lustre.LustreOperationError, llops.make_fileset, '/lustre/mylfs/gent/vo/000/gvo00002', 'gvo00002')
         mock_exists.side_effect = [False, True]
-        llops.make_fileset('/lustre/mylfs/gent/vo/000/gvo00002', 'gvo00002')
-
-
+        self.assertRaises(lustre.LustreOperationError, llops.make_fileset, '/lustre/mylfs/gent/vo/000/gvo00002', 'gvo00002')
+        mock_exists.side_effect = [False, True]
+        mock_execute.side_effect = [(0, '    0 P /lustre/mylfs/gent/vo/000/gvo00003'), (0, "")]
+        llops.make_fileset('/lustre/mylfs/gent/vo/000/gvo00003', 'gvo00003')
+        mock_set_quota.assert_called_with(who=900003, obj='/lustre/mylfs/gent/vo/000/gvo00003', typ='project', inode_soft=1048576, inode_hard=1048576)
+        mock_make_dir.assert_called_with('/lustre/mylfs/gent/vo/000/gvo00003')
+        mock_execute.assert_called_with(['/usr/bin/lfs', 'project', '-p', 900003, '-r', '-s', '/lustre/mylfs/gent/vo/000/gvo00003'], True)
