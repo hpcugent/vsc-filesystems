@@ -152,13 +152,13 @@ class QuotaFileset(QuotaEntity):
 
 class QuotaGroup(QuotaEntity):
     """Definition of a group with it associated quota."""
-    def __init__(self, group_id):
+    def __init__(self, storage, filesystem, group_id):
         """Initialisation.
 
         @type group_id: string
         @param group_id: the alphanumerical ID of the group.
         """
-        super(QuotaGroup, self).__init__()
+        super(QuotaGroup, self).__init__(storage, filesystem)
         self.group_id = group_id
 
     def key(self):

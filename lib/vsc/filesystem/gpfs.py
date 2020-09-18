@@ -73,7 +73,7 @@ def split_output_lines(out):
         else:
             return line
 
-    return [[percentdecode(y) for y in clean(x).strip().split(':')] for x in out.strip().split('\n')]
+    return [[percentdecode(y) for y in clean(x).split(':')] for x in out]
 
 
 class GpfsOperationError(PosixOperationError):
@@ -264,7 +264,7 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
         # it's percent encoded: first split in :, then decode
         b = [[percentdecode(y) for y in  x.split(':')] for x in a]
         """
-        what = split_output_lines(out)
+        what = split_output_lines(out.splitlines())
         expectedheader = [name, '', 'HEADER', 'version', 'reserved', 'reserved']
 
         # verify result and remove all items that do not match the expected output data
@@ -379,7 +379,7 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
             for (key, value) in res.items():
                 info[key] = value
 
-        datakeys = info.keys()
+        datakeys = list(info.keys())
         datakeys.remove('filesystemName')
         datakeys.remove('quotaType')
         datakeys.remove('id')
@@ -456,7 +456,7 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
             for (key, value) in res.items():
                 info[key] = value
 
-        datakeys = info.keys()
+        datakeys = list(info.keys())
         datakeys.remove('filesystemName')
         datakeys.remove('id')
 
@@ -516,10 +516,10 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
         shorthn = gethostname().split('.')[0]
 
         infoL = self._executeY('mmlsdisk', [device, '-L'])
-        keysL = infoL.keys()
+        keysL = list(infoL.keys())
         keysL.remove('nsdName')
         infoM = self._executeY('mmlsdisk', [device, '-M'])
-        keysM = infoM.keys()
+        keysM = list(infoM.keys())
         keysM.remove('nsdName')
 
         # sanity check
