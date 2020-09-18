@@ -314,8 +314,29 @@ global_pool0_md_usr
         llops = lustre.LustreOperations()
         self.assertEqual(llops.list_filesets(), LUSTRE_FILESET_TREE)
         self.assertEqual(llops.filesets, LUSTRE_FILESET_TREE)
-        mock__list_filesets.called_with('mylfs')
+        mock__list_filesets.assert_called_with({'defaultMountPoint': '/lustre/mylfs', 'location': '10.141.21.204@tcp'})
 
-    def test_make_fileset(self, mock_exists, mock_sanity_check, mock_execute):
+    @mock.patch('vsc.filesystem.lustre.LustreOperations._set_quota')
+    @mock.patch('vsc.filesystem.posix.PosixOperations._execute')
+    @mock.patch('vsc.filesystem.posix.PosixOperations.make_dir')
+    @mock.patch('vsc.filesystem.posix.PosixOperations.what_filesystem')
+    @mock.patch('vsc.filesystem.lustre.LustreOperations.list_filesets')
+    @mock.patch('vsc.filesystem.posix.PosixOperations._sanity_check')
+    @mock.patch('vsc.filesystem.posix.PosixOperations.exists')
+    def test_make_fileset(self, mock_exists, mock_sanity_check, mock_list_filesets,
+            mock_what_filesystem, mock_make_dir, mock_execute, mock__set_quota):
         """ Test making a new fileset on a specified file system """
-        pass
+        mock_sanity_check.side_effect = lambda x: x
+        mock_execute.return_value = (0, "")
+        mock_list_filesets.return_value = LUSTRE_FILESET_TREE
+        mock_what_filesystem.return_value = ['lustre', '/lustre/mylfs', 452646254, '10.141.21.204@tcp:/mylfs']
+        mock_make_dir.return_value = True
+        mock_exists.return_value = True
+        llops = lustre.LustreOperations()
+        self.assertRaises(lustre.LustreOperationError, llops.make_fileset, '/lustre/mylfs/gent/vo/000/gvo00002', 'gvo00002')
+        mock_exists.return_value = False
+        self.assertRaises(lustre.LustreOperationError, llops.make_fileset, '/lustre/mylfs/gent/vo/000/gvo00002', 'gvo00002')
+        mock_exists.side_effect = [False, True]
+        llops.make_fileset('/lustre/mylfs/gent/vo/000/gvo00002', 'gvo00002')
+
+

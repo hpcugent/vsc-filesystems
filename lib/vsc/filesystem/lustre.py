@@ -235,7 +235,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         if not self.get_project_id(project_path, False):
             # recursive and inheritance flag set
             opts = ['-p', pjid, '-r', '-s', project_path]
-            ec, _res = self._execute_lfs('project', opts)
+            ec, _res = self._execute_lfs('project', opts, True)
             if ec == 0:
                 return pjid
             else:
@@ -353,7 +353,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
     def get_fileset_info(self, filesystem_name, fileset_name):
         """ get the info of a specific fileset """
         fsets = self.list_filesets(filesystem_name)
-        for fileset in fsets[filesystem_name]:
+        for fileset in fsets[filesystem_name].values():
             if fileset['filesetName'] == fileset_name:
                 return fileset
 
@@ -381,7 +381,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         return filesetsres
 
 
-    def make_fileset(self, new_fileset_path, fileset_name=None, inodes_max=1048576):
+    def make_fileset(self, new_fileset_path, fileset_name, inodes_max=1048576):
         """
         Given path, create a new directory and set file quota
           - check uniqueness
@@ -412,7 +412,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         if not fsinfo:
             pjid = self._map_project_id(fsetpath, fileset_name)
             filesets = self.list_filesets(fsname)
-            if filesets[pjid]:
+            if pjid in filesets[fsname]:
                 self.log.raiseException("Found existing projectid %s in file system %s: %s"
                     % (pjid, fsname, filesets[pjid]), LustreOperationError)
 
