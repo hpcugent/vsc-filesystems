@@ -22,6 +22,7 @@ from __future__ import print_function
 
 import os
 import re
+import glob
 
 from collections import namedtuple
 
@@ -58,7 +59,7 @@ class LustreOperationError(PosixOperationError):
 class LustreVscFSError(Exception):
     """ LustreVSCFS Error """
 
-class LustreVscFS():
+class LustreVscFS(object):
     """Default class for a vsc managed Lustre file system
         Since Lustre doesn't have a 'lsfileset' kind of command,
         we need some hints to defining names, ids and mappings
@@ -88,7 +89,7 @@ class LustreVscFS():
         """ Get all the paths we should look for projects """
         res = []
         for loc in self.project_locations:
-            res.append(os.path.join(self.mountpoint, loc))
+            res.extend(glob.glob(os.path.join(self.mountpoint, loc)))
         return res
 
 
@@ -98,7 +99,7 @@ class LustreVscGhentScratchFs(LustreVscFS):
 
     def __init__(self, mountpoint):
 
-        project_locations = ['gent', 'gent/vo/*']
+        project_locations = ['gent', 'gent/vo/00[0-9]']
         projectid_maps = {'gvo' : 900000}
         super(LustreVscGhentScratchFs, self).__init__(mountpoint, project_locations, projectid_maps)
 

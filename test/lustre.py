@@ -271,7 +271,7 @@ global_pool0_md_usr
         mock_what_filesystem.return_value = ['lustre', '/lustre/mylfs', 452646254, '10.141.21.204@tcp:/mylfs']
         llops = lustre.LustreOperations()
         fsclass = llops._get_fshint_for_path('/lustre/mylfs/mypath')
-        self.assertEqual(fsclass.get_search_paths(), ['/lustre/mylfs/gent', '/lustre/mylfs/gent/vo/*'])
+        self.assertEqual(fsclass.get_search_paths(), ['/lustre/mylfs/gent', '/lustre/mylfs/gent/vo/000', '/lustre/mylfs/gent/vo/001'])
         self.assertEqual(fsclass.pjid_from_name('gvo00002'), 900002)
 
 
@@ -299,7 +299,7 @@ global_pool0_md_usr
         llops = lustre.LustreOperations()
         fsystems = {'mylfs': {'defaultMountPoint': '/lustre/mylfs', 'location': '10.141.21.204@tcp'}}
         filesets = llops._list_filesets(fsystems['mylfs'])
-        mock_execute.assert_called_with(['/usr/bin/lfs', 'project', '/lustre/mylfs/gent/vo/*'], False)
+        mock_execute.assert_called_with(['/usr/bin/lfs', 'project', '/lustre/mylfs/gent/vo/001'], False)
         self.assertEqual(filesets, LUSTRE_FILESET_TREE['mylfs'])
 
 
