@@ -24,7 +24,7 @@ from vsc.install.shared_setup import ag, kh, sdw, kw, wdp
 
 
 PACKAGE = {
-    'version': '1.2.0',
+    'version': '1.2.1',
     'author': [sdw, ag, kh, kw],
     'maintainer': [sdw, ag, kh, kw, wdp],
     'setup_requires': ['vsc-install >= 0.15.2'],
@@ -34,6 +34,7 @@ PACKAGE = {
         'vsc-config >= 3.0.0',
         'vsc-utils >= 2.0.0',
         'future >= 0.16.0',
+        'PyYAML',
     ],
 }
 
