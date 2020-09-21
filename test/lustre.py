@@ -22,6 +22,7 @@ from __future__ import print_function
 
 import mock
 import os
+import glob
 import vsc.filesystem.lustre as lustre
 from vsc.filesystem.lustre import LustreQuota
 
@@ -265,9 +266,11 @@ global_pool0_md_usr
         (args, _) = mock_execute.call_args
         self.assertEqual(args[0], ['/usr/bin/lfs', 'project', '-p', 4, '-r', '-s', '/lustre/scratch/gent/vsc406/vsc40605'])
 
+    @mock.patch('glob.glob')
     @mock.patch('vsc.filesystem.posix.PosixOperations.what_filesystem')
-    def test__get_fshint_for_path(self, mock_what_filesystem):
+    def test__get_fshint_for_path(self, mock_what_filesystem, mock_glob):
         """ Test getting the search paths and pjid mapping for a file system """
+        mock_glob.side_effect = [['/lustre/mylfs/gent'], ['/lustre/mylfs/gent/vo/000', '/lustre/mylfs/gent/vo/001']]
         mock_what_filesystem.return_value = ['lustre', '/lustre/mylfs', 452646254, '10.141.21.204@tcp:/mylfs']
         llops = lustre.LustreOperations()
         fsclass = llops._get_fshint_for_path('/lustre/mylfs/mypath')
@@ -275,12 +278,14 @@ global_pool0_md_usr
         self.assertEqual(fsclass.pjid_from_name('gvo00002'), 900002)
 
 
+    @mock.patch('glob.glob')
     @mock.patch('vsc.filesystem.posix.PosixOperations.what_filesystem')
     @mock.patch('vsc.filesystem.posix.PosixOperations._execute')
     @mock.patch('vsc.filesystem.lustre.LustreOperations._sanity_check')
-    def test__list_filesets(self, mock_sanity_check, mock_execute, mock_what_filesystem):
+    def test__list_filesets(self, mock_sanity_check, mock_execute, mock_what_filesystem, mock_glob):
         """ Test listing all filesets for a specified file system"""
         mock_sanity_check.side_effect = lambda x: x
+        mock_glob.side_effect = [['/lustre/mylfs/gent'], ['/lustre/mylfs/gent/vo/000', '/lustre/mylfs/gent/vo/001']]
         mock_what_filesystem.return_value = ['lustre', '/lustre/mylfs', 452646254, '10.141.21.204@tcp:/mylfs']
         mock_execute.side_effect = [
             (0, '''    0 P /lustre/mylfs/gent/training
@@ -292,7 +297,8 @@ global_pool0_md_usr
             (0, '''900006 P /lustre/mylfs/gent/vo/000/gvo00006
 900002 P /lustre/mylfs/gent/vo/000/gvo00002
 900004 P /lustre/mylfs/gent/vo/000/gvo00004
-900110 P /lustre/mylfs/gent/vo/001/gvo00110
+'''),
+            (0,'''900110 P /lustre/mylfs/gent/vo/001/gvo00110
 900112 P /lustre/mylfs/gent/vo/001/gvo00112
 900111 P /lustre/mylfs/gent/vo/001/gvo00111
 ''')]
