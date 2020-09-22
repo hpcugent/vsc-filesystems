@@ -80,7 +80,7 @@ class LustreVscFS(object):
         prefix, pjid = self.pjparser.match(name).groups()
         if prefix in self.projectid_maps.keys():
             res = self.projectid_maps[prefix] + int(pjid)
-            return res
+            return str(res)
         else:
             self.log.raiseException("_pjid_from_name: project prefix %s not recognized" % prefix, LustreVscFSError)
             return None
@@ -119,17 +119,13 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         """
 
         cmd = ['/usr/bin/lfs', name]
-
-        if opts is not None:
-            if isinstance(opts, (tuple, list,)):
-                cmd += list(opts)
-            else:
-                self.log.raiseException("_execute_lfs: please use a list or tuple for options: cmd %s opts %s" %
-                                        (cmd, opts), LustreOperationError)
+        cmd += opts
 
         ec, out = self._execute(cmd, changes)
+        if ec != 0:
+            self.log.raiseException("Unable to run command %s. ec: %s, out:%s" % (cmd, ec, out), LustreOperationError)
 
-        return ec, out
+        return out
 
     def _execute_lctl_get_param_qmt_yaml(self, device, typ, quotyp='block'):
         """ executy LUSTRE lctl get_param qmt.* command and parse output
@@ -157,7 +153,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
 
         param = 'qmt.%s-*.%s-*.glb-%s' % (device, QUOTYP2PARAM[quotyp], TYP2PARAM[typ])
         opts = ['get_param', param]
-        _ec, res = self._execute_lctl(opts)
+        res = self._execute_lctl(opts)
         quota_info = res.split("\n", 2)
         try:
             newres = yaml.safe_load(quota_info[2])
@@ -171,16 +167,13 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         """ Return output of lctl command """
 
         cmd = ['/usr/sbin/lctl']
-        if opts is not None:
-            if isinstance(opts, (tuple, list,)):
-                cmd += list(opts)
-            else:
-                self.log.raiseException("_execute_lctl: please use a list or tuple for options: cmd %s opts %s" %
-                                        (cmd, opts), LustreOperationError)
+        cmd += opts
 
-        ec, res = self._execute(cmd, changes)
+        ec, out = self._execute(cmd, changes)
+        if ec != 0:
+            self.log.raiseException("Unable to run command %s. ec: %s, out:%s" % (cmd, ec, out), LustreOperationError)
 
-        return ec, res
+        return out
 
     def list_filesystems(self, device=None):
         """ List all Lustre file systems """
@@ -237,12 +230,8 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         if not exid or int(exid) == 0:
             # recursive and inheritance flag set
             opts = ['-p', pjid, '-r', '-s', project_path]
-            ec, _res = self._execute_lfs('project', opts, True)
-            if ec == 0:
-                return pjid
-            else:
-                self.log.raiseException("Could not set new projectid %s for path %s" % (pjid, project_path),
-                    LustreOperationError)
+            self._execute_lfs('project', opts, True)
+            return pjid
         else:
             self.log.raiseException("Path %s already has a projectid %s" % (project_path, exid), LustreOperationError)
 
@@ -254,7 +243,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         project_path = self._sanity_check(project_path)
         opts = ['-d', project_path]
 
-        _ec, res = self._execute_lfs('project', opts)
+        res = self._execute_lfs('project', opts)
         pjid, flag, path = res.split()
         self.log.info('got pjid %s, flag %s, path %s' % (pjid, flag, path))
         if flag == 'P' and path == project_path:
@@ -267,7 +256,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         return None
 
     # pylint: disable=arguments-differ
-    def list_quota(self, devices):
+    def list_quota(self, devices=None):
         """get quota info for filesystems for all user,group,project
             Output has been remapped to format of gpfs.py
                 dict: key = deviceName, value is
@@ -323,9 +312,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         filesets = {}
         for upath in fs.get_search_paths():
             spath = self._sanity_check(upath)
-            ec, res = self._execute_lfs('project', [spath])
-            if ec != 0:
-                self.log.raiseException("Unable to get projects for path %s" % spath, LustreOperationError)
+            res = self._execute_lfs('project', [spath])
 
             for pjline in res.splitlines():
                 pjid, flag, path = pjline.split()
@@ -412,7 +399,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         fsname, _fsmount = self._get_fsinfo_for_path(parentfsetpath)
         fsinfo = self.get_fileset_info(fsname, fileset_name)
         if not fsinfo:
-            pjid = self._map_project_id(fsetpath, fileset_name)
+            pjid = self._map_project_id(parentfsetpath, fileset_name)
             filesets = self.list_filesets(fsname)
             if pjid in filesets[fsname]:
                 self.log.raiseException("Found existing projectid %s in file system %s: %s"
@@ -519,9 +506,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
 
         opts.append(obj)
 
-        ec, _ = self._execute_lfs('setquota', opts, True)
-        if ec > 0:
-            self.log.raiseException("_set_grace: setquota with opts %s failed" % (opts), LustreOperationError)
+        self._execute_lfs('setquota', opts, True)
 
     def _get_quota(self, who, obj, typ):
         """Get quota of a given object.
@@ -542,7 +527,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         opts += ["-%s" % TYP2OPT[typ], "%s" % who]
         opts.append(obj)
 
-        _ec, res = self._execute_lfs('quota', opts)
+        res = self._execute_lfs('quota', opts)
         return res
 
 
@@ -600,9 +585,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
 
         opts.append(obj)
 
-        ec, _ = self._execute_lfs('setquota', opts, True)
-        if ec > 0:
-            self.log.raiseException("_set_quota: tssetquota with opts %s failed" % (opts), LustreOperationError)
+        self._execute_lfs('setquota', opts, True)
 
 
 

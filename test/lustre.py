@@ -275,7 +275,7 @@ global_pool0_md_usr
         llops = lustre.LustreOperations()
         fsclass = llops._get_fshint_for_path('/lustre/mylfs/mypath')
         self.assertEqual(fsclass.get_search_paths(), ['/lustre/mylfs/gent', '/lustre/mylfs/gent/vo/000', '/lustre/mylfs/gent/vo/001'])
-        self.assertEqual(fsclass.pjid_from_name('gvo00002'), 900002)
+        self.assertEqual(fsclass.pjid_from_name('gvo00002'), '900002')
 
 
     @mock.patch('glob.glob')
@@ -348,6 +348,6 @@ global_pool0_md_usr
         mock_exists.side_effect = [False, True]
         mock_execute.side_effect = [(0, '    0 P /lustre/mylfs/gent/vo/000/gvo00003'), (0, "")]
         llops.make_fileset('/lustre/mylfs/gent/vo/000/gvo00003', 'gvo00003')
-        mock_set_quota.assert_called_with(who=900003, obj='/lustre/mylfs/gent/vo/000/gvo00003', typ='project', inode_soft=1048576, inode_hard=1048576)
+        mock_set_quota.assert_called_with(who='900003', obj='/lustre/mylfs/gent/vo/000/gvo00003', typ='project', inode_soft=1048576, inode_hard=1048576)
         mock_make_dir.assert_called_with('/lustre/mylfs/gent/vo/000/gvo00003')
-        mock_execute.assert_called_with(['/usr/bin/lfs', 'project', '-p', 900003, '-r', '-s', '/lustre/mylfs/gent/vo/000/gvo00003'], True)
+        mock_execute.assert_called_with(['/usr/bin/lfs', 'project', '-p', '900003', '-r', '-s', '/lustre/mylfs/gent/vo/000/gvo00003'], True)
