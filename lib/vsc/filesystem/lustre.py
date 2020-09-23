@@ -29,6 +29,7 @@ from collections import namedtuple
 from vsc.filesystem.posix import PosixOperations, PosixOperationError
 from vsc.utils.patterns import Singleton
 from vsc.utils import fancylogger
+from enum import Enum
 
 from future.utils import with_metaclass
 import yaml
@@ -38,20 +39,19 @@ LustreQuota = namedtuple('LustreQuota',
         'blockUsage', 'blockQuota', 'blockLimit', 'blockGrace', 'blockInDoubt',
         'filesUsage', 'filesQuota', 'filesLimit', 'filesGrace', 'filesInDoubt'])
 
-TYP2OPT = {
-    'user': 'u',
-    'group': 'g',
-    'project': 'p',
-}
-TYP2PARAM = {
-    'USR': 'usr',
-    'GRP': 'grp',
-    'FILESET': 'prj',
-}
-QUOTYP2PARAM = {
-    'block': 'dt',
-    'inode': 'md',
-}
+class Typ2Opt(Enum):
+    user = 'u'
+    group = 'g'
+    project = 'p'
+
+class Typ2Param(Enum):
+    USR = 'usr'
+    GRP = 'grp'
+    FILESET = 'prj'
+
+class Quotyp2Param(Enum):
+    block = 'dt'
+    inode = 'md'
 
 class LustreOperationError(PosixOperationError):
     """ Lustre Error """
@@ -144,14 +144,8 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
           limits:  { hard:   0, soft:   0, granted:  0, time: 281474976710656 }
 
         """
-        if typ not in TYP2PARAM:
-            self.log.raiseException("_execute_lctl_get_param_qmt_yaml: unsupported type %s. Use USR,GRP or FILESET"
-                % typ, LustreOperationError)
-        if quotyp not in QUOTYP2PARAM:
-            self.log.raiseException("_execute_lctl_get_param_qmt_yaml: unsupported type %s. Use 'block' or 'inode'" %
-                quotyp, LustreOperationError)
 
-        param = 'qmt.%s-*.%s-*.glb-%s' % (device, QUOTYP2PARAM[quotyp], TYP2PARAM[typ])
+        param = 'qmt.%s-*.%s-*.glb-%s' % (device, Quotyp2Param[quotyp].value, Typ2Param[typ].value)
         opts = ['get_param', param]
         res = self._execute_lctl(opts)
         quota_info = res.split("\n", 2)
@@ -182,8 +176,6 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
 
         if device is None:
             devices = []
-        elif not isinstance(device, list):
-            devices = [device]
         else:
             devices = device
 
@@ -245,7 +237,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
 
         res = self._execute_lfs('project', opts)
         pjid, flag, path = res.split()
-        self.log.info('got pjid %s, flag %s, path %s' % (pjid, flag, path))
+        self.log.info('got pjid %s, flag %s, path %s', pjid, flag, path)
         if flag == 'P' and path == project_path:
             return pjid
         elif existing:
@@ -267,13 +259,12 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         """
         if devices is None:
             devices = self.list_filesystems().keys()
-        elif isinstance(devices, str):
-            devices = [devices]
 
         quota = {}
         for fsname in devices:
             quota[fsname] = {}
-            for typ in TYP2PARAM.keys():
+            for typp in list(Typ2Param):
+                typ = typp.name
                 quota[fsname][typ] = {}
                 blockres = self._execute_lctl_get_param_qmt_yaml(fsname, typ, 'block')
                 inoderes = self._execute_lctl_get_param_qmt_yaml(fsname, typ, 'inode')
@@ -510,7 +501,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
             self.log.raiseException("setQuota: can't set quota on none-existing obj %s" % obj, LustreOperationError)
 
         opts = ['-t']
-        opts += ["-%s" % TYP2OPT[typ]]
+        opts += ["-%s" % Typ2Opt[typ].value]
         opts += ["-b", "%s" % int(grace)]
         opts += ["-i", "%s" % int(grace)]
 
@@ -530,11 +521,8 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         if not self.dry_run and not self.exists(obj):
             self.log.raiseException("setQuota: can't set quota on none-existing obj %s" % obj, LustreOperationError)
 
-        if typ not in TYP2OPT:
-            self.log.raiseException("_set_quota: unsupported type %s" % typ, LustreOperationError)
-
         opts = []
-        opts += ["-%s" % TYP2OPT[typ], "%s" % who]
+        opts += ["-%s" % Typ2Opt[typ].value, "%s" % who]
         opts.append(obj)
 
         res = self._execute_lfs('quota', opts)
@@ -560,10 +548,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
 
         soft2hard_factor = 1.05
 
-        if typ not in TYP2OPT:
-            self.log.raiseException("_set_quota: unsupported type %s" % typ, LustreOperationError)
-
-        opts = ["-%s" % TYP2OPT[typ], "%s" % who]
+        opts = ["-%s" % Typ2Opt[typ].value, "%s" % who]
 
         if soft is None and inode_soft is None:
             self.log.raiseException("setQuota: At least one type of quota (block,inode) should be specified",

@@ -180,7 +180,7 @@ class ToolsTest(TestCase):
                 ['tmpfs', '/run/user/2006', 40, 'tmpfs']
                 ]
         self.assertEqual(llops.list_filesystems(), {'mylfs': {'defaultMountPoint': '/lustre/mylfs', 'location': '10.141.21.204@tcp'}})
-        self.assertEqual(llops.list_filesystems('mylfs'), {'mylfs': {'defaultMountPoint': '/lustre/mylfs', 'location': '10.141.21.204@tcp'}})
+        self.assertEqual(llops.list_filesystems(['mylfs']), {'mylfs': {'defaultMountPoint': '/lustre/mylfs', 'location': '10.141.21.204@tcp'}})
         self.assertRaises(lustre.LustreOperationError, llops.list_filesystems, 'nofs')
 
     @mock.patch('vsc.filesystem.posix.PosixOperations._execute')
@@ -248,7 +248,7 @@ global_pool0_md_usr
         mock_lctl_yaml.side_effect = quota_mock
 
         llops = lustre.LustreOperations()
-        self.assertEqual(llops.list_quota('mylfs'), quota_result)
+        self.assertEqual(llops.list_quota(['mylfs']), quota_result)
 
 
     @mock.patch('vsc.filesystem.lustre.LustreOperations.get_project_id')
