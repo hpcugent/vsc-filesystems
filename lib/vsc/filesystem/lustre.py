@@ -383,6 +383,12 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
 
         fsetpath = self._sanity_check(new_fileset_path)
 
+        if fileset_name is None:
+            fileset_name = os.path.basename(fsetpath)
+        elif fileset_name != os.path.basename(fsetpath):
+            self.log.raiseException('fileset name %s should be the directory name %s.'
+                    %(fileset_name, os.path.basename(fsetpath)), LustreOperationError)
+
         # does the path exist ?
         if self.exists(fsetpath):
             self.log.raiseException(("makeFileset for new_fileset_path %s returned sane fsetpath %s,"
@@ -393,8 +399,6 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
             self.log.raiseException(("parent dir %s of fsetpath %s does not exist. Not going to create it "
                                      "automatically.") % (parentfsetpath, fsetpath), LustreOperationError)
 
-        if fileset_name is None:
-            self.log.raiseException('fileset name is mandatory')
 
         fsname, _fsmount = self._get_fsinfo_for_path(parentfsetpath)
         fsinfo = self.get_fileset_info(fsname, fileset_name)
@@ -446,7 +450,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         self._set_quota(who=group, obj=obj, typ='group', soft=soft, hard=hard,
                 inode_soft=inode_soft, inode_hard=inode_hard)
 
-    def set_fileset_quota(self, soft, fileset_path, hard=None, inode_soft=None, inode_hard=None):
+    def set_fileset_quota(self, soft, fileset_path, fileset_name=None, hard=None, inode_soft=None, inode_hard=None):
         """Set quota on a fileset. This maps to projects in Lustre
 
         @type soft: integer representing the soft limit expressed in bytes
@@ -455,6 +459,12 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         @type inode_soft: integer representing the soft files limit
         @type inode_soft: integer representing the hard files quota
         """
+
+        fileset_path = self._sanity_check(fileset_path)
+        if fileset_name is not None and fileset_name != os.path.basename(fileset_path):
+            self.log.raiseException('fileset name %s should be the directory name %s.'
+                    %(fileset_name, os.path.basename(fileset_path)), LustreOperationError)
+
         # we need the corresponding project id
         project = self.get_project_id(fileset_path)
         if int(project) == 0:
@@ -586,7 +596,6 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         opts.append(obj)
 
         self._execute_lfs('setquota', opts, True)
-
 
 
 if __name__ == '__main__':

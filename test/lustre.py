@@ -134,7 +134,7 @@ class ToolsTest(TestCase):
     def test_get_project_id(self, mock_sanity_check, mock_execute):
         """ Test the retrieval of projectid on fs """
         test_path = os.path.join("/lustre", "scratch", "gent", "vsc406", "vsc40605")
-        mock_sanity_check.return_value = test_path
+        mock_sanity_check.side_effect = lambda x: x
 
         llops = lustre.LustreOperations()
         mock_execute.return_value = (0, '    1 P /lustre/scratch/gent/vsc406/vsc40605')
@@ -150,7 +150,7 @@ class ToolsTest(TestCase):
     def test_set_fileset_quota(self, mock_exists, mock_sanity_check, mock_execute, mock_get_project_id):
         """ test setting quota for specified fileset """
         test_path = os.path.join("/lustre", "scratch", "gent", "vsc406", "vsc40605")
-        mock_sanity_check.return_value = test_path
+        mock_sanity_check.side_effect = lambda x: x
         mock_execute.return_value = (0, "")
 
         mock_get_project_id.return_value = '1'
