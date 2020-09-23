@@ -88,7 +88,7 @@ class ToolsTest(TestCase):
         llops = lustre.LustreOperations()
         mock_execute.return_value = (0, "")
 
-        llops._set_grace(test_path, 'user', 7 * 24 * 60 * 60)
+        llops._set_grace(test_path, lustre.Typ2Opt.user, 7 * 24 * 60 * 60)
 
         (args, _) = mock_execute.call_args
         self.assertEqual(args[0], ['/usr/bin/lfs', 'setquota', '-t', '-u',
@@ -107,7 +107,7 @@ class ToolsTest(TestCase):
         llops = lustre.LustreOperations()
         mock_execute.return_value = (0, "")
 
-        llops._set_quota(2540075, test_path, 'user', 10240000)
+        llops._set_quota(2540075, test_path, lustre.Typ2Opt.user, 10240000)
 
         (args, _) = mock_execute.call_args
         self.assertEqual(args[0], [
@@ -115,14 +115,14 @@ class ToolsTest(TestCase):
             '-b', '9m', '-B', '10m',
             '/lustre/scratch/gent/vsc406/vsc40605'])
 
-        llops._set_quota(2540075, test_path, 'user', 10240000, inode_soft=1000)
+        llops._set_quota(2540075, test_path, lustre.Typ2Opt.user, 10240000, inode_soft=1000)
         (args, _) = mock_execute.call_args
         self.assertEqual(args[0], [
             '/usr/bin/lfs', 'setquota', '-u', '2540075',
             '-b', '9m', '-B', '10m', '-i', '1000', '-I', '1050',
             '/lustre/scratch/gent/vsc406/vsc40605'])
 
-        llops._set_quota(2540075, test_path, 'user', inode_soft=2000, inode_hard=2123)
+        llops._set_quota(2540075, test_path, lustre.Typ2Opt.user, inode_soft=2000, inode_hard=2123)
         (args, _) = mock_execute.call_args
         self.assertEqual(args[0], [
             '/usr/bin/lfs', 'setquota', '-u', '2540075',
@@ -205,7 +205,7 @@ global_pool0_md_usr
 
         mock_execute.return_value = (0, output_dt_prj)
         llops = lustre.LustreOperations()
-        quots = llops._execute_lctl_get_param_qmt_yaml('mylfs', 'FILESET', 'block')
+        quots = llops._execute_lctl_get_param_qmt_yaml('mylfs', lustre.Typ2Param.FILESET, lustre.Quotyp2Param.block)
         (args, _) = mock_execute.call_args
         self.assertEqual(args[0], ['/usr/sbin/lctl', 'get_param', 'qmt.mylfs-*.dt-*.glb-prj'])
         self.assertEqual( quots, [{
@@ -214,7 +214,7 @@ global_pool0_md_usr
             {'id': 598, 'limits': {'hard': 1100000, 'soft': 1000000, 'granted': 0, 'time': 281474976710656}}])
 
         mock_execute.return_value = (0, output_md_usr)
-        quots = llops._execute_lctl_get_param_qmt_yaml('mylfs', 'USR', 'inode')
+        quots = llops._execute_lctl_get_param_qmt_yaml('mylfs', lustre.Typ2Param.USR, lustre.Quotyp2Param.inode)
         (args, _) = mock_execute.call_args
         self.assertEqual(args[0], ['/usr/sbin/lctl', 'get_param', 'qmt.mylfs-*.md-*.glb-usr'])
         self.assertEqual(quots, [
@@ -243,7 +243,7 @@ global_pool0_md_usr
         }
 
         def quota_mock(fs, typ, quotyp):
-            return LUSTRE_QUOTA_OUTPUT[typ][quotyp]
+            return LUSTRE_QUOTA_OUTPUT[typ.name][quotyp.name]
 
         mock_lctl_yaml.side_effect = quota_mock
 
@@ -348,6 +348,7 @@ global_pool0_md_usr
         mock_exists.side_effect = [False, True]
         mock_execute.side_effect = [(0, '    0 P /lustre/mylfs/gent/vo/000/gvo00003'), (0, "")]
         llops.make_fileset('/lustre/mylfs/gent/vo/000/gvo00003', 'gvo00003')
-        mock_set_quota.assert_called_with(who='900003', obj='/lustre/mylfs/gent/vo/000/gvo00003', typ='project', inode_soft=1048576, inode_hard=1048576)
+        mock_set_quota.assert_called_with(who='900003', obj='/lustre/mylfs/gent/vo/000/gvo00003', typ=lustre.Typ2Opt.project, inode_soft=1048576, inode_hard=1048576)
+
         mock_make_dir.assert_called_with('/lustre/mylfs/gent/vo/000/gvo00003')
         mock_execute.assert_called_with(['/usr/bin/lfs', 'project', '-p', '900003', '-r', '-s', '/lustre/mylfs/gent/vo/000/gvo00003'], True)

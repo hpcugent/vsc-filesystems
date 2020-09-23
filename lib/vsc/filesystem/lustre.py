@@ -127,7 +127,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
 
         return out
 
-    def _execute_lctl_get_param_qmt_yaml(self, device, typ, quotyp='block'):
+    def _execute_lctl_get_param_qmt_yaml(self, device, typ, quotyp=Quotyp2Param.block):
         """ executy LUSTRE lctl get_param qmt.* command and parse output
 
         eg:
@@ -145,7 +145,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
 
         """
 
-        param = 'qmt.%s-*.%s-*.glb-%s' % (device, Quotyp2Param[quotyp].value, Typ2Param[typ].value)
+        param = 'qmt.%s-*.%s-*.glb-%s' % (device, quotyp.value, typ.value)
         opts = ['get_param', param]
         res = self._execute_lctl(opts)
         quota_info = res.split("\n", 2)
@@ -266,8 +266,8 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
             for typp in list(Typ2Param):
                 typ = typp.name
                 quota[fsname][typ] = {}
-                blockres = self._execute_lctl_get_param_qmt_yaml(fsname, typ, 'block')
-                inoderes = self._execute_lctl_get_param_qmt_yaml(fsname, typ, 'inode')
+                blockres = self._execute_lctl_get_param_qmt_yaml(fsname, typp, Quotyp2Param.block)
+                inoderes = self._execute_lctl_get_param_qmt_yaml(fsname, typp, Quotyp2Param.inode)
                 for qentry in blockres:
                     qid = qentry['id']
                     qlim = qentry['limits']
@@ -404,7 +404,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
             self.make_dir(fsetpath)
             self._set_new_project_id(fsetpath, pjid)
             # set inode quota
-            self._set_quota(who=pjid, obj=fsetpath, typ='project', inode_soft=inodes_max, inode_hard=inodes_max)
+            self._set_quota(who=pjid, obj=fsetpath, typ=Typ2Opt.project, inode_soft=inodes_max, inode_hard=inodes_max)
             self.log.info("Created new fileset %s at %s with id %s", fileset_name, fsetpath, pjid)
             self.set_fs_update(fsname)
 
@@ -425,7 +425,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         @type inode_soft: integer representing the soft files limit
         @type inode_soft: integer representing the hard files quota
         """
-        self._set_quota(who=user, obj=obj, typ='user', soft=soft, hard=hard,
+        self._set_quota(who=user, obj=obj, typ=Typ2Opt.user, soft=soft, hard=hard,
                 inode_soft=inode_soft, inode_hard=inode_hard)
 
     def set_group_quota(self, soft, group, obj=None, hard=None, inode_soft=None, inode_hard=None):
@@ -438,7 +438,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         @type inode_soft: integer representing the soft files limit
         @type inode_soft: integer representing the hard files quota
         """
-        self._set_quota(who=group, obj=obj, typ='group', soft=soft, hard=hard,
+        self._set_quota(who=group, obj=obj, typ=Typ2Opt.group, soft=soft, hard=hard,
                 inode_soft=inode_soft, inode_hard=inode_hard)
 
     def set_fileset_quota(self, soft, fileset_path, fileset_name=None, hard=None, inode_soft=None, inode_hard=None):
@@ -461,7 +461,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         if int(project) == 0:
             self.log.raiseException("Can not set quota for fileset with projectid 0", LustreOperationError)
         else:
-            self._set_quota(who=project, obj=fileset_path, typ='project', soft=soft, hard=hard,
+            self._set_quota(who=project, obj=fileset_path, typ=Typ2Opt.project, soft=soft, hard=hard,
                 inode_soft=inode_soft, inode_hard=inode_hard)
 
     def set_user_grace(self, obj, grace=0):
@@ -470,15 +470,15 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         @type obj: string representing the path where the FS was mounted
         @type grace: grace period expressed in seconds
         """
-        self._set_grace(obj, 'user', grace)
+        self._set_grace(obj, Typ2Opt.user, grace)
 
     def set_group_grace(self, obj, grace=0):
-        """Set the grace period for user data.
+        """Set the grace period for group data.
 
         @type obj: string representing the path where the FS was mounted
         @type grace: grace period expressed in seconds
         """
-        self._set_grace(obj, 'group', grace)
+        self._set_grace(obj, Typ2Opt.group, grace)
 
     def set_fileset_grace(self, obj, grace=0):
         """Set the grace period for fileset data.
@@ -486,7 +486,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         @type obj: string representing the path where the FS was mounted
         @type grace: grace period expressed in seconds
         """
-        self._set_grace(obj, 'project', grace)
+        self._set_grace(obj, Typ2Opt.project, grace)
 
     def _set_grace(self, obj, typ, grace=0):
         """Set the grace period for a given type of objects
@@ -501,7 +501,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
             self.log.raiseException("setQuota: can't set quota on none-existing obj %s" % obj, LustreOperationError)
 
         opts = ['-t']
-        opts += ["-%s" % Typ2Opt[typ].value]
+        opts += ["-%s" % typ.value]
         opts += ["-b", "%s" % int(grace)]
         opts += ["-i", "%s" % int(grace)]
 
@@ -522,14 +522,14 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
             self.log.raiseException("setQuota: can't set quota on none-existing obj %s" % obj, LustreOperationError)
 
         opts = []
-        opts += ["-%s" % Typ2Opt[typ].value, "%s" % who]
+        opts += ["-%s" % typ.value, "%s" % who]
         opts.append(obj)
 
         res = self._execute_lfs('quota', opts)
         return res
 
 
-    def _set_quota(self, who, obj, typ='user', soft=None, hard=None, inode_soft=None, inode_hard=None):
+    def _set_quota(self, who, obj, typ=Typ2Opt.user, soft=None, hard=None, inode_soft=None, inode_hard=None):
         """Set quota on the given object.
 
         @type soft: integer representing the soft limit expressed in bytes
@@ -548,7 +548,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
 
         soft2hard_factor = 1.05
 
-        opts = ["-%s" % Typ2Opt[typ].value, "%s" % who]
+        opts = ["-%s" % typ.value, "%s" % who]
 
         if soft is None and inode_soft is None:
             self.log.raiseException("setQuota: At least one type of quota (block,inode) should be specified",
