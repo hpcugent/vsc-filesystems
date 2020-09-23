@@ -413,8 +413,10 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         self.make_dir(fsetpath)
         try:
             self._set_new_project_id(fsetpath, pjid)
-            # set inode quota
-            self._set_quota(who=pjid, obj=fsetpath, typ=Typ2Opt.project, inode_soft=inodes_max, inode_hard=inodes_max)
+            # set inode default quota, block quota should be set after with set_xxxx_quota, default 1MB
+            blockq = 1024 ** 2
+            self._set_quota(who=pjid, obj=fsetpath, typ=Typ2Opt.project,
+                    soft=blockq, hard=blockq, inode_soft=inodes_max, inode_hard=inodes_max)
         except LustreOperationError as err:
             self.log.error("Something went wrong creating fileset %s with id %s, error: %s", fsetpath, pjid, err)
             os.rmdir(fsetpath) # only deletes empty directories

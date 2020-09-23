@@ -348,7 +348,7 @@ global_pool0_md_usr
         mock_exists.side_effect = [False, True]
         mock_execute.side_effect = [(0, '    0 P /lustre/mylfs/gent/vo/000/gvo00003'), (0, "")]
         llops.make_fileset('/lustre/mylfs/gent/vo/000/gvo00003', 'gvo00003')
-        mock_set_quota.assert_called_with(who='900003', obj='/lustre/mylfs/gent/vo/000/gvo00003', typ=lustre.Typ2Opt.project, inode_soft=1048576, inode_hard=1048576)
+        mock_set_quota.assert_called_with(who='900003', obj='/lustre/mylfs/gent/vo/000/gvo00003', typ=lustre.Typ2Opt.project, soft=1048576, hard=1048576, inode_soft=1048576, inode_hard=1048576)
 
         mock_make_dir.assert_called_with('/lustre/mylfs/gent/vo/000/gvo00003')
         mock_execute.assert_called_with(['/usr/bin/lfs', 'project', '-p', '900003', '-r', '-s', '/lustre/mylfs/gent/vo/000/gvo00003'], True)
