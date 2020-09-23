@@ -336,7 +336,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
 
     def get_fileset_info(self, filesystem_name, fileset_name):
         """ get the info of a specific fileset """
-        fsets = self.list_filesets(filesystem_name)
+        fsets = self.list_filesets([filesystem_name])
         for fileset in fsets[filesystem_name].values():
             if fileset['filesetName'] == fileset_name:
                 return fileset
