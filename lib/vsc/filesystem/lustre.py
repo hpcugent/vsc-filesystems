@@ -404,7 +404,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
             return None
 
         pjid = self._map_project_id(parentfsetpath, fileset_name)
-        filesets = self.list_filesets(fsname)
+        filesets = self.list_filesets([fsname])
         if pjid in filesets[fsname]:
             self.log.raiseException("Found existing projectid %s in file system %s: %s"
                 % (pjid, fsname, filesets[pjid]), LustreOperationError)
