@@ -201,10 +201,12 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         return lustrefss
 
     def _get_fsinfo_for_path(self, path):
+        """ Get the Lustre file system name and mountpoint """
         fs = self.what_filesystem(path)
         return (fs[3].split(':/')[1], fs[1])
 
     def _get_fshint_for_path(self, path):
+        """ Get hints to find projects locations and ids """
         fsname, fsmount = self._get_fsinfo_for_path(path)
         if fsname not in self.filesystems:
             # TODO: Ideally this is set up from immutable config of some sorts instead of hard coded
@@ -213,10 +215,12 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         return self.filesystems[fsname]
 
     def _map_project_id(self, project_path, fileset_name):
+        """ Map a project name to a project id """
         fs = self._get_fshint_for_path(project_path)
         return fs.pjid_from_name(fileset_name)
 
     def _set_new_project_id(self, project_path, pjid):
+        """ Set the project id and flags for a new project path """
 
         exid = self.get_project_id(project_path, False)
         if not exid or int(exid) == 0:
@@ -393,26 +397,32 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
 
         fsname, _fsmount = self._get_fsinfo_for_path(parentfsetpath)
         fsinfo = self.get_fileset_info(fsname, fileset_name)
-        if not fsinfo:
-            pjid = self._map_project_id(parentfsetpath, fileset_name)
-            filesets = self.list_filesets(fsname)
-            if pjid in filesets[fsname]:
-                self.log.raiseException("Found existing projectid %s in file system %s: %s"
-                    % (pjid, fsname, filesets[pjid]), LustreOperationError)
+        if fsinfo:
+            # bail if there is a fileset with the same name
+            self.log.raiseException(("Found existing fileset %s with the same name at %s ") %
+                                    (fileset_name, fsinfo['path']), LustreOperationError)
+            return None
 
-            # create the fileset: dir and project
-            self.make_dir(fsetpath)
+        pjid = self._map_project_id(parentfsetpath, fileset_name)
+        filesets = self.list_filesets(fsname)
+        if pjid in filesets[fsname]:
+            self.log.raiseException("Found existing projectid %s in file system %s: %s"
+                % (pjid, fsname, filesets[pjid]), LustreOperationError)
+
+        # create the fileset: dir and project
+        self.make_dir(fsetpath)
+        try:
             self._set_new_project_id(fsetpath, pjid)
             # set inode quota
             self._set_quota(who=pjid, obj=fsetpath, typ=Typ2Opt.project, inode_soft=inodes_max, inode_hard=inodes_max)
-            self.log.info("Created new fileset %s at %s with id %s", fileset_name, fsetpath, pjid)
-            self.set_fs_update(fsname)
+        except LustreOperationError as err:
+            self.log.error("Something went wrong creating fileset %s with id %s, error: %s", fsetpath, pjid, err)
+            os.rmdir(fsetpath) # only deletes empty directories
+            self.log.raiseException("Fileset creation failed, fileset directory removed", LustreOperationError)
 
-        else:
-        # bail if there is a fileset with the same name
-            self.log.raiseException(("Found existing fileset %s with the same name at %s ") %
-                                    (fileset_name, fsinfo['path']), LustreOperationError)
-
+        self.log.info("Created new fileset %s at %s with id %s", fileset_name, fsetpath, pjid)
+        self.set_fs_update(fsname)
+        return True
 
 
     def set_user_quota(self, soft, user, obj=None, hard=None, inode_soft=None, inode_hard=None):
@@ -492,7 +502,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         """Set the grace period for a given type of objects
 
         @type obj: the path
-        @type typ: the type of entities for which we set the grace
+        @type typ: the enum type of entities for which we set the grace
         @type grace: int representing the grace period in seconds
         """
 
@@ -514,7 +524,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
 
         @type who: identifier (username, uid, gid, group, projectid)
         @type obj: the path
-        @type typ: string representing the type of object to set quota for: user, project or group.
+        @type typ: enum representing the type of object to set quota for: user, project or group.
         """
 
         obj = self._sanity_check(obj)
@@ -535,7 +545,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         @type soft: integer representing the soft limit expressed in bytes
         @type who: identifier (eg username or userid)
         @type obj: the path
-        @type typ: string representing the type of object to set quota for: user, fileset or group.
+        @type typ: enum representing the type of object to set quota for: user, fileset or group.
         @type hard: integer representing the hard limit expressed in bytes. If None, then 1.05 * soft.
 
         @type inode_soft: integer representing the soft inodes quota
