@@ -37,7 +37,11 @@ import yaml
 LustreQuota = namedtuple('LustreQuota',
     ['name',
         'blockUsage', 'blockQuota', 'blockLimit', 'blockGrace', 'blockInDoubt',
-        'filesUsage', 'filesQuota', 'filesLimit', 'filesGrace', 'filesInDoubt'])
+        'filesUsage', 'filesQuota', 'filesLimit', 'filesGrace', 'filesInDoubt',
+        'filesetname'])
+# blockInDoubt and filesInDoubt does not exist in Lustre, so set to 0
+# filesetname only valid for project quota
+LustreQuota.__new__.__defaults__ = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, None)
 
 class Typ2Opt(Enum):
     user = 'u'
@@ -273,7 +277,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
                 blockres = self._execute_lctl_get_param_qmt_yaml(fsname, typp, Quotyp2Param.block)
                 inoderes = self._execute_lctl_get_param_qmt_yaml(fsname, typp, Quotyp2Param.inode)
                 for qentry in blockres:
-                    qid = qentry['id']
+                    qid = str(qentry['id'])
                     qlim = qentry['limits']
                     # map quota fields to same names as for GPFS
                     qinfo = {
@@ -282,19 +286,20 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
                         'blockQuota' : qlim['soft'],
                         'blockLimit' : qlim['hard'],
                         'blockGrace' : qlim['time'],
-                        'blockInDoubt': 0, # non-existent in Lustre
                     }
                     quota[fsname][typ][qid] = qinfo
                 for qentry in inoderes:
-                    qid = qentry['id']
+                    qid = str(qentry['id'])
                     qlim = qentry['limits']
                     quota[fsname][typ][qid].update({
                         'filesUsage' : qlim['granted'],
                         'filesQuota' : qlim['soft'],
                         'filesLimit' : qlim['hard'],
                         'filesGrace' : qlim['time'],
-                        'filesInDoubt': 0 # non-existent in Lustre
                     })
+                for qid in quota[fsname][typ]:
+                    if typp == Typ2Param.FILESET:
+                        quota[fsname][typ][qid]['filesetname'] = qid
                     quota[fsname][typ][qid] = [LustreQuota(**quota[fsname][typ][qid])]
 
         return quota
@@ -413,7 +418,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         self.make_dir(fsetpath)
         try:
             self._set_new_project_id(fsetpath, pjid)
-            # set inode default quota, block quota should be set after with set_xxxx_quota, default 1MB
+            # set inode default quota; block quota should be set after with set_fileset_quota, default 1MB
             blockq = 1024 ** 2
             self._set_quota(who=pjid, obj=fsetpath, typ=Typ2Opt.project,
                     soft=blockq, hard=blockq, inode_soft=inodes_max, inode_hard=inodes_max)

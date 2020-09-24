@@ -32,6 +32,7 @@ LUSTRE_QUOTA_OUTPUT = {
     'USR': {
         'block':[
             {'id': 0, 'limits': {'hard': 0, 'soft': 0, 'granted': 0, 'time': 604800}},
+            {'id': 2005, 'limits': {'hard': 10000000, 'soft': 5000000, 'granted': 0, 'time': 604800}},
             {'id': 2006, 'limits': {'hard': 50000000, 'soft': 45000000, 'granted': 10240000, 'time': 281474976710656}}],
         'inode':[
             {'id': 0, 'limits': {'hard': 0, 'soft': 0, 'granted': 0, 'time': 604800}},
@@ -228,17 +229,18 @@ global_pool0_md_usr
 
         quota_result = {'mylfs':{
             'USR': {
-                0: [LustreQuota(name=0, blockUsage=0, blockQuota=0, blockLimit=0, blockGrace=604800, blockInDoubt=0, filesUsage=0, filesQuota=0, filesLimit=0, filesGrace=604800, filesInDoubt=0)],
-                2006: [LustreQuota(name=2006, blockUsage=10240000, blockQuota=45000000, blockLimit=50000000, blockGrace=281474976710656, blockInDoubt=0, filesUsage=200, filesQuota=1000000, filesLimit=1200000, filesGrace=281474976710656, filesInDoubt=0)]
+                '0': [LustreQuota(name='0', blockUsage=0, blockQuota=0, blockLimit=0, blockGrace=604800, blockInDoubt=0, filesUsage=0, filesQuota=0, filesLimit=0, filesGrace=604800, filesInDoubt=0)],
+                '2005': [LustreQuota(name='2005', blockUsage=0, blockQuota=5000000, blockLimit=10000000, blockGrace=604800, blockInDoubt=0, filesUsage=0, filesQuota=0, filesLimit=0, filesGrace=0, filesInDoubt=0)],
+                '2006': [LustreQuota(name='2006', blockUsage=10240000, blockQuota=45000000, blockLimit=50000000, blockGrace=281474976710656, blockInDoubt=0, filesUsage=200, filesQuota=1000000, filesLimit=1200000, filesGrace=281474976710656, filesInDoubt=0)]
             },
             'GRP': {
-                0: [LustreQuota(name=0, blockUsage=0, blockQuota=0, blockLimit=0, blockGrace=604800, blockInDoubt=0, filesUsage=0, filesQuota=0, filesLimit=0, filesGrace=604800, filesInDoubt=0)],
-                2006: [LustreQuota(name=2006, blockUsage=4285456, blockQuota=3072000, blockLimit=3584000, blockGrace=1600685548, blockInDoubt=0, filesUsage=200, filesQuota=1000000, filesLimit=1200000, filesGrace=281474976710656, filesInDoubt=0)]
+                '0': [LustreQuota(name='0', blockUsage=0, blockQuota=0, blockLimit=0, blockGrace=604800, blockInDoubt=0, filesUsage=0, filesQuota=0, filesLimit=0, filesGrace=604800, filesInDoubt=0)],
+                '2006': [LustreQuota(name='2006', blockUsage=4285456, blockQuota=3072000, blockLimit=3584000, blockGrace=1600685548, blockInDoubt=0, filesUsage=200, filesQuota=1000000, filesLimit=1200000, filesGrace=281474976710656, filesInDoubt=0)]
             },
             'FILESET': {
-                0: [LustreQuota(name=0, blockUsage=0, blockQuota=0, blockLimit=0, blockGrace=604800, blockInDoubt=0, filesUsage=0, filesQuota=0, filesLimit=0, filesGrace=604800, filesInDoubt=0)],
-                1: [LustreQuota(name=1, blockUsage=3875852, blockQuota=3591168, blockLimit=3798016, blockGrace=1600334880, blockInDoubt=0, filesUsage=950, filesQuota=900, filesLimit=1000, filesGrace=1600334880, filesInDoubt=0)],
-                598: [LustreQuota(name=598, blockUsage=0, blockQuota=1000000, blockLimit=1100000, blockGrace=281474976710656, blockInDoubt=0, filesUsage=0, filesQuota=1000000, filesLimit=1100000, filesGrace=281474976710656, filesInDoubt=0)]}
+                '0': [LustreQuota(name='0', blockUsage=0, blockQuota=0, blockLimit=0, blockGrace=604800, blockInDoubt=0, filesUsage=0, filesQuota=0, filesLimit=0, filesGrace=604800, filesInDoubt=0, filesetname='0')],
+                '1': [LustreQuota(name='1', blockUsage=3875852, blockQuota=3591168, blockLimit=3798016, blockGrace=1600334880, blockInDoubt=0, filesUsage=950, filesQuota=900, filesLimit=1000, filesGrace=1600334880, filesInDoubt=0, filesetname='1')],
+                '598': [LustreQuota(name='598', blockUsage=0, blockQuota=1000000, blockLimit=1100000, blockGrace=281474976710656, blockInDoubt=0, filesUsage=0, filesQuota=1000000, filesLimit=1100000, filesGrace=281474976710656, filesInDoubt=0, filesetname='598')]}
             }
         }
 
