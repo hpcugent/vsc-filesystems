@@ -116,7 +116,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         self.supportedfilesystems = ['lustre']
         self.filesystems = {}
         self.filesets = {}
-
+        self.quotadump = '/var/cache/lustre';
 
     def _execute_lfs(self, name, opts=None, changes=False):
         """Return and check the LUSTRE lfs command.
@@ -131,7 +131,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
 
         return out
 
-    def _execute_lctl_get_param_qmt_yaml(self, device, typ, quotyp=Quotyp2Param.block):
+    def _execute_lctl_get_param_qmt_yaml(self, device, typ, quotyp=Quotyp2Param.block, qmt_direct=True):
         """ executy LUSTRE lctl get_param qmt.* command and parse output
 
         eg:
@@ -150,8 +150,15 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         """
 
         param = 'qmt.%s-*.%s-*.glb-%s' % (device, quotyp.value, typ.value)
-        opts = ['get_param', param]
-        res = self._execute_lctl(opts)
+        if qmt_direct:
+            opts = ['get_param', param]
+            res = self._execute_lctl(opts)
+        else:
+            cmd = ['cat', os.path.join(self.quotadump, param)]
+            ec, res = self._execute(cmd)
+            if ec != 0:
+                self.log.raiseException("Could not get quota info. out:%s" % res, LustreOperationError)
+
         quota_info = res.split("\n", 2)
         try:
             newres = yaml.safe_load(quota_info[2])
@@ -255,6 +262,26 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
             self.log.debug('path has no pjid set')
         return None
 
+    def _quota_src(self, device):
+        """ Locate the quota info: directly through qmt params(True) or using a dump(False) """
+
+        qparam = 'qmt.%s-*.*.glb-*' % device
+        opts = ['list_param', qparam]
+        try:
+            self._execute_lctl(opts)
+        except LustreOperationError:
+            cmd = ['ls', os.path.join(self.quotadump, qparam)]
+            ec, _out = self._execute(cmd)
+            if ec != 0:
+                self.log.raiseException("Could not get quota information from qmt or dump", LustreOperationError)
+            else:
+                self.log.info('Getting quota information out of dump')
+                return False
+        else:
+            self.log.info('Running on Lustre Quota Target')
+            return True
+
+
     # pylint: disable=arguments-differ
     def list_quota(self, devices=None):
         """get quota info for filesystems for all user,group,project
@@ -270,12 +297,13 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
 
         quota = {}
         for fsname in devices:
+            qmt_direct = self._quota_src(fsname)
             quota[fsname] = {}
             for typp in list(Typ2Param):
                 typ = typp.name
                 quota[fsname][typ] = {}
-                blockres = self._execute_lctl_get_param_qmt_yaml(fsname, typp, Quotyp2Param.block)
-                inoderes = self._execute_lctl_get_param_qmt_yaml(fsname, typp, Quotyp2Param.inode)
+                blockres = self._execute_lctl_get_param_qmt_yaml(fsname, typp, Quotyp2Param.block, qmt_direct)
+                inoderes = self._execute_lctl_get_param_qmt_yaml(fsname, typp, Quotyp2Param.inode, qmt_direct)
                 for qentry in blockres:
                     qid = str(qentry['id'])
                     qlim = qentry['limits']

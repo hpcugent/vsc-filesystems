@@ -204,27 +204,40 @@ global_pool0_md_usr
   limits:  { hard:              1200000, soft:              1000000, granted:                   200, time:      281474976710656 }
 '''
 
+        quota_result_data = [{
+            'id': 0, 'limits': {'hard': 0, 'soft': 0, 'granted': 0, 'time': 604800}},
+            {'id': 1, 'limits': {'hard': 3798016, 'soft': 3591168, 'granted': 3875852, 'time': 1600334880}},
+            {'id': 598, 'limits': {'hard': 1100000, 'soft': 1000000, 'granted': 0, 'time': 281474976710656}}]
+
+        quota_result_md = [
+              {'id': 0, 'limits': {'hard': 0, 'soft': 0, 'granted': 0, 'time': 604800}},
+              {'id': 2006, 'limits': {'hard': 1200000, 'soft': 1000000, 'granted': 200, 'time': 281474976710656}}]
+
         mock_execute.return_value = (0, output_dt_prj)
         llops = lustre.LustreOperations()
         quots = llops._execute_lctl_get_param_qmt_yaml('mylfs', lustre.Typ2Param.FILESET, lustre.Quotyp2Param.block)
         (args, _) = mock_execute.call_args
         self.assertEqual(args[0], ['/usr/sbin/lctl', 'get_param', 'qmt.mylfs-*.dt-*.glb-prj'])
-        self.assertEqual( quots, [{
-            'id': 0, 'limits': {'hard': 0, 'soft': 0, 'granted': 0, 'time': 604800}},
-            {'id': 1, 'limits': {'hard': 3798016, 'soft': 3591168, 'granted': 3875852, 'time': 1600334880}},
-            {'id': 598, 'limits': {'hard': 1100000, 'soft': 1000000, 'granted': 0, 'time': 281474976710656}}])
+        self.assertEqual(quots, quota_result_data)
+
+        quots = llops._execute_lctl_get_param_qmt_yaml('mylfs', lustre.Typ2Param.FILESET, lustre.Quotyp2Param.block, False)
+        mock_execute.assert_called_with(['cat', '/var/cache/lustre/qmt.mylfs-*.dt-*.glb-prj'])
+        self.assertEqual(quots, quota_result_data)
 
         mock_execute.return_value = (0, output_md_usr)
         quots = llops._execute_lctl_get_param_qmt_yaml('mylfs', lustre.Typ2Param.USR, lustre.Quotyp2Param.inode)
         (args, _) = mock_execute.call_args
         self.assertEqual(args[0], ['/usr/sbin/lctl', 'get_param', 'qmt.mylfs-*.md-*.glb-usr'])
-        self.assertEqual(quots, [
-            {'id': 0, 'limits': {'hard': 0, 'soft': 0, 'granted': 0, 'time': 604800}},
-            {'id': 2006, 'limits': {'hard': 1200000, 'soft': 1000000, 'granted': 200, 'time': 281474976710656}}])
+        self.assertEqual(quots, quota_result_md)
 
+        quots = llops._execute_lctl_get_param_qmt_yaml('mylfs', lustre.Typ2Param.USR, lustre.Quotyp2Param.inode, False)
+        mock_execute.assert_called_with(['cat', '/var/cache/lustre/qmt.mylfs-*.md-*.glb-usr'])
+        self.assertEqual(quots, quota_result_md)
 
+    @mock.patch('vsc.filesystem.lustre.LustreOperations._execute')
+    @mock.patch('vsc.filesystem.lustre.LustreOperations._execute_lctl')
     @mock.patch('vsc.filesystem.lustre.LustreOperations._execute_lctl_get_param_qmt_yaml')
-    def test_list_quota(self, mock_lctl_yaml):
+    def test_list_quota(self, mock_lctl_yaml, mock_lctl, mock_execute):
         """ Test making quota structure """
 
         quota_result = {'mylfs':{
@@ -244,13 +257,20 @@ global_pool0_md_usr
             }
         }
 
-        def quota_mock(fs, typ, quotyp):
+        def quota_mock(fs, typ, quotyp, ok):
             return LUSTRE_QUOTA_OUTPUT[typ.name][quotyp.name]
 
         mock_lctl_yaml.side_effect = quota_mock
-
+        mock_lctl.return_value = True
+        mock_execute.return_value = (2, "Not ok")
         llops = lustre.LustreOperations()
         self.assertEqual(llops.list_quota(['mylfs']), quota_result)
+        mock_lctl.assert_called_with(['list_param', 'qmt.mylfs-*.*.glb-*'])
+        mock_lctl.side_effect = lustre.LustreOperationError
+        self.assertRaises(lustre.LustreOperationError, llops.list_quota, ['mylfs'])
+        mock_execute.return_value = (0, "ok")
+        self.assertEqual(llops.list_quota(['mylfs']), quota_result)
+        mock_execute.assert_called_with(['ls', '/var/cache/lustre/qmt.mylfs-*.*.glb-*'])
 
 
     @mock.patch('vsc.filesystem.lustre.LustreOperations.get_project_id')
