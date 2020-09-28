@@ -184,7 +184,7 @@ class ToolsTest(TestCase):
         self.assertEqual(llops.list_filesystems(['mylfs']), {'mylfs': {'defaultMountPoint': '/lustre/mylfs', 'location': '10.141.21.204@tcp'}})
         self.assertRaises(lustre.LustreOperationError, llops.list_filesystems, 'nofs')
 
-    @mock.patch('vsc.utils.run.Run.run')
+    @mock.patch('vsc.utils.run.RunAsyncLoop.run')
     @mock.patch('vsc.filesystem.posix.PosixOperations._execute')
     def test__execute_lctl_get_param_qmt_yaml(self, mock_execute, mock_run):
         """ Test executing lctl get_param output parsing """

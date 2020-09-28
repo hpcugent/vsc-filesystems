@@ -24,7 +24,7 @@ from vsc.install.shared_setup import ag, kh, sdw, kw, wdp
 
 
 PACKAGE = {
-    'version': '1.2.10',
+    'version': '1.2.11',
     'author': [sdw, ag, kh, kw],
     'maintainer': [sdw, ag, kh, kw, wdp],
     'setup_requires': ['vsc-install >= 0.15.2'],

@@ -29,7 +29,7 @@ from collections import namedtuple
 from vsc.filesystem.posix import PosixOperations, PosixOperationError
 from vsc.utils.patterns import Singleton
 from vsc.utils import fancylogger
-from vsc.utils.run import Run, RunNoWorries
+from vsc.utils.run import RunAsyncLoop, RunNoWorries
 from enum import Enum
 
 from future.utils import with_metaclass
@@ -156,7 +156,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
             res = self._execute_lctl(opts)
         else:
             cmd = ['cat', os.path.join(self.quotadump, param)]
-            ec, res = Run.run(cmd)
+            ec, res = RunAsyncLoop.run(cmd)
             if ec != 0:
                 self.log.raiseException("Could not get quota info. out:%s" % res, LustreOperationError)
 
