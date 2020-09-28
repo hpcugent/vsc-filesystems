@@ -184,8 +184,9 @@ class ToolsTest(TestCase):
         self.assertEqual(llops.list_filesystems(['mylfs']), {'mylfs': {'defaultMountPoint': '/lustre/mylfs', 'location': '10.141.21.204@tcp'}})
         self.assertRaises(lustre.LustreOperationError, llops.list_filesystems, 'nofs')
 
+    @mock.patch('vsc.utils.run.Run.run')
     @mock.patch('vsc.filesystem.posix.PosixOperations._execute')
-    def test__execute_lctl_get_param_qmt_yaml(self, mock_execute):
+    def test__execute_lctl_get_param_qmt_yaml(self, mock_execute, mock_run):
         """ Test executing lctl get_param output parsing """
         output_dt_prj = '''qmt.mylfs-QMT0000.dt-0x0.glb-prj=
 global_pool0_dt_prj
@@ -220,8 +221,9 @@ global_pool0_md_usr
         self.assertEqual(args[0], ['/usr/sbin/lctl', 'get_param', 'qmt.mylfs-*.dt-*.glb-prj'])
         self.assertEqual(quots, quota_result_data)
 
+        mock_run.return_value = (0, output_dt_prj)
         quots = llops._execute_lctl_get_param_qmt_yaml('mylfs', lustre.Typ2Param.FILESET, lustre.Quotyp2Param.block, False)
-        mock_execute.assert_called_with(['cat', '/var/cache/lustre/qmt.mylfs-*.dt-*.glb-prj'])
+        mock_run.assert_called_with(['cat', '/var/cache/lustre/qmt.mylfs-*.dt-*.glb-prj'])
         self.assertEqual(quots, quota_result_data)
 
         mock_execute.return_value = (0, output_md_usr)
@@ -230,11 +232,12 @@ global_pool0_md_usr
         self.assertEqual(args[0], ['/usr/sbin/lctl', 'get_param', 'qmt.mylfs-*.md-*.glb-usr'])
         self.assertEqual(quots, quota_result_md)
 
+        mock_run.return_value = (0, output_md_usr)
         quots = llops._execute_lctl_get_param_qmt_yaml('mylfs', lustre.Typ2Param.USR, lustre.Quotyp2Param.inode, False)
-        mock_execute.assert_called_with(['cat', '/var/cache/lustre/qmt.mylfs-*.md-*.glb-usr'])
+        mock_run.assert_called_with(['cat', '/var/cache/lustre/qmt.mylfs-*.md-*.glb-usr'])
         self.assertEqual(quots, quota_result_md)
 
-    @mock.patch('vsc.filesystem.lustre.LustreOperations._execute')
+    @mock.patch('vsc.utils.run.RunNoWorries.run')
     @mock.patch('vsc.filesystem.lustre.LustreOperations._execute_lctl')
     @mock.patch('vsc.filesystem.lustre.LustreOperations._execute_lctl_get_param_qmt_yaml')
     def test_list_quota(self, mock_lctl_yaml, mock_lctl, mock_execute):
