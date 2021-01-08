@@ -108,6 +108,17 @@ class LustreVscGhentScratchFs(LustreVscFS):
         projectid_maps = {'gvo' : 900000}
         super(LustreVscGhentScratchFs, self).__init__(mountpoint, project_locations, projectid_maps)
 
+class LustreVscTier1cScratchFs(LustreVscFS):
+    """ Make some assumptions on where to find filesets
+        This could also be extended to be done by importing config files """
+
+    def __init__(self, mountpoint):
+
+        project_locations = ['gent', 'gent/projects']
+        projectid_maps = {'pj' : 900000}
+        super(LustreVscTier1cScratchFs, self).__init__(mountpoint, project_locations, projectid_maps)
+
+
 
 class LustreOperations(with_metaclass(Singleton, PosixOperations)):
     """ Lustre Operations """
