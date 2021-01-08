@@ -114,7 +114,7 @@ class LustreVscTier1cScratchFs(LustreVscFS):
 
     def __init__(self, mountpoint):
 
-        project_locations = ['gent', 'gent/projects']
+        project_locations = ['gent', 'gent/projects/00[0-9]']
         projectid_maps = {'pj' : 900000}
         super(LustreVscTier1cScratchFs, self).__init__(mountpoint, project_locations, projectid_maps)
 
@@ -234,7 +234,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         if fsname not in self.filesystems:
             # TODO: Ideally this is set up from immutable config of some sorts instead of hard coded
             # Or need API change)
-            self.filesystems[fsname] = LustreVscGhentScratchFs(fsmount)
+            self.filesystems[fsname] = LustreVscTier1cScratchFs(fsmount)
         return self.filesystems[fsname]
 
     def _map_project_id(self, project_path, fileset_name):
