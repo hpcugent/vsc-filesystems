@@ -1,6 +1,6 @@
 # -*- coding: latin-1 -*-
 #
-# Copyright 2015-2020 Ghent University
+# Copyright 2015-2021 Ghent University
 #
 # This file is part of vsc-filesystems,
 # originally created by the HPC team of Ghent University (http://ugent.be/hpc/en),
@@ -11,7 +11,7 @@
 #
 # https://github.com/hpcugent/vsc-filesystems
 #
-# Allopsrights reserved.
+# All rights reserved.
 #
 """
 Tests for the lustre library.
