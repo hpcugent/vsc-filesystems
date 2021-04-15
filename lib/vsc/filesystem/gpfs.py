@@ -1,6 +1,6 @@
 # -*- coding: latin-1 -*-
 #
-# Copyright 2009-2020 Ghent University
+# Copyright 2009-2021 Ghent University
 #
 # This file is part of vsc-filesystems,
 # originally created by the HPC team of Ghent University (http://ugent.be/hpc/en),
@@ -945,11 +945,13 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
             else:
                 self.log.raiseException(err.args[0], GpfsOperationError)
 
-    def create_filesystem_snapshot(self, fsname, snapname):
+    def create_filesystem_snapshot(self, fsname, snapname, filesets=None):
         """
-        Create a full filesystem snapshot
+        Create a filesystem snapshot. If filesets is None, it's full system snapshots
+        else the snapshot is limited to the list of filesets given.
             @type fsname: string representing the name of the filesystem
             @type snapname: string representing the name of the new snapshot
+            @type filesets: list of fileset names to take a snapshots of
         """
         snapshots = self.list_snapshots(fsname)
         if snapname in snapshots:
@@ -957,6 +959,15 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
             return 0
 
         opts = [fsname, snapname]
+        if filesets is not None:
+            all_filesets = self.list_filesets(devices=fsname)
+            all_filesets_names = [x['filesetName'] for x in all_filesets[fsname].values()]
+            if not all([x in all_filesets_names for x in filesets]):
+                self.log.error("Not all given filesets could be found on filesystem %s!", fsname)
+                return 0
+
+            opts.extend(['-j', ','.join(filesets)])
+
         ec, out = self._execute('mmcrsnapshot', opts, True)
         if ec > 0:
             self.log.raiseException("create_filesystem_snapshot: mmcrsnapshot with opts %s failed: %s"

@@ -1,6 +1,6 @@
 # -*- coding: latin-1 -*-
 #
-# Copyright 2015-2020 Ghent University
+# Copyright 2015-2021 Ghent University
 #
 # This file is part of vsc-filesystems,
 # originally created by the HPC team of Ghent University (http://ugent.be/hpc/en),
@@ -112,8 +112,17 @@ class ToolsTest(TestCase):
 
     @mock.patch('vsc.filesystem.gpfs.GpfsOperations._execute')
     @mock.patch('vsc.filesystem.gpfs.GpfsOperations.list_snapshots')
-    def test_create_filesystem_snapshot(self, mock_list, mock_exec):
+    @mock.patch('vsc.filesystem.gpfs.GpfsOperations.list_filesets')
+    def test_create_filesystem_snapshot(self, mock_filesets, mock_list, mock_exec):
         mock_list.return_value = ['autumn_20151012', 'okt_20151028']
+        mock_filesets.return_value = {
+            'fstest': {
+                '0': {'filesetName': 'foo'},
+                '1': {'filesetName': 'bar'},
+                '2': {'filesetName': 'fs1'},
+                '3': {'filesetName': 'fs2'},
+            },
+        }
         gpfsi = gpfs.GpfsOperations()
         self.assertEqual(gpfsi.create_filesystem_snapshot('fstest', 'okt_20151028'), 0)
         mock_exec.return_value = (1, 'mocked!')
@@ -121,6 +130,10 @@ class ToolsTest(TestCase):
         mock_exec.assert_called_once_with('mmcrsnapshot', ['fstest', '@backup'], True)
         mock_exec.return_value = (0, 'mocked!')
         self.assertTrue(gpfsi.create_filesystem_snapshot('fstest', 'backup'))
+
+        mock_exec.reset_mock()
+        self.assertTrue(gpfsi.create_filesystem_snapshot('fstest', 'backup', filesets=['fs1', 'bar']))
+        mock_exec.assert_called_once_with('mmcrsnapshot', ['fstest', 'backup', '-j', 'fs1,bar'], True)
 
     @mock.patch('vsc.filesystem.gpfs.GpfsOperations._execute')
     @mock.patch('vsc.filesystem.gpfs.GpfsOperations.list_snapshots')
