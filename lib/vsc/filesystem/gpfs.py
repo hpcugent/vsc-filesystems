@@ -145,10 +145,8 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
                 else:
                     fs.append(None)
                     self.log.warning(("While trying to resolve GPFS device from localfilesystem device"
-                                      " fs %s found gpfsdevice %s that is not in "
-                                      "gpfslocalfilesystems %s") %
-                                      (fs, gpfsdevice, self.gpfslocalfilesystems.keys()),
-                                      GpfsOperationError)
+                                      " fs %s found gpfsdevice %s that is not in gpfslocalfilesystems %s"),
+                                     fs, gpfsdevice, self.gpfslocalfilesystems.keys())
             else:
                 fs.append(None)
 
@@ -175,7 +173,7 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
                                         Cannot find match for the start field. Not fixing line %s" %
                                     (len(fields), description_count, fields))
         else:
-            self.log.info("Fixing found an index for the sublist at %d" % (sub_index))
+            self.log.info("Fixing found an index for the sublist at %d", sub_index)
             line = expected_start_fields + ls[:sub_index]
             remainder = ls[sub_index:]
 
@@ -211,13 +209,13 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
                 if field_count == description_field_count:
                     continue
                 elif field_count < description_field_count:
-                    self.log.debug("Description length %s greater then %s. Adding whitespace. (names %s, row %s)" %
-                                   (maximum_field_count, field_count, fields[0][6:], line[6:]))
+                    self.log.debug("Description length %s greater then %s. Adding whitespace. (names %s, row %s)",
+                                   maximum_field_count, field_count, fields[0][6:], line[6:])
                     line.extend([''] * (maximum_field_count - field_count))
                 else:
                     # try to fix the line
-                    self.log.info("Line has too many fields (%d > %d), trying to fix %s" %
-                                  (field_count, description_field_count, line))
+                    self.log.info("Line has too many fields (%d > %d), trying to fix %s",
+                                  field_count, description_field_count, line)
                     fixed_lines = self.fixup_executeY_line(line, description_field_count)
                     i = fields.index((field_count, line))
                     fields[i:i + 1] = map(lambda fs: (len(fs), fs), fixed_lines)
@@ -235,7 +233,6 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
 
         return res
 
-
     def _executeY(self, name, opts=None, prefix=False):
         """Run with -Y and parse output in dict of name:list of values
            type prefix: boolean, if true prefix the -Y to the options (otherwise append the option).
@@ -245,7 +242,7 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
         elif isinstance(opts, (tuple, list,)):
             opts = list(opts)
         else:
-            self.log.error("_executeY: have to use a list or tuple for options: name %s opts %s" % (name, opts))
+            self.log.error("_executeY: have to use a list or tuple for options: name %s opts %s", name, opts)
             return {}
 
         if prefix:
@@ -284,14 +281,14 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
                 try:
                     fields = [(len(x), x) for x in what if x[1] == typ]
                 except IndexError:
-                    self.log.raiseException("No valid lines for output: %s" % (out), GpfsOperationError)
+                    self.log.raiseException("No valid lines for output: %s" % (out,), GpfsOperationError)
                 if len(fields):
                     res = self._assemble_fields(fields, out)
                     rest[typ] = res
 
                 else:
                     self.log.raiseException("No valid lines of header type %s for output: %s" % (typ, out),
-                        GpfsOperationError)
+                                            GpfsOperationError)
 
             return rest
 
@@ -323,7 +320,7 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
             if len(gpfsdevices) == 0:
                 self.log.raiseException("No devices found. Returned info %s" % info, GpfsOperationError)
             else:
-                self.log.debug("listAllFilesystems found device %s out of requested %s" % (gpfsdevices, devices))
+                self.log.debug("listAllFilesystems found device %s out of requested %s", gpfsdevices, devices)
 
             res_ = dict([(dev, {}) for dev in gpfsdevices])  # build structure
             res.update(res_)
@@ -385,7 +382,7 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
         datakeys.remove('id')
 
         fss = nub(info.get('filesystemName', []))
-        self.log.debug("Found the following filesystem names: %s" % (fss))
+        self.log.debug("Found the following filesystem names: %s", fss)
 
         quotatypes = nub(info.get('quotaType', []))
         quotatypesstruct = dict([(qt, MonoidDict(Monoid([], lambda xs, ys: xs + ys))) for qt in quotatypes])
@@ -437,7 +434,7 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
             filesetnamestxt = ','.join(filesetnames)
             opts.append(filesetnamestxt)
 
-        self.log.debug("Looking up filesets for devices %s" % (devices))
+        self.log.debug("Looking up filesets for devices %s", devices)
 
         listm = Monoid([], lambda xs, ys: xs + ys)
         info = MonoidDict(listm)
@@ -452,7 +449,7 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
             # afmLastPSnapId:inodeSpace:isInodeSpaceOwner:maxInodes:allocInodes:inodeSpaceMask:afmShowHomeSnapshots:
             # afmNumReadThreads:afmNumReadGWs:afmReadBufferSize:afmWriteBufferSize:afmReadSparseThreshold:
             # afmParallelReadChunkSize:afmParallelReadThreshold:snapId:
-            self.log.debug("list_filesets res keys = %s " % (res.keys()))
+            self.log.debug("list_filesets res keys = %s ", res.keys())
             for (key, value) in res.items():
                 info[key] = value
 
@@ -530,10 +527,10 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
             # - means disk offline, so no nodename
             alldomains = ['.'.join(x.split('.')[1:]) for x in infoM['IOPerformedOnNode'] if x not in ['-', 'localhost']]
             if len(set(alldomains)) > 1:
-                self.log.error("More than one domain found: %s." % alldomains)
+                self.log.error("More than one domain found: %s.", alldomains)
             commondomain = alldomains[0]  # TODO: should be most frequent one
         except (IndexError, KeyError):
-            self.log.exception("Cannot determine domainname for nodes %s" % infoM['IOPerformedOnNode'])
+            self.log.exception("Cannot determine domainname for nodes %s", infoM['IOPerformedOnNode'])
             commondomain = None
 
         for idx, node in enumerate(infoM['IOPerformedOnNode']):
@@ -550,7 +547,7 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
                     # duplicate key !!
                     if not infoL[k][idx] == infoM[k][idx]:
                         self.log.error(("nsdName %s has named value %s in both -L and -M, but have different value"
-                                        " L=%s M=%s") % (nsd, infoL[k][idx], infoM[k][idx]))
+                                        " L=%s M=%s"), nsd, k, infoL[k][idx], infoM[k][idx])
                     Mk = "M_%s" % k
                 res[nsd][Mk] = infoM[k][idx]
 
@@ -705,8 +702,8 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
                 fileset_name = "_".join(lastpart)
             else:
                 fileset_name = os.path.basedir(fsetpath)
-                self.log.error("fsetpath %s doesn't start with mntpt %s. using basedir %s" %
-                               (fsetpath, mntpt, fileset_name))
+                self.log.error("fsetpath %s doesn't start with mntpt %s. using basedir %s",
+                               fsetpath, mntpt, fileset_name)
 
         # bail if there is a fileset with the same name or the same link location, i.e., path
         for efset in self.gpfslocalfilesets[foundgpfsdevice].values():
@@ -792,7 +789,7 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
             attr = self.getAttr(fileset_path)
             if 'filesetname' in attr:
                 fileset_name = attr['filesetname']
-                self.log.info("set_fileset_quota: setting fileset to %s for obj %s" % (fileset_name, fileset_path))
+                self.log.info("set_fileset_quota: setting fileset to %s for obj %s", fileset_name, fileset_path)
             else:
                 self.log.raiseException(("set_fileset_quota: attrs for obj %s don't have filestename property "
                                          "(attr: %s)") % (fileset_path, attr), GpfsOperationError)
@@ -940,7 +937,7 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
             return snaps['directory']
         except GpfsOperationError as err:
             if 'No snapshots in file system' in err.args[0]:
-                self.log.debug('No snapshots in filesystem %s' % filesystem)
+                self.log.debug('No snapshots in filesystem %s', filesystem)
                 return []
             else:
                 self.log.raiseException(err.args[0], GpfsOperationError)
@@ -953,7 +950,7 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
         """
         snapshots = self.list_snapshots(fsname)
         if snapname in snapshots:
-            self.log.error("Snapshotname %s already exists for filesystem %s!" % (snapname, fsname))
+            self.log.error("Snapshotname %s already exists for filesystem %s!", snapname, fsname)
             return 0
 
         opts = [fsname, snapname]
@@ -973,14 +970,14 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
 
         snapshots = self.list_snapshots(fsname)
         if snapname not in snapshots:
-            self.log.error("Snapshotname %s does not exists for filesystem %s!" % (snapname, fsname))
+            self.log.error("Snapshotname %s does not exists for filesystem %s!", snapname, fsname)
             return 0
 
         opts = [fsname, snapname]
         ec, out = self._execute('mmdelsnapshot', opts, True)
         if ec > 0:
             self.log.raiseException("delete_filesystem_snapshot: mmdelsnapshot with opts %s failed: %s" %
-                (opts, out), GpfsOperationError)
+                                    (opts, out), GpfsOperationError)
         return ec == 0
 
     def get_mmhealth_state(self):
@@ -990,19 +987,3 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
         states = res['State']
         comp_entities = ['%s_%s' % ident for ident in zip(states['component'], states['entityname'])]
         return dict(zip(comp_entities, states['status']))
-
-
-if __name__ == '__main__':
-    g = GpfsOperations()
-
-    g.list_filesystems()
-    print("fs", g.gpfslocalfilesystems)
-
-    g.list_quota()
-    print("quota", g.gpfslocalquotas)
-
-    g.list_filesets()
-    print("filesets", g.gpfslocalfilesets)
-
-    g.list_disks()
-    print("disks", g.gpfsdisks)
