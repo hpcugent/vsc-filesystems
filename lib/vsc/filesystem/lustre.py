@@ -117,7 +117,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         self.supportedfilesystems = ['lustre']
         self.filesystems = {}
         self.filesets = {}
-        self.quotadump = '/var/cache/lustre';
+        self.quotadump = '/var/cache/lustre'
 
     def _execute_lfs(self, name, opts=None, changes=False):
         """Return and check the LUSTRE lfs command.
@@ -351,21 +351,19 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
                 else:
                     if pjid in filesets:
                         self.log.raiseException("projectids mapping multiple paths: %s: %s, %s" %
-                            (pjid, filesets[pjid]['path'], path), LustreOperationError)
+                                                (pjid, filesets[pjid]['path'], path), LustreOperationError)
                     elif flag != 'P':
                         # Not sure if this should give error or raise Exception
                         self.log.raiseException("Project inheritance flag not set for project %s: %s"
-                            % (pjid, path), LustreOperationError)
+                                                % (pjid, path), LustreOperationError)
                     else:
                         path = self._sanity_check(path)
                         filesets[pjid] = {'path': path, 'filesetName': os.path.basename(path)}
-
 
         return filesets
 
     def set_fs_update(self, device):
         """ Update this FS next run of list_filesets """
-
         del self.filesets[device]
 
     def get_fileset_info(self, filesystem_name, fileset_name):
@@ -416,7 +414,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
             fileset_name = os.path.basename(fsetpath)
         elif fileset_name != os.path.basename(fsetpath):
             self.log.raiseException('fileset name %s should be the directory name %s.'
-                    %(fileset_name, os.path.basename(fsetpath)), LustreOperationError)
+                                    %(fileset_name, os.path.basename(fsetpath)), LustreOperationError)
 
         # does the path exist ?
         if self.exists(fsetpath):
@@ -441,7 +439,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         filesets = self.list_filesets([fsname])
         if pjid in filesets[fsname]:
             self.log.raiseException("Found existing projectid %s in file system %s: %s"
-                % (pjid, fsname, filesets[pjid]), LustreOperationError)
+                                    % (pjid, fsname, filesets[pjid]), LustreOperationError)
 
         # create the fileset: dir and project
         self.make_dir(fsetpath)
@@ -472,7 +470,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         @type inode_soft: integer representing the hard files quota
         """
         self._set_quota(who=user, obj=obj, typ=Typ2Opt.user, soft=soft, hard=hard,
-                inode_soft=inode_soft, inode_hard=inode_hard)
+                        inode_soft=inode_soft, inode_hard=inode_hard)
 
     def set_group_quota(self, soft, group, obj=None, hard=None, inode_soft=None, inode_hard=None):
         """Set quota for a group on a given object (e.g., a path in the filesystem, which may correpond to a fileset)
@@ -485,7 +483,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         @type inode_soft: integer representing the hard files quota
         """
         self._set_quota(who=group, obj=obj, typ=Typ2Opt.group, soft=soft, hard=hard,
-                inode_soft=inode_soft, inode_hard=inode_hard)
+                        inode_soft=inode_soft, inode_hard=inode_hard)
 
     def set_fileset_quota(self, soft, fileset_path, fileset_name=None, hard=None, inode_soft=None, inode_hard=None):
         """Set quota on a fileset. This maps to projects in Lustre
@@ -500,7 +498,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         fileset_path = self._sanity_check(fileset_path)
         if fileset_name is not None and fileset_name != os.path.basename(fileset_path):
             self.log.raiseException('fileset name %s should be the directory name %s.'
-                    %(fileset_name, os.path.basename(fileset_path)), LustreOperationError)
+                                    %(fileset_name, os.path.basename(fileset_path)), LustreOperationError)
 
         # we need the corresponding project id
         project = self.get_project_id(fileset_path)
@@ -508,7 +506,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
             self.log.raiseException("Can not set quota for fileset with projectid 0", LustreOperationError)
         else:
             self._set_quota(who=project, obj=fileset_path, typ=Typ2Opt.project, soft=soft, hard=hard,
-                inode_soft=inode_soft, inode_hard=inode_hard)
+                            inode_soft=inode_soft, inode_hard=inode_hard)
 
     def set_user_grace(self, obj, grace=0):
         """Set the grace period for user data.
@@ -598,14 +596,14 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
 
         if soft is None and inode_soft is None:
             self.log.raiseException("setQuota: At least one type of quota (block,inode) should be specified",
-                    LustreOperationError)
+                                    LustreOperationError)
 
         if soft:
             if hard is None:
                 hard = int(soft * soft2hard_factor)
             elif hard < soft:
                 self.log.raiseException("setQuota: can't set hard limit %s lower then soft limit %s" %
-                                    (hard, soft), LustreOperationError)
+                                        (hard, soft), LustreOperationError)
             softm = int(soft / 1024 ** 2) # round to MB
             hardm = int(hard / 1024 ** 2) # round to MB
             if softm == 0 or hardm == 0:
@@ -627,11 +625,3 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         opts.append(obj)
 
         self._execute_lfs('setquota', opts, True)
-
-
-if __name__ == '__main__':
-    lust = LustreOperations()
-
-    print(lust.list_quota('lustrefs'))
-
-    print(lust.list_filesets('lustrefs'))

@@ -31,16 +31,18 @@ from future.utils import with_metaclass
 
 OS_LINUX_MOUNTS = '/proc/mounts'
 OS_LINUX_FILESYSTEMS = '/proc/filesystems'
+
 # be very careful to add new ones here
-OS_LINUX_IGNORE_FILESYSTEMS = ('rootfs',  # special initramfs filesystem
-                               'configfs',  # kernel config
-                               'debugfs',  # kernel debug
-                               'usbfs',  # usb devices
-                               'ipathfs',  # qlogic IB
-                               'binfmt_misc',  # ?
-                               'rpc_pipefs',  # NFS RPC
-                               'fuse.sshfs',  # X2GO sshfs over fuse
-                               )
+OS_LINUX_IGNORE_FILESYSTEMS = (
+    'rootfs',  # special initramfs filesystem
+    'configfs',  # kernel config
+    'debugfs',  # kernel debug
+    'usbfs',  # usb devices
+    'ipathfs',  # qlogic IB
+    'binfmt_misc',  # ?
+    'rpc_pipefs',  # NFS RPC
+    'fuse.sshfs',  # X2GO sshfs over fuse
+)
 
 
 class PosixOperationError(Exception):
@@ -129,8 +131,8 @@ class PosixOperations(with_metaclass(Singleton, object)):
         if not obj == os.path.realpath(obj):
             # some part of the path is a symlink
             if self.ignorerealpathmismatch:
-                self.log.debug("_sanity_check obj %s doesn't correspond with realpath %s"
-                               % (obj, os.path.realpath(obj)))
+                self.log.debug("_sanity_check obj %s doesn't correspond with realpath %s",
+                               obj, os.path.realpath(obj))
             else:
                 self.log.raiseException("_sanity_check obj %s doesn't correspond with realpath %s"
                                         % (obj, os.path.realpath(obj)), PosixOperationError)
@@ -175,7 +177,7 @@ class PosixOperations(with_metaclass(Singleton, object)):
         """Check is obj is broken link. Called from _exist or with sanitised obj"""
         res = (not os.path.exists(obj)) and os.path.islink(obj)
         if res:
-            self.log.error("_isbrokenlink: found broken link for %s" % obj)
+            self.log.error("_isbrokenlink: found broken link for %s", obj)
         return res
 
     def is_symlink(self, obj):
@@ -190,7 +192,7 @@ class PosixOperations(with_metaclass(Singleton, object)):
     def _what_filesystem(self, obj):
         """Determine which filesystem a given obj belongs to."""
         if not self._exists(obj):  # obj is sanitised
-            self.log.error("_whatFilesystem: obj %s does not exist" % obj)
+            self.log.error("_whatFilesystem: obj %s does not exist", obj)
             return None
 
         if self.localfilesystems is None:
@@ -199,7 +201,7 @@ class PosixOperations(with_metaclass(Singleton, object)):
         try:
             fsid = os.stat(obj).st_dev  # this resolves symlinks
         except OSError:
-            self.log.exception("Failed to get fsid from obj %s" % obj)
+            self.log.exception("Failed to get fsid from obj %s", obj)
             return None
 
         fss = [x for x in self.localfilesystems if x[self.localfilesystemnaming.index('id')] == fsid]
@@ -211,7 +213,7 @@ class PosixOperations(with_metaclass(Singleton, object)):
             self.log.raiseException("More than one matching filesystem found for obj %s with "
                                     "id %s (matched localfilesystems: %s)" % (obj, fsid, fss), PosixOperationError)
         else:
-            self.log.debug("Found filesystem for obj %s: %s" % (obj, fss[0]))
+            self.log.debug("Found filesystem for obj %s: %s", obj, fss[0])
             return fss[0]
         return None
 
@@ -250,7 +252,7 @@ class PosixOperations(with_metaclass(Singleton, object)):
             if res is None and self.exists(fp):
                 res = fp  # could be broken symlink
                 if self.isbrokenlink(fp):
-                    self.log.error("_largestExistingPath found broken link %s for obj %s" % (res, obj))
+                    self.log.error("_largestExistingPath found broken link %s for obj %s", res, obj)
                 break
 
         return res
@@ -276,7 +278,7 @@ class PosixOperations(with_metaclass(Singleton, object)):
                 if self.dry_run:
                     self.log.info("Target is a symlink. Dry run, so not removing anything")
                 elif force:
-                    self.log.warning("Target %s is a symlink, removing" % (target))
+                    self.log.warning("Target %s is a symlink, removing", target)
                     target_ = os.path.realpath(target)
                     os.unlink(target)
                     target = self._sanity_check(target_)
@@ -284,7 +286,7 @@ class PosixOperations(with_metaclass(Singleton, object)):
             self.log.raiseException("Target %s does not exist, cannot make symlink to it" % (target),
                                     PosixOperationError)
 
-        self.log.info("Attempting to create a symlink from %s to %s" % (obj, target))
+        self.log.info("Attempting to create a symlink from %s to %s", obj, target)
         if self.exists(obj):
             if not os.path.realpath(target) == os.path.realpath(obj):
                 try:
@@ -296,11 +298,11 @@ class PosixOperations(with_metaclass(Singleton, object)):
                     self.log.raiseException("Cannot unlink existing symlink from %s to %s" % (obj, target),
                                             PosixOperationError)
             else:
-                self.log.info("Symlink already exists from %s to %s" % (obj, target))
+                self.log.info("Symlink already exists from %s to %s", obj, target)
                 return  # Nothing to do, symlink already exists
         try:
             if self.dry_run:
-                self.log.info("Linking %s to %s. Dry-run, so not really doing anything" % (obj, target))
+                self.log.info("Linking %s to %s. Dry-run, so not really doing anything", obj, target)
             else:
                 os.symlink(target, obj)
         except OSError:
@@ -353,11 +355,11 @@ class PosixOperations(with_metaclass(Singleton, object)):
         @type ssh_public_keys: list of strings representing the public ssh keys
         """
         # ssh
-        self.log.info("Populating home %s for user %s:%s" % (home_dir, user_id, group_id))
+        self.log.info("Populating home %s for user %s:%s", home_dir, user_id, group_id)
         ssh_path = os.path.join(home_dir, '.ssh')
         self.make_dir(ssh_path)
 
-        self.log.info("Placing %d ssh public keys in the authorized keys file." % (len(ssh_public_keys)))
+        self.log.info("Placing %d ssh public keys in the authorized keys file.", len(ssh_public_keys))
         authorized_keys = os.path.join(home_dir, '.ssh', 'authorized_keys')
 
         default_keys = ['dsa', 'rsa', 'ed25519']
@@ -401,9 +403,9 @@ class PosixOperations(with_metaclass(Singleton, object)):
         if self.dry_run:
             self.log.info("Writing .bashrc an .bash_profile. Dry-run, so not really doing anything.")
             if not os.path.exists(bashprofile_path):
-                self.log.info(".bash_profile will contain: %s" % ("\n".join(bashprofile_text)))
+                self.log.info(".bash_profile will contain: %s", "\n".join(bashprofile_text))
             if not os.path.exists(bashrc_path):
-                self.log.info(".bashrc will contain: %s" % ("\n".join(bashrc_text)))
+                self.log.info(".bashrc will contain: %s", "\n".join(bashrc_text))
         else:
             self._deploy_dot_file(bashrc_path, ".bashrc", user_id, bashrc_text)
             self._deploy_dot_file(bashprofile_path, ".bash_profile", user_id, bashprofile_text)
@@ -412,7 +414,7 @@ class PosixOperations(with_metaclass(Singleton, object)):
                   os.path.join(home_dir, '.ssh', 'authorized_keys'),
                   os.path.join(home_dir, '.bashrc'),
                   os.path.join(home_dir, '.bash_profile')]:
-            self.log.info("Changing ownership of %s to %s:%s" % (f, user_id, group_id))
+            self.log.info("Changing ownership of %s to %s:%s", f, user_id, group_id)
             try:
                 self.chown(user_id, group_id, f)
             except OSError:
@@ -439,7 +441,7 @@ class PosixOperations(with_metaclass(Singleton, object)):
     def list_quota(self, obj=None):
         """Report on quota"""
         obj = self._sanity_check(obj)
-        self.log.error("listQuota not implemented for this class %s" % self.__class__.__name__)
+        self.log.error("listQuota not implemented for this class %s", self.__class__.__name__)
 
     def set_quota(self, soft, who, obj=None, typ='user', hard=None, grace=None):
         """Set quota
@@ -453,17 +455,17 @@ class PosixOperations(with_metaclass(Singleton, object)):
         del who
         del soft
         obj = self._sanity_check(obj)
-        self.log.error("setQuota not implemented for this class %s" % self.__class__.__name__)
+        self.log.error("setQuota not implemented for this class %s", self.__class__.__name__)
 
     def chown(self, owner, group=None, obj=None):
         """Change ownership of the object"""
         obj = self._sanity_check(obj)
 
-        self.log.info("Changing ownership of %s to %s:%s" % (obj, owner, group))
+        self.log.info("Changing ownership of %s to %s:%s", obj, owner, group)
         try:
             if self.dry_run:
-                self.log.info("Chown on %s to %s:%s. Dry-run, so not actually changing this ownership"
-                              % (obj, owner, group))
+                self.log.info("Chown on %s to %s:%s. Dry-run, so not actually changing this ownership",
+                              obj, owner, group)
             else:
                 os.chown(obj, owner, group)
         except OSError:
@@ -478,12 +480,12 @@ class PosixOperations(with_metaclass(Singleton, object)):
         """
         obj = self._sanity_check(obj)
 
-        self.log.info("Changing access permission of %s to %o" % (obj, permissions))
+        self.log.info("Changing access permission of %s to %o", obj, permissions)
 
         try:
             if self.dry_run:
-                self.log.info("Chmod on %s to %s. Dry-run, so not actually changing access permissions"
-                              % (obj, permissions))
+                self.log.info("Chmod on %s to %s. Dry-run, so not actually changing access permissions",
+                              obj, permissions)
             else:
                 os.chmod(obj, permissions)
         except OSError:
@@ -501,13 +503,13 @@ class PosixOperations(with_metaclass(Singleton, object)):
         # if backup, take backup
         # if real, remove
         if self.dry_run:
-            self.log.info("Removing %s. Dry-run so not actually doing anything" % (obj))
+            self.log.info("Removing %s. Dry-run so not actually doing anything", obj)
         else:
             if os.path.isdir(obj):
                 try:
                     os.rmdir(obj)
                 except OSError:
-                    self.log.exception("Cannot remove directory %s" % (obj))
+                    self.log.exception("Cannot remove directory %s", obj)
             else:
                 os.unlink(obj)
 
@@ -529,18 +531,18 @@ class PosixOperations(with_metaclass(Singleton, object)):
             self.log.debug("Path %s found.", path)
         except OSError:
             created = self.make_dir(path)
-            self.log.info("Created directory at %s" % (path,))
+            self.log.info("Created directory at %s", path)
 
         if created or (override_permissions and stat.S_IMODE(statinfo.st_mode) != permissions):
             self.chmod(permissions, path)
             self.log.info("Permissions changed for path %s to %s", path, permissions)
         else:
-            self.log.debug("Path %s already exists with correct permissions" % (path,))
+            self.log.debug("Path %s already exists with correct permissions", path)
 
         if created or statinfo.st_uid != uid or statinfo.st_gid != gid:
             self.chown(uid, gid, path)
             self.log.info("Ownership changed for path %s to %d, %d", path, uid, gid)
         else:
-            self.log.debug("Path %s already exists with correct ownership" % (path,))
+            self.log.debug("Path %s already exists with correct ownership", path)
 
         return created
