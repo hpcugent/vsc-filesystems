@@ -640,37 +640,30 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         self._execute_lfs('setquota', opts, True)
 
 
+    def xdmod_list_quota(self, devices=None):
+        """ Quota information in xdmod format """
 
-    def xdmod_list_quota(self):
+        allquota = self.list_quota(devices)
+        date = datetime.utcnow().isoformat(timespec='seconds')
+        filesys = self.list_filesystems()
 
-        allquota = self.list_quota()
-        date = datetime.now().isoformat()
-
-        xdmod_list = [];
+        xdmod_list = []
         for fsname in allquota.keys():
-            mountpoint = self.get_mountpoint(fsname)
-            for typp in list(Typ2Param): # or keys
-                typ = typp.name
-                for qinfo in allquota[fsname][typ]:
-                    entry = {
-                        'resource' : fsname,
-                        'mountpoint' : mountpoint,
-                        'user' : qinfo['name'],
-                        'pi' : qinfo['filesetname'],
-                        'dt' : date,
-                        'soft_threshold' : qinfo['blockQuota'],
-                        'hard_threshold' : qinfo['blockLimit'],
-                        'file_count' : qinfo['filesUsage'],
-                        'logical_usage' : qinfo['blockUsage'],
-                        'physical_usage' : qinfo['blockUsage'],
-
-                        }
-                    # Lustre has no per fileset user/group quota
-                    if typp == Typ2Param.FILESET:
-                        entry['user'] = typp.name
-                    else:
-                        entry['pi'] = typp.name
-
+            mountpoint = filesys[fsname]['defaultMountPoint']
+            for quots in allquota[fsname].values():
+                for qentries in quots.values():
+                    for qinfo in qentries:
+                        entry = {
+                            'resource' : fsname,
+                            'mountpoint' : mountpoint,
+                            'user' : qinfo.name,
+                            'pi' : qinfo.filesetname,
+                            'dt' : date,
+                            'soft_threshold' : qinfo.blockQuota,
+                            'hard_threshold' : qinfo.blockLimit,
+                            'file_count' : qinfo.filesUsage,
+                            'logical_usage' : qinfo.blockUsage,
+                            'physical_usage' : qinfo.blockUsage,
+                            }
                     xdmod_list.append(entry)
-
         return xdmod_list

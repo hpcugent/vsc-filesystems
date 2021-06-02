@@ -19,7 +19,7 @@ Tests for the lustre library.
 @author: Kenneth Waegeman (Ghent University)
 """
 from __future__ import print_function
-
+import datetime
 import mock
 import os
 import glob
@@ -56,6 +56,23 @@ LUSTRE_QUOTA_OUTPUT = {
             {'id': 1, 'limits': {'hard': 1000, 'soft': 900, 'granted': 950, 'time': 1600334880}},
             {'id': 598, 'limits': {'hard': 1100000, 'soft': 1000000, 'granted': 0, 'time': 281474976710656}}]
         },
+    }
+
+LUSTRE_QUOTA_RESULT = {'mylfs':{
+            'USR': {
+                '0': [LustreQuota(name='0', blockUsage=0, blockQuota=0, blockLimit=0, blockGrace=604800, blockInDoubt=0, filesUsage=0, filesQuota=0, filesLimit=0, filesGrace=604800, filesInDoubt=0)],
+                '2005': [LustreQuota(name='2005', blockUsage=0, blockQuota=5000000, blockLimit=10000000, blockGrace=604800, blockInDoubt=0, filesUsage=0, filesQuota=0, filesLimit=0, filesGrace=0, filesInDoubt=0)],
+                '2006': [LustreQuota(name='2006', blockUsage=10240000, blockQuota=45000000, blockLimit=50000000, blockGrace=281474976710656, blockInDoubt=0, filesUsage=200, filesQuota=1000000, filesLimit=1200000, filesGrace=281474976710656, filesInDoubt=0)]
+            },
+            'GRP': {
+                '0': [LustreQuota(name='0', blockUsage=0, blockQuota=0, blockLimit=0, blockGrace=604800, blockInDoubt=0, filesUsage=0, filesQuota=0, filesLimit=0, filesGrace=604800, filesInDoubt=0)],
+                '2006': [LustreQuota(name='2006', blockUsage=4285456, blockQuota=3072000, blockLimit=3584000, blockGrace=1600685548, blockInDoubt=0, filesUsage=200, filesQuota=1000000, filesLimit=1200000, filesGrace=281474976710656, filesInDoubt=0)]
+            },
+            'FILESET': {
+                '0': [LustreQuota(name='0', blockUsage=0, blockQuota=0, blockLimit=0, blockGrace=604800, blockInDoubt=0, filesUsage=0, filesQuota=0, filesLimit=0, filesGrace=604800, filesInDoubt=0, filesetname='0')],
+                '1': [LustreQuota(name='1', blockUsage=3875852, blockQuota=3591168, blockLimit=3798016, blockGrace=1600334880, blockInDoubt=0, filesUsage=950, filesQuota=900, filesLimit=1000, filesGrace=1600334880, filesInDoubt=0, filesetname='1')],
+                '598': [LustreQuota(name='598', blockUsage=0, blockQuota=1000000, blockLimit=1100000, blockGrace=281474976710656, blockInDoubt=0, filesUsage=0, filesQuota=1000000, filesLimit=1100000, filesGrace=281474976710656, filesInDoubt=0, filesetname='598')]}
+            }
     }
 
 LUSTRE_FILESET_TREE = {
@@ -243,23 +260,6 @@ global_pool0_md_usr
     def test_list_quota(self, mock_lctl_yaml, mock_lctl, mock_execute):
         """ Test making quota structure """
 
-        quota_result = {'mylfs':{
-            'USR': {
-                '0': [LustreQuota(name='0', blockUsage=0, blockQuota=0, blockLimit=0, blockGrace=604800, blockInDoubt=0, filesUsage=0, filesQuota=0, filesLimit=0, filesGrace=604800, filesInDoubt=0)],
-                '2005': [LustreQuota(name='2005', blockUsage=0, blockQuota=5000000, blockLimit=10000000, blockGrace=604800, blockInDoubt=0, filesUsage=0, filesQuota=0, filesLimit=0, filesGrace=0, filesInDoubt=0)],
-                '2006': [LustreQuota(name='2006', blockUsage=10240000, blockQuota=45000000, blockLimit=50000000, blockGrace=281474976710656, blockInDoubt=0, filesUsage=200, filesQuota=1000000, filesLimit=1200000, filesGrace=281474976710656, filesInDoubt=0)]
-            },
-            'GRP': {
-                '0': [LustreQuota(name='0', blockUsage=0, blockQuota=0, blockLimit=0, blockGrace=604800, blockInDoubt=0, filesUsage=0, filesQuota=0, filesLimit=0, filesGrace=604800, filesInDoubt=0)],
-                '2006': [LustreQuota(name='2006', blockUsage=4285456, blockQuota=3072000, blockLimit=3584000, blockGrace=1600685548, blockInDoubt=0, filesUsage=200, filesQuota=1000000, filesLimit=1200000, filesGrace=281474976710656, filesInDoubt=0)]
-            },
-            'FILESET': {
-                '0': [LustreQuota(name='0', blockUsage=0, blockQuota=0, blockLimit=0, blockGrace=604800, blockInDoubt=0, filesUsage=0, filesQuota=0, filesLimit=0, filesGrace=604800, filesInDoubt=0, filesetname='0')],
-                '1': [LustreQuota(name='1', blockUsage=3875852, blockQuota=3591168, blockLimit=3798016, blockGrace=1600334880, blockInDoubt=0, filesUsage=950, filesQuota=900, filesLimit=1000, filesGrace=1600334880, filesInDoubt=0, filesetname='1')],
-                '598': [LustreQuota(name='598', blockUsage=0, blockQuota=1000000, blockLimit=1100000, blockGrace=281474976710656, blockInDoubt=0, filesUsage=0, filesQuota=1000000, filesLimit=1100000, filesGrace=281474976710656, filesInDoubt=0, filesetname='598')]}
-            }
-        }
-
         def quota_mock(fs, typ, quotyp, ok):
             return LUSTRE_QUOTA_OUTPUT[typ.name][quotyp.name]
 
@@ -267,14 +267,28 @@ global_pool0_md_usr
         mock_lctl.return_value = True
         mock_execute.return_value = (2, "Not ok")
         llops = lustre.LustreOperations()
-        self.assertEqual(llops.list_quota(['mylfs']), quota_result)
+        self.assertEqual(llops.list_quota(['mylfs']), LUSTRE_QUOTA_RESULT)
         mock_lctl.assert_called_with(['list_param', 'qmt.mylfs-*.*.glb-*'])
         mock_lctl.side_effect = lustre.LustreOperationError
         self.assertRaises(lustre.LustreOperationError, llops.list_quota, ['mylfs'])
         mock_execute.return_value = (0, "ok")
-        self.assertEqual(llops.list_quota(['mylfs']), quota_result)
+        self.assertEqual(llops.list_quota(['mylfs']), LUSTRE_QUOTA_RESULT)
         mock_execute.assert_called_with(['ls', '/var/cache/lustre/qmt.mylfs-*.*.glb-*'])
 
+
+    @mock.patch('vsc.filesystem.lustre.datetime')
+    @mock.patch('vsc.filesystem.lustre.LustreOperations.list_filesystems')
+    @mock.patch('vsc.filesystem.lustre.LustreOperations.list_quota')
+    def test_xdmod_info(self, mock_list_quota, mock_list_filesystems, mock_date):
+        """ Test xdmod output """
+
+        xdmod_input = [{'resource': 'mylfs', 'mountpoint': '/lustre/mylfs', 'user': '0', 'pi': None, 'dt': '2021-06-02T12:14:52', 'soft_threshold': 0, 'hard_threshold': 0, 'file_count': 0, 'logical_usage': 0, 'physical_usage': 0}, {'resource': 'mylfs', 'mountpoint': '/lustre/mylfs', 'user': '2005', 'pi': None, 'dt': '2021-06-02T12:14:52', 'soft_threshold': 5000000, 'hard_threshold': 10000000, 'file_count': 0, 'logical_usage': 0, 'physical_usage': 0}, {'resource': 'mylfs', 'mountpoint': '/lustre/mylfs', 'user': '2006', 'pi': None, 'dt': '2021-06-02T12:14:52', 'soft_threshold': 45000000, 'hard_threshold': 50000000, 'file_count': 200, 'logical_usage': 10240000, 'physical_usage': 10240000}, {'resource': 'mylfs', 'mountpoint': '/lustre/mylfs', 'user': '0', 'pi': None, 'dt': '2021-06-02T12:14:52', 'soft_threshold': 0, 'hard_threshold': 0, 'file_count': 0, 'logical_usage': 0, 'physical_usage': 0}, {'resource': 'mylfs', 'mountpoint': '/lustre/mylfs', 'user': '2006', 'pi': None, 'dt': '2021-06-02T12:14:52', 'soft_threshold': 3072000, 'hard_threshold': 3584000, 'file_count': 200, 'logical_usage': 4285456, 'physical_usage': 4285456}, {'resource': 'mylfs', 'mountpoint': '/lustre/mylfs', 'user': '0', 'pi': '0', 'dt': '2021-06-02T12:14:52', 'soft_threshold': 0, 'hard_threshold': 0, 'file_count': 0, 'logical_usage': 0, 'physical_usage': 0}, {'resource': 'mylfs', 'mountpoint': '/lustre/mylfs', 'user': '1', 'pi': '1', 'dt': '2021-06-02T12:14:52', 'soft_threshold': 3591168, 'hard_threshold': 3798016, 'file_count': 950, 'logical_usage': 3875852, 'physical_usage': 3875852}, {'resource': 'mylfs', 'mountpoint': '/lustre/mylfs', 'user': '598', 'pi': '598', 'dt': '2021-06-02T12:14:52', 'soft_threshold': 1000000, 'hard_threshold': 1100000, 'file_count': 0, 'logical_usage': 0, 'physical_usage': 0}]
+        mock_list_filesystems.return_value = {
+            'mylfs': {'defaultMountPoint': '/lustre/mylfs', 'location': '10.141.21.204@tcp'}}
+        mock_list_quota.return_value = LUSTRE_QUOTA_RESULT
+        mock_date.utcnow.return_value = datetime.datetime(2021, 6, 2, 12, 14, 52, 411070)
+        llops = lustre.LustreOperations()
+        self.assertEqual(llops.xdmod_list_quota(), xdmod_input)
 
     @mock.patch('vsc.filesystem.lustre.LustreOperations.get_project_id')
     @mock.patch('vsc.filesystem.posix.PosixOperations._execute')
