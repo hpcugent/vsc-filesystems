@@ -26,6 +26,7 @@ import copy
 import os
 import re
 
+from datetime import datetime
 from collections import namedtuple
 from vsc.utils.py2vs3 import unquote as percentdecode
 from socket import gethostname
@@ -998,3 +999,32 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
         states = res['State']
         comp_entities = ['%s_%s' % ident for ident in zip(states['component'], states['entityname'])]
         return dict(zip(comp_entities, states['status']))
+
+    def xdmod_list_quota(self, devices=None):
+        """ Quota information in xdmod format """
+
+        allquota = self.list_quota(devices)
+        date = datetime.utcnow().isoformat(timespec='seconds')
+        filesys = self.list_filesystems()
+
+        xdmod_list = []
+        for fsname in allquota.keys():
+            mountpoint = filesys[fsname]['defaultMountPoint']
+            for quots in allquota[fsname].values():
+                for qentries in quots.values():
+                    for qinfo in qentries:
+                        entry = {
+                            'resource' : fsname,
+                            'mountpoint' : mountpoint,
+                            'user' : qinfo.name,
+                            'pi' : qinfo.filesetname,
+                            'dt' : date,
+                            'soft_threshold' : qinfo.blockQuota,
+                            'hard_threshold' : qinfo.blockLimit,
+                            'file_count' : qinfo.filesUsage,
+                            'logical_usage' : qinfo.blockUsage,
+                            'physical_usage' : qinfo.blockUsage,
+                            }
+                    xdmod_list.append(entry)
+        return xdmod_list
+
