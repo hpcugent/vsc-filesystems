@@ -24,7 +24,7 @@ import mock
 import os
 import glob
 import vsc.filesystem.lustre as lustre
-from vsc.filesystem.lustre import LustreQuota
+from vsc.filesystem.lustre import LustreQuota, LustreVscTier1cScratchFs
 
 from vsc.install.testing import TestCase
 
@@ -298,6 +298,7 @@ global_pool0_md_usr
         mock_glob.side_effect = [['/lustre/mylfs/gent'], ['/lustre/mylfs/gent/projects/000', '/lustre/mylfs/gent/projects/001']]
         mock_what_filesystem.return_value = ['lustre', '/lustre/mylfs', 452646254, '10.141.21.204@tcp:/mylfs']
         llops = lustre.LustreOperations()
+        llops.set_default_mapping(LustreVscTier1cScratchFs)
         fsclass = llops._get_fshint_for_path('/lustre/mylfs/mypath')
         self.assertEqual(fsclass.get_search_paths(), ['/lustre/mylfs/gent', '/lustre/mylfs/gent/projects/000', '/lustre/mylfs/gent/projects/001'])
         self.assertEqual(fsclass.pjid_from_name('pj00002'), '900002')
@@ -328,6 +329,7 @@ global_pool0_md_usr
 900111 P /lustre/mylfs/gent/projects/001/pj00111
 ''')]
         llops = lustre.LustreOperations()
+        llops.set_default_mapping(LustreVscTier1cScratchFs)
         fsystems = {'mylfs': {'defaultMountPoint': '/lustre/mylfs', 'location': '10.141.21.204@tcp'}}
         filesets = llops._list_filesets(fsystems['mylfs'])
         mock_execute.assert_called_with(['/usr/bin/lfs', 'project', '/lustre/mylfs/gent/projects/001'], False)
@@ -343,6 +345,7 @@ global_pool0_md_usr
         mock__list_filesets.return_value = LUSTRE_FILESET_TREE['mylfs']
 
         llops = lustre.LustreOperations()
+        llops.set_default_mapping(LustreVscTier1cScratchFs)
         self.assertEqual(llops.list_filesets(), LUSTRE_FILESET_TREE)
         self.assertEqual(llops.filesets, LUSTRE_FILESET_TREE)
         mock__list_filesets.assert_called_with({'defaultMountPoint': '/lustre/mylfs', 'location': '10.141.21.204@tcp'})
@@ -365,6 +368,7 @@ global_pool0_md_usr
         mock_exists.return_value = True
         mock_set_quota.return_value = True
         llops = lustre.LustreOperations()
+        llops.set_default_mapping(LustreVscTier1cScratchFs)
         self.assertRaises(lustre.LustreOperationError, llops.make_fileset, '/lustre/mylfs/gent/projects/000/pj00002', 'pj00002')
         mock_exists.return_value = False
         self.assertRaises(lustre.LustreOperationError, llops.make_fileset, '/lustre/mylfs/gent/projects/000/pj00002', 'pj00002')

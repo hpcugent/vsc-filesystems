@@ -130,6 +130,10 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         self.filesets = {}
         self.quotadump = '/var/cache/lustre'
 
+    def set_default_mapping(self, default_mapping=None):
+        ''' Set the class for the mapping of ids and search paths'''
+        self.default_mapping = default_mapping
+
     def _execute_lfs(self, name, opts=None, changes=False):
         """Return and check the LUSTRE lfs command.
         """
@@ -232,9 +236,11 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         """ Get hints to find projects locations and ids """
         fsname, fsmount = self._get_fsinfo_for_path(path)
         if fsname not in self.filesystems:
-            # TODO: Ideally this is set up from immutable config of some sorts instead of hard coded
-            # Or need API change)
-            self.filesystems[fsname] = LustreVscTier1cScratchFs(fsmount)
+            print('ALLOO')
+            print(self.default_mapping)
+            if self.default_mapping is None:
+                self.log.raiseException("fs mapping not set, we need a default mapping", LustreOperationError)
+            self.filesystems[fsname] = self.default_mapping(fsmount)
         return self.filesystems[fsname]
 
     def _map_project_id(self, project_path, fileset_name):
