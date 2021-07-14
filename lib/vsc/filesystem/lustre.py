@@ -236,8 +236,6 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         """ Get hints to find projects locations and ids """
         fsname, fsmount = self._get_fsinfo_for_path(path)
         if fsname not in self.filesystems:
-            print('ALLOO')
-            print(self.default_mapping)
             if self.default_mapping is None:
                 self.log.raiseException("fs mapping not set, we need a default mapping", LustreOperationError)
             self.filesystems[fsname] = self.default_mapping(fsmount)
@@ -414,7 +412,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         return filesetsres
 
 
-    def make_fileset(self, new_fileset_path, fileset_name, inodes_max=1048576):
+    def make_fileset(self, new_fileset_path, fileset_name, inodes_max=1048576, fileset_id=None):
         """
         Given path, create a new directory and set file quota
           - check uniqueness
@@ -452,7 +450,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
                                     (fileset_name, fsinfo['path']), LustreOperationError)
             return None
 
-        pjid = self._map_project_id(parentfsetpath, fileset_name)
+        pjid = str(fileset_id) if fileset_id else self._map_project_id(parentfsetpath, fileset_name)
         filesets = self.list_filesets([fsname])
         if pjid in filesets[fsname]:
             self.log.raiseException("Found existing projectid %s in file system %s: %s"
