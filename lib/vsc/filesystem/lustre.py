@@ -108,6 +108,17 @@ class LustreVscGhentScratchFs(LustreVscFS):
         projectid_maps = {'gvo' : 900000}
         super(LustreVscGhentScratchFs, self).__init__(mountpoint, project_locations, projectid_maps)
 
+class LustreVscTier1cScratchFs(LustreVscFS):
+    """ Make some assumptions on where to find filesets
+        This could also be extended to be done by importing config files """
+
+    def __init__(self, mountpoint):
+
+        project_locations = ['gent', 'gent/projects/00[0-9]']
+        projectid_maps = {'pj' : 900000}
+        super(LustreVscTier1cScratchFs, self).__init__(mountpoint, project_locations, projectid_maps)
+
+
 
 class LustreOperations(with_metaclass(Singleton, PosixOperations)):
     """ Lustre Operations """
@@ -118,6 +129,10 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         self.filesystems = {}
         self.filesets = {}
         self.quotadump = '/var/cache/lustre'
+
+    def set_default_mapping(self, default_mapping=None):
+        ''' Set the class for the mapping of ids and search paths'''
+        self.default_mapping = default_mapping
 
     def _execute_lfs(self, name, opts=None, changes=False):
         """Return and check the LUSTRE lfs command.
@@ -221,9 +236,9 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         """ Get hints to find projects locations and ids """
         fsname, fsmount = self._get_fsinfo_for_path(path)
         if fsname not in self.filesystems:
-            # TODO: Ideally this is set up from immutable config of some sorts instead of hard coded
-            # Or need API change)
-            self.filesystems[fsname] = LustreVscGhentScratchFs(fsmount)
+            if self.default_mapping is None:
+                self.log.raiseException("fs mapping not set, we need a default mapping", LustreOperationError)
+            self.filesystems[fsname] = self.default_mapping(fsmount)
         return self.filesystems[fsname]
 
     def _map_project_id(self, project_path, fileset_name):
@@ -397,7 +412,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         return filesetsres
 
 
-    def make_fileset(self, new_fileset_path, fileset_name, inodes_max=1048576):
+    def make_fileset(self, new_fileset_path, fileset_name, inodes_max=1048576, fileset_id=None):
         """
         Given path, create a new directory and set file quota
           - check uniqueness
@@ -435,7 +450,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
                                     (fileset_name, fsinfo['path']), LustreOperationError)
             return None
 
-        pjid = self._map_project_id(parentfsetpath, fileset_name)
+        pjid = str(fileset_id) if fileset_id else self._map_project_id(parentfsetpath, fileset_name)
         filesets = self.list_filesets([fsname])
         if pjid in filesets[fsname]:
             self.log.raiseException("Found existing projectid %s in file system %s: %s"

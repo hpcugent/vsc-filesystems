@@ -24,7 +24,7 @@ import mock
 import os
 import glob
 import vsc.filesystem.lustre as lustre
-from vsc.filesystem.lustre import LustreQuota
+from vsc.filesystem.lustre import LustreQuota, LustreVscTier1cScratchFs
 
 from vsc.install.testing import TestCase
 
@@ -61,12 +61,12 @@ LUSTRE_QUOTA_OUTPUT = {
 LUSTRE_FILESET_TREE = {
     'mylfs': {
         '5': {'path': '/lustre/mylfs/gent/archive', 'filesetName': 'archive'},
-        '900006': {'path': '/lustre/mylfs/gent/vo/000/gvo00006', 'filesetName': 'gvo00006'},
-        '900002': {'path': '/lustre/mylfs/gent/vo/000/gvo00002', 'filesetName': 'gvo00002'},
-        '900004': {'path': '/lustre/mylfs/gent/vo/000/gvo00004', 'filesetName': 'gvo00004'},
-        '900110': {'path': '/lustre/mylfs/gent/vo/001/gvo00110', 'filesetName': 'gvo00110'},
-        '900112': {'path': '/lustre/mylfs/gent/vo/001/gvo00112', 'filesetName': 'gvo00112'},
-        '900111': {'path': '/lustre/mylfs/gent/vo/001/gvo00111', 'filesetName': 'gvo00111'}
+        '900006': {'path': '/lustre/mylfs/gent/projects/000/pj00006', 'filesetName': 'pj00006'},
+        '900002': {'path': '/lustre/mylfs/gent/projects/000/pj00002', 'filesetName': 'pj00002'},
+        '900004': {'path': '/lustre/mylfs/gent/projects/000/pj00004', 'filesetName': 'pj00004'},
+        '900110': {'path': '/lustre/mylfs/gent/projects/001/pj00110', 'filesetName': 'pj00110'},
+        '900112': {'path': '/lustre/mylfs/gent/projects/001/pj00112', 'filesetName': 'pj00112'},
+        '900111': {'path': '/lustre/mylfs/gent/projects/001/pj00111', 'filesetName': 'pj00111'}
         }
     }
 
@@ -295,12 +295,13 @@ global_pool0_md_usr
     @mock.patch('vsc.filesystem.posix.PosixOperations.what_filesystem')
     def test__get_fshint_for_path(self, mock_what_filesystem, mock_glob):
         """ Test getting the search paths and pjid mapping for a file system """
-        mock_glob.side_effect = [['/lustre/mylfs/gent'], ['/lustre/mylfs/gent/vo/000', '/lustre/mylfs/gent/vo/001']]
+        mock_glob.side_effect = [['/lustre/mylfs/gent'], ['/lustre/mylfs/gent/projects/000', '/lustre/mylfs/gent/projects/001']]
         mock_what_filesystem.return_value = ['lustre', '/lustre/mylfs', 452646254, '10.141.21.204@tcp:/mylfs']
         llops = lustre.LustreOperations()
+        llops.set_default_mapping(LustreVscTier1cScratchFs)
         fsclass = llops._get_fshint_for_path('/lustre/mylfs/mypath')
-        self.assertEqual(fsclass.get_search_paths(), ['/lustre/mylfs/gent', '/lustre/mylfs/gent/vo/000', '/lustre/mylfs/gent/vo/001'])
-        self.assertEqual(fsclass.pjid_from_name('gvo00002'), '900002')
+        self.assertEqual(fsclass.get_search_paths(), ['/lustre/mylfs/gent', '/lustre/mylfs/gent/projects/000', '/lustre/mylfs/gent/projects/001'])
+        self.assertEqual(fsclass.pjid_from_name('pj00002'), '900002')
 
 
     @mock.patch('glob.glob')
@@ -310,7 +311,7 @@ global_pool0_md_usr
     def test__list_filesets(self, mock_sanity_check, mock_execute, mock_what_filesystem, mock_glob):
         """ Test listing all filesets for a specified file system"""
         mock_sanity_check.side_effect = lambda x: x
-        mock_glob.side_effect = [['/lustre/mylfs/gent'], ['/lustre/mylfs/gent/vo/000', '/lustre/mylfs/gent/vo/001']]
+        mock_glob.side_effect = [['/lustre/mylfs/gent'], ['/lustre/mylfs/gent/projects/000', '/lustre/mylfs/gent/projects/001']]
         mock_what_filesystem.return_value = ['lustre', '/lustre/mylfs', 452646254, '10.141.21.204@tcp:/mylfs']
         mock_execute.side_effect = [
             (0, '''    0 P /lustre/mylfs/gent/training
@@ -319,18 +320,19 @@ global_pool0_md_usr
     0 P /lustre/mylfs/gent/vo
     5 P /lustre/mylfs/gent/archive
 '''),
-            (0, '''900006 P /lustre/mylfs/gent/vo/000/gvo00006
-900002 P /lustre/mylfs/gent/vo/000/gvo00002
-900004 P /lustre/mylfs/gent/vo/000/gvo00004
+            (0, '''900006 P /lustre/mylfs/gent/projects/000/pj00006
+900002 P /lustre/mylfs/gent/projects/000/pj00002
+900004 P /lustre/mylfs/gent/projects/000/pj00004
 '''),
-            (0,'''900110 P /lustre/mylfs/gent/vo/001/gvo00110
-900112 P /lustre/mylfs/gent/vo/001/gvo00112
-900111 P /lustre/mylfs/gent/vo/001/gvo00111
+            (0,'''900110 P /lustre/mylfs/gent/projects/001/pj00110
+900112 P /lustre/mylfs/gent/projects/001/pj00112
+900111 P /lustre/mylfs/gent/projects/001/pj00111
 ''')]
         llops = lustre.LustreOperations()
+        llops.set_default_mapping(LustreVscTier1cScratchFs)
         fsystems = {'mylfs': {'defaultMountPoint': '/lustre/mylfs', 'location': '10.141.21.204@tcp'}}
         filesets = llops._list_filesets(fsystems['mylfs'])
-        mock_execute.assert_called_with(['/usr/bin/lfs', 'project', '/lustre/mylfs/gent/vo/001'], False)
+        mock_execute.assert_called_with(['/usr/bin/lfs', 'project', '/lustre/mylfs/gent/projects/001'], False)
         self.assertEqual(filesets, LUSTRE_FILESET_TREE['mylfs'])
 
 
@@ -343,6 +345,7 @@ global_pool0_md_usr
         mock__list_filesets.return_value = LUSTRE_FILESET_TREE['mylfs']
 
         llops = lustre.LustreOperations()
+        llops.set_default_mapping(LustreVscTier1cScratchFs)
         self.assertEqual(llops.list_filesets(), LUSTRE_FILESET_TREE)
         self.assertEqual(llops.filesets, LUSTRE_FILESET_TREE)
         mock__list_filesets.assert_called_with({'defaultMountPoint': '/lustre/mylfs', 'location': '10.141.21.204@tcp'})
@@ -365,15 +368,16 @@ global_pool0_md_usr
         mock_exists.return_value = True
         mock_set_quota.return_value = True
         llops = lustre.LustreOperations()
-        self.assertRaises(lustre.LustreOperationError, llops.make_fileset, '/lustre/mylfs/gent/vo/000/gvo00002', 'gvo00002')
+        llops.set_default_mapping(LustreVscTier1cScratchFs)
+        self.assertRaises(lustre.LustreOperationError, llops.make_fileset, '/lustre/mylfs/gent/projects/000/pj00002', 'pj00002')
         mock_exists.return_value = False
-        self.assertRaises(lustre.LustreOperationError, llops.make_fileset, '/lustre/mylfs/gent/vo/000/gvo00002', 'gvo00002')
+        self.assertRaises(lustre.LustreOperationError, llops.make_fileset, '/lustre/mylfs/gent/projects/000/pj00002', 'pj00002')
         mock_exists.side_effect = [False, True]
-        self.assertRaises(lustre.LustreOperationError, llops.make_fileset, '/lustre/mylfs/gent/vo/000/gvo00002', 'gvo00002')
+        self.assertRaises(lustre.LustreOperationError, llops.make_fileset, '/lustre/mylfs/gent/projects/000/pj00002', 'pj00002')
         mock_exists.side_effect = [False, True]
-        mock_execute.side_effect = [(0, '    0 P /lustre/mylfs/gent/vo/000/gvo00003'), (0, "")]
-        llops.make_fileset('/lustre/mylfs/gent/vo/000/gvo00003', 'gvo00003')
-        mock_set_quota.assert_called_with(who='900003', obj='/lustre/mylfs/gent/vo/000/gvo00003', typ=lustre.Typ2Opt.project, soft=1048576, hard=1048576, inode_soft=1048576, inode_hard=1048576)
+        mock_execute.side_effect = [(0, '    0 P /lustre/mylfs/gent/projects/000/pj00003'), (0, "")]
+        llops.make_fileset('/lustre/mylfs/gent/projects/000/pj00003', 'pj00003')
+        mock_set_quota.assert_called_with(who='900003', obj='/lustre/mylfs/gent/projects/000/pj00003', typ=lustre.Typ2Opt.project, soft=1048576, hard=1048576, inode_soft=1048576, inode_hard=1048576)
 
-        mock_make_dir.assert_called_with('/lustre/mylfs/gent/vo/000/gvo00003')
-        mock_execute.assert_called_with(['/usr/bin/lfs', 'project', '-p', '900003', '-r', '-s', '/lustre/mylfs/gent/vo/000/gvo00003'], True)
+        mock_make_dir.assert_called_with('/lustre/mylfs/gent/projects/000/pj00003')
+        mock_execute.assert_called_with(['/usr/bin/lfs', 'project', '-p', '900003', '-r', '-s', '/lustre/mylfs/gent/projects/000/pj00003'], True)
