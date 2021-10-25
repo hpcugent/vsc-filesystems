@@ -333,6 +333,7 @@ class PosixOperations(with_metaclass(Singleton, object)):
                 return False
             else:
                 self.log.raiseException("Cannot create the directory hierarchy %s" % (obj), PosixOperationError)
+                return False
 
     def make_home_dir(self, obj=None):
         """Make a homedirectory"""
