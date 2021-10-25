@@ -68,7 +68,7 @@ def split_output_lines(out):
     header_ends_in_colon = out[0][-1] == ":"
 
     def clean(line):
-        if not header_ends_in_colon and line[-1] == ":":
+        if not header_ends_in_colon and line and line[-1] == ":":
             return line[:-1]
         else:
             return line
