@@ -290,6 +290,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
             ec, _out = RunNoWorries.run(cmd)
             if ec != 0:
                 self.log.raiseException("Could not get quota information from qmt or dump", LustreOperationError)
+                return False
             else:
                 self.log.info('Getting quota information out of dump')
                 return False

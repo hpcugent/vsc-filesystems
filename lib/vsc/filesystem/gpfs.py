@@ -68,7 +68,7 @@ def split_output_lines(out):
     header_ends_in_colon = out[0][-1] == ":"
 
     def clean(line):
-        if not header_ends_in_colon and line[-1] == ":":
+        if not header_ends_in_colon and line and line[-1] == ":":
             return line[:-1]
         else:
             return line
@@ -481,6 +481,7 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
             return self.gpfslocalfilesystems[filesystem]
         except KeyError:
             self.log.raiseException("GPFS has no information for filesystem %s" % (filesystem), GpfsOperationError)
+            return None
 
     def get_fileset_info(self, filesystem_name, fileset_name):
         """Get all the relevant information for a given fileset.
@@ -941,6 +942,7 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
                 return []
             else:
                 self.log.raiseException(err.args[0], GpfsOperationError)
+                return None
 
     def create_filesystem_snapshot(self, fsname, snapname, filesets=None):
         """
