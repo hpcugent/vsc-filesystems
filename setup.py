@@ -36,7 +36,7 @@ else:
     install_requires.append('pyyaml')
 
 PACKAGE = {
-    'version': '1.2.16',
+    'version': '1.2.17',
     'author': [sdw, ag, kh, kw],
     'maintainer': [sdw, ag, kh, kw, wdp],
     'setup_requires': ['vsc-install >= 0.15.2'],
