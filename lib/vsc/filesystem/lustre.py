@@ -588,6 +588,9 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         res = self._execute_lfs('quota', opts)
         return res
 
+    def get_project_quota(self, who, obj):
+        """ Return project quota"""
+        return self._get_quota(who, obj, Typ2Opt.project)
 
     def _set_quota(self, who, obj, typ=Typ2Opt.user, soft=None, hard=None, inode_soft=None, inode_hard=None):
         """Set quota on the given object.
