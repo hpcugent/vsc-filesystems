@@ -569,7 +569,7 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
 
         self._execute_lfs('setquota', opts, True)
 
-    def _get_quota(self, who, obj, typ):
+    def _get_quota(self, who, obj, typ, human=False):
         """Get quota of a given object.
 
         @type who: identifier (username, uid, gid, group, projectid)
@@ -583,14 +583,16 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
 
         opts = []
         opts += ["-%s" % typ.value, "%s" % who]
+        if human:
+            opts.append("-h")
         opts.append(obj)
 
         res = self._execute_lfs('quota', opts)
         return res
 
-    def get_project_quota(self, who, obj):
+    def get_project_quota(self, who, obj, human=True):
         """ Return project quota"""
-        return self._get_quota(who, obj, Typ2Opt.project)
+        return self._get_quota(who, obj, Typ2Opt.project, human)
 
     def _set_quota(self, who, obj, typ=Typ2Opt.user, soft=None, hard=None, inode_soft=None, inode_hard=None):
         """Set quota on the given object.
