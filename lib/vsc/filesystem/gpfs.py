@@ -44,7 +44,7 @@ GpfsQuota = namedtuple('GpfsQuota',
      'filesUsage', 'filesQuota', 'filesLimit', 'filesInDoubt', 'filesGrace',
      'remarks', 'quota', 'defQuota', 'fid', 'filesetname'])
 
-GPFS_OK_STATES = ['HEALTHY', 'DISABLED']
+GPFS_OK_STATES = ['HEALTHY', 'DISABLED', 'TIPS']
 GPFS_WARNING_STATES = ['DEGRADED']
 GPFS_ERROR_STATES = ['FAILED', 'DEPEND']
 GPFS_UNKNOWN_STATES = ['CHECKING', 'UNKNOWN']
