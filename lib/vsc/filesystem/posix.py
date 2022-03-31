@@ -417,7 +417,9 @@ class PosixOperations(with_metaclass(Singleton, object)):
                   os.path.join(home_dir, '.bash_profile')]:
             self.log.info("Changing ownership of %s to %s:%s", f, user_id, group_id)
             try:
+                self.ignorerealpathmismatch = True
                 self.chown(user_id, group_id, f)
+                self.ignorerealpathmismatch = False
             except OSError:
                 self.log.raiseException("Cannot change ownership of file %s to %s:%s" %
                                         (f, user_id, group_id), PosixOperationError)
