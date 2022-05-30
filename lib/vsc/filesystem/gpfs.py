@@ -38,7 +38,7 @@ from vsc.utils.patterns import Singleton
 
 GPFS_BIN_PATH = '/usr/lpp/mmfs/bin'
 
-GpfsQuota = namedtuple('GpfsQuota',
+StorageQuota = namedtuple('StorageQuota',
     ['name',
      'blockUsage', 'blockQuota', 'blockLimit', 'blockInDoubt', 'blockGrace',
      'filesUsage', 'filesQuota', 'filesLimit', 'filesInDoubt', 'filesGrace',
@@ -394,7 +394,7 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
             if qt == 'FILESET':
                 # GPFS fileset quota have empty filesetName field
                 details['filesetname'] = details['name']
-            res[fs][qt][qid] = [GpfsQuota(**details)]
+            res[fs][qt][qid] = [StorageQuota(**details)]
 
         self.gpfslocalquotas = res
         return res
