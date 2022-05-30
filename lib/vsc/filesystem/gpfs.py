@@ -34,6 +34,7 @@ from enum import Enum
 
 from vsc.config.base import GPFS_DEFAULT_INODE_LIMIT
 from vsc.filesystem.posix import PosixOperations, PosixOperationError
+from vsc.utils import fancylogger
 from vsc.utils.missing import nub, find_sublist_index, Monoid, MonoidDict, RUDict
 from vsc.utils.patterns import Singleton
 
@@ -55,6 +56,11 @@ GPFS_WARNING_STATES = ['DEGRADED']
 GPFS_ERROR_STATES = ['FAILED', 'DEPEND']
 GPFS_UNKNOWN_STATES = ['CHECKING', 'UNKNOWN']
 GPFS_HEALTH_STATES = GPFS_OK_STATES + GPFS_WARNING_STATES + GPFS_ERROR_STATES + GPFS_UNKNOWN_STATES
+
+GPFS_NOGRACE_REGEX = re.compile(r"none", re.I)
+GPFS_GRACE_REGEX = re.compile(
+    r"(?P<days>\d+)\s*days?|(?P<hours>\d+)\s*hours?|(?P<minutes>\d+)\s*minutes?|(?P<expired>expired)"
+)
 
 
 def _automatic_mount_only(fs):
@@ -857,6 +863,58 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
         ec, _ = self._execute('tssetquota', opts, True)
         if ec > 0:
             self.log.raiseException("_set_grace: tssetquota with opts %s failed" % (opts), GpfsOperationError)
+
+    @staticmethod
+    def determine_grace_periods(quota):
+        """
+        Determine if grace period has expired
+
+        @type quota: StorageQuota named tuple
+
+        @returns: grace expiration on blocks and grace expiration on files 
+        """
+
+        block_expire = GpfsOperations._get_grace_expiration(quota.blockGrace)
+        files_expire = GpfsOperations._get_grace_expiration(quota.filesGrace)
+
+        return block_expire, files_expire
+
+    @staticmethod
+    def _get_grace_expiration(grace_record)
+        """
+        Convert grace string from GPFS to expiration time
+
+        @type grace_record: string
+
+        @returns tuple: (expiration state, grace time)
+        """
+
+        grace = GPFS_GRACE_REGEX.search(grace_record)
+        nograce = GPFS_NOGRACE_REGEX.search(grace_record)
+
+        if nograce:
+            expired = (False, None)
+        elif grace:
+            grace = grace.groupdict()
+            grace_time = 0
+            if grace['days']:
+                grace_time = int(grace['days']) * 86400
+            elif grace['hours']:
+                grace_time = int(grace['hours']) * 3600
+            elif grace['minutes']:
+                grace_time = int(grace['minutes']) * 60
+            elif grace['expired']:
+                grace_time = 0
+            else:
+                errmsg = "Unprocessed grace groupdict %s (from string %s)."
+                fancylogger.getLogger().error(errmsg, grace, grace_record)
+                raise GpfsOperationError("Cannot process grace time string")
+            expired = (True, grace_time)
+        else:
+            fancylogger.getLogger().error("Unknown grace record %s.", grace_record)
+            raise GpfsOperationError("Cannot process grace information (%s)" % grace_record)
+
+        return expired
 
     def _set_quota(self, soft, who, obj=None, typ='user', hard=None, inode_soft=None, inode_hard=None):
         """Set quota on the given object.
