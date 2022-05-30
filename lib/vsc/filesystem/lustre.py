@@ -130,6 +130,8 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
         self.filesets = {}
         self.quotadump = '/var/cache/lustre'
 
+        self.quota_types = Typ2Param
+
     def set_default_mapping(self, default_mapping=None):
         ''' Set the class for the mapping of ids and search paths'''
         self.default_mapping = default_mapping

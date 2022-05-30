@@ -30,6 +30,7 @@ from collections import namedtuple
 from vsc.utils.py2vs3 import unquote as percentdecode
 from socket import gethostname
 from itertools import dropwhile
+from enum import Enum
 
 from vsc.config.base import GPFS_DEFAULT_INODE_LIMIT
 from vsc.filesystem.posix import PosixOperations, PosixOperationError
@@ -43,6 +44,11 @@ StorageQuota = namedtuple('StorageQuota',
      'blockUsage', 'blockQuota', 'blockLimit', 'blockInDoubt', 'blockGrace',
      'filesUsage', 'filesQuota', 'filesLimit', 'filesInDoubt', 'filesGrace',
      'remarks', 'quota', 'defQuota', 'fid', 'filesetname'])
+
+class Typ2Param(Enum):
+    USR = 'USR'
+    GRP = 'GRP'
+    FILESET = 'FILESET'
 
 GPFS_OK_STATES = ['HEALTHY', 'DISABLED', 'TIPS']
 GPFS_WARNING_STATES = ['DEGRADED']
@@ -91,6 +97,8 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
         self.gpfslocalfilesets = None
 
         self.gpfsdisks = None
+
+        self.quota_types = Typ2Param
 
     # pylint: disable=arguments-differ
     def _execute(self, name, opts=None, changes=False):
@@ -391,7 +399,7 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
 
         for idx, (fs, qt, qid) in enumerate(zip(info['filesystemName'], info['quotaType'], info['id'])):
             details = dict([(k, info[k][idx]) for k in datakeys])
-            if qt == 'FILESET':
+            if qt == Typ2Param.FILESET.value:
                 # GPFS fileset quota have empty filesetName field
                 details['filesetname'] = details['name']
             res[fs][qt][qid] = [StorageQuota(**details)]
