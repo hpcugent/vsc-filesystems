@@ -521,6 +521,22 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
 
         return None
 
+    def get_fileset_name(self, filesystem_name, fileset_id):
+        """
+        Return name of fileset ID
+
+        @type filesystem_name: string representing a OceanStor filesystem
+        @type fileset_name: string representing a OceanStor fileset ID
+        """
+        self.list_filesets(devices=filesystem_name)
+        try:
+            fileset_name = self.oceanstor_filesets[filesystem_name][fileset_id]['filesetName']
+        except KeyError:
+            errmsg = "Fileset ID '%s' not found in OceanStor filesystem '%s'" % (fileset_id, filesystem_name)
+            self.log.raiseException(errmsg, OceanStorOperationError)
+
+        return fileset_name
+
     def _list_disk_single_device(self, device):
         """Return disk info for specific device
             both -M and -L info
