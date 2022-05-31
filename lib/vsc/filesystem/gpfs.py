@@ -521,21 +521,57 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
 
         return None
 
-    def get_fileset_name(self, filesystem_name, fileset_id):
+    def get_fileset_name(self, fileset_id, filesystem_name):
         """
-        Return name of fileset ID
+        Return name of fileset
 
-        @type filesystem_name: string representing a OceanStor filesystem
-        @type fileset_name: string representing a OceanStor fileset ID
+        @type fileset_id: string with fileset ID
+        @type filesystem_name: string with device name
         """
         self.list_filesets(devices=filesystem_name)
+
         try:
-            fileset_name = self.oceanstor_filesets[filesystem_name][fileset_id]['filesetName']
+            fileset_name = self.gpfslocalfilesets[filesystem_name][fileset_id]['filesetName']
         except KeyError:
-            errmsg = "Fileset ID '%s' not found in OceanStor filesystem '%s'" % (fileset_id, filesystem_name)
-            self.log.raiseException(errmsg, OceanStorOperationError)
+            errmsg = "Fileset ID '%s' not found in GPFS filesystem '%s'" % (fileset_id, filesystem_name)
+            self.log.raiseException(errmsg, GpfsOperationError)
 
         return fileset_name
+
+    def get_quota_fileset(self, quota_id, filesystem_name):
+        """
+        Return ID and name of fileset with given quota
+
+        @type quota_id: string with quota ID
+        @type filesystem_name: string with device name
+        """
+        fileset_quotas = self.gpfslocalquotas[filesystem_name][Typ2Param.FILESET.value]
+
+        if quota_id not in fileset_quotas:
+            errmsg = "Fileset quota '%s' not found in GPFS filesystem '%s'" % (quota_id, filesystem_name)
+            self.log.raiseException(errmsg, GpfsOperationError)
+
+        # ID of fileset quota in GPFS corresponds to its fileset ID
+        self.log.debug("Quota '%s' is attached to fileset: %s", quota_id, quota_id)
+        return quota_id
+
+    def get_quota_owner(self, quota_id, filesystem_name):
+        """
+        Return UID/GID of given quota ID
+
+        @type quota_id: string with quota ID
+        @type filesystem_name: string with device name
+        """
+        user_quotas = self.gpfslocalquotas[filesystem_name][Typ2Param.USR.value]
+        group_quotas = self.gpfslocalquotas[filesystem_name][Typ2Param.GRP.value]
+
+        if quota_id not in user_quotas and quota_id not in group_quotas:
+            errmsg = "USR/GRP quota '%s' not found in GPFS filesystem '%s'" % (quota_id, filesystem_name)
+            self.log.raiseException(errmsg, GpfsOperationError)
+
+        # ID of USR/GRP quota in GPFS corresponds to its owner ID
+        self.log.debug("Quota '%s' is owned by uid/gid: %s", quota_id, quota_id)
+        return quota_id
 
     def _list_disk_single_device(self, device):
         """Return disk info for specific device
@@ -887,7 +923,7 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
 
         @type quota: StorageQuota named tuple
 
-        @returns: grace expiration on blocks and grace expiration on files 
+        @returns: grace expiration on blocks and grace expiration on files
         """
 
         block_expire = GpfsOperations._get_grace_expiration(quota.blockGrace)
@@ -896,7 +932,7 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
         return block_expire, files_expire
 
     @staticmethod
-    def _get_grace_expiration(grace_record)
+    def _get_grace_expiration(grace_record):
         """
         Convert grace string from GPFS to expiration time
 
