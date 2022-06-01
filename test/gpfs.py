@@ -357,3 +357,11 @@ mmhealth:State:0:1:::test01.gastly.data:OBJECT:test01.gastly.data:NODE:DISABLED:
             for test_quota in TEST_LOCAL_QUOTAS['fstest']['USR'][test_user]:
                 test_grace = gpfsi.determine_grace_periods(test_quota)
                 self.assertEqual(test_grace, ref_grace[test_user])
+
+    def test_get_grace_expiration(self):
+        gpfsi = gpfs.GpfsOperations()
+        self.assertEqual(gpfsi._get_grace_expiration("6 days"), (True, 6 * 86400))
+        self.assertEqual(gpfsi._get_grace_expiration("2 hours"), (True, 2 * 3600))
+        self.assertEqual(gpfsi._get_grace_expiration("13 minutes"), (True, 13 * 60))
+        self.assertEqual(gpfsi._get_grace_expiration("expired"), (True, 0))
+        self.assertEqual(gpfsi._get_grace_expiration("none"), (False, None))
