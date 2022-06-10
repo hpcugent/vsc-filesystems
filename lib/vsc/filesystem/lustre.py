@@ -526,20 +526,22 @@ class LustreOperations(with_metaclass(Singleton, PosixOperations)):
             self._set_quota(who=project, obj=fileset_path, typ=Typ2Opt.project, soft=soft, hard=hard,
                             inode_soft=inode_soft, inode_hard=inode_hard)
 
-    def set_user_grace(self, obj, grace=0):
+    def set_user_grace(self, obj, grace=0, who=None):
         """Set the grace period for user data.
 
         @type obj: string representing the path where the FS was mounted
         @type grace: grace period expressed in seconds
         """
+        del who
         self._set_grace(obj, Typ2Opt.user, grace)
 
-    def set_group_grace(self, obj, grace=0):
+    def set_group_grace(self, obj, grace=0, who=None):
         """Set the grace period for group data.
 
         @type obj: string representing the path where the FS was mounted
         @type grace: grace period expressed in seconds
         """
+        del who
         self._set_grace(obj, Typ2Opt.group, grace)
 
     def set_fileset_grace(self, obj, grace=0):

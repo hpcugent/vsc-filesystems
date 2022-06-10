@@ -864,20 +864,22 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
         self._set_quota(soft, who=fileset_name, obj=fileset_path, typ='fileset', hard=hard,
                         inode_soft=inode_soft, inode_hard=inode_hard)
 
-    def set_user_grace(self, obj, grace=0):
+    def set_user_grace(self, obj, grace=0, who=None):
         """Set the grace period for user data.
 
         @type obj: string representing the path where the GPFS was mounted or the device itself
         @type grace: grace period expressed in seconds
         """
+        del who
         self._set_grace(obj, 'user', grace)
 
-    def set_group_grace(self, obj, grace=0):
+    def set_group_grace(self, obj, grace=0, who=None):
         """Set the grace period for user data.
 
         @type obj: string representing the path where the GPFS was mounted or the device itself
         @type grace: grace period expressed in seconds
         """
+        del who
         self._set_grace(obj, 'group', grace)
 
     def set_fileset_grace(self, obj, grace=0):
