@@ -33,7 +33,7 @@ from itertools import dropwhile
 
 from vsc.config.base import GPFS_DEFAULT_INODE_LIMIT
 from vsc.filesystem.posix import PosixOperations, PosixOperationError
-from vsc.utils.missing import nub, find_sublist_index, Monoid, MonoidDict, RUDict
+from vsc.utils.missing import nub, find_sublist_index, MonoidConcat, MonoidDict, RUDict
 from vsc.utils.patterns import Singleton
 
 GPFS_BIN_PATH = '/usr/lpp/mmfs/bin'
@@ -221,7 +221,7 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
                     fields[i:i + 1] = map(lambda fs: (len(fs), fs), fixed_lines)
 
         # assemble result
-        listm = Monoid([], lambda xs, ys: xs + ys)  # not exactly the fastest mappend for lists ...
+        listm = MonoidConcat()
         res = MonoidDict(listm)
         try:
             for index, name in enumerate(fields[0][1][6:]):
@@ -369,7 +369,7 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
         elif isinstance(devices, str):
             devices = [devices]
 
-        listm = Monoid([], lambda xs, ys: xs + ys)  # not exactly the fastest mappend for lists ...
+        listm = MonoidConcat()
         info = MonoidDict(listm)
         for device in devices:
             res = self._executeY('mmrepquota', ['-n', device], prefix=True)
@@ -385,7 +385,7 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
         self.log.debug("Found the following filesystem names: %s", fss)
 
         quotatypes = nub(info.get('quotaType', []))
-        quotatypesstruct = dict([(qt, MonoidDict(Monoid([], lambda xs, ys: xs + ys))) for qt in quotatypes])
+        quotatypesstruct = dict([(qt, MonoidDict(MonoidConcat())) for qt in quotatypes])
 
         res = dict([(fs, copy.deepcopy(quotatypesstruct)) for fs in fss])  # build structure
 
@@ -436,7 +436,7 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
 
         self.log.debug("Looking up filesets for devices %s", devices)
 
-        listm = Monoid([], lambda xs, ys: xs + ys)
+        listm = MonoidConcat()
         info = MonoidDict(listm)
         for device in devices:
             opts_ = copy.deepcopy(opts)
