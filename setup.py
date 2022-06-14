@@ -24,7 +24,7 @@ import vsc.install.shared_setup as shared_setup
 from vsc.install.shared_setup import ag, kh, sdw, kw, wdp
 
 install_requires = [
-    'vsc-base >= 3.0.3',
+    'vsc-base >= 3.4.7',
     'vsc-config >= 3.0.0',
     'vsc-utils >= 2.0.0',
     'future >= 0.16.0',
