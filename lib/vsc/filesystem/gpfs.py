@@ -32,13 +32,14 @@ from socket import gethostname
 from itertools import dropwhile
 from enum import Enum
 
-from vsc.config.base import GPFS_DEFAULT_INODE_LIMIT
+from vsc.config.base import DEFAULT_INODE_MAX, DEFAULT_INODE_PREALLOC
 from vsc.filesystem.posix import PosixOperations, PosixOperationError
 from vsc.utils import fancylogger
 from vsc.utils.missing import nub, find_sublist_index, Monoid, MonoidDict, RUDict
 from vsc.utils.patterns import Singleton
 
 GPFS_BIN_PATH = '/usr/lpp/mmfs/bin'
+GPFS_DEFAULT_INODE_LIMIT = "%d:%d" % (DEFAULT_INODE_MAX, DEFAULT_INODE_PREALLOC)
 
 StorageQuota = namedtuple('StorageQuota',
     ['name',
