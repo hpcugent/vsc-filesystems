@@ -26,14 +26,14 @@ import copy
 import os
 import re
 
-from collections import namedtuple
+from collections import namedtuple, defaultdict
 from vsc.utils.py2vs3 import unquote as percentdecode
 from socket import gethostname
 from itertools import dropwhile
 
 from vsc.config.base import GPFS_DEFAULT_INODE_LIMIT
 from vsc.filesystem.posix import PosixOperations, PosixOperationError
-from vsc.utils.missing import nub, find_sublist_index, Monoid, MonoidDict, RUDict
+from vsc.utils.missing import nub, find_sublist_index, RUDict
 from vsc.utils.patterns import Singleton
 
 GPFS_BIN_PATH = '/usr/lpp/mmfs/bin'
@@ -221,13 +221,12 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
                     fields[i:i + 1] = map(lambda fs: (len(fs), fs), fixed_lines)
 
         # assemble result
-        listm = Monoid([], lambda xs, ys: xs + ys)  # not exactly the fastest mappend for lists ...
-        res = MonoidDict(listm)
+        res = defaultdict(list)
         try:
             for index, name in enumerate(fields[0][1][6:]):
                 if name != '':
                     for (_, line) in fields[1:]:
-                        res[name] = [line[6 + index]]
+                        res[name].append(line[6 + index])
         except IndexError:
             self.log.raiseException("Failed to regroup data %s (from output %s)" % (fields, out))
 
@@ -369,12 +368,11 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
         elif isinstance(devices, str):
             devices = [devices]
 
-        listm = Monoid([], lambda xs, ys: xs + ys)  # not exactly the fastest mappend for lists ...
-        info = MonoidDict(listm)
+        info = defaultdict(list)
         for device in devices:
             res = self._executeY('mmrepquota', ['-n', device], prefix=True)
             for (key, value) in res.items():
-                info[key] = value
+                info[key].extend(value)
 
         datakeys = list(info.keys())
         datakeys.remove('filesystemName')
@@ -385,16 +383,16 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
         self.log.debug("Found the following filesystem names: %s", fss)
 
         quotatypes = nub(info.get('quotaType', []))
-        quotatypesstruct = dict([(qt, MonoidDict(Monoid([], lambda xs, ys: xs + ys))) for qt in quotatypes])
+        quotatypesstruct = {qt: defaultdict(list) for qt in quotatypes}
 
-        res = dict([(fs, copy.deepcopy(quotatypesstruct)) for fs in fss])  # build structure
+        res = {fs: copy.deepcopy(quotatypesstruct) for fs in fss}  # build structure
 
         for idx, (fs, qt, qid) in enumerate(zip(info['filesystemName'], info['quotaType'], info['id'])):
-            details = dict([(k, info[k][idx]) for k in datakeys])
+            details = {k: info[k][idx] for k in datakeys}
             if qt == 'FILESET':
                 # GPFS fileset quota have empty filesetName field
                 details['filesetname'] = details['name']
-            res[fs][qt][qid] = [GpfsQuota(**details)]
+            res[fs][qt][qid].append(GpfsQuota(**details))
 
         self.gpfslocalquotas = res
         return res
@@ -436,8 +434,7 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
 
         self.log.debug("Looking up filesets for devices %s", devices)
 
-        listm = Monoid([], lambda xs, ys: xs + ys)
-        info = MonoidDict(listm)
+        info = defaultdict(list)
         for device in devices:
             opts_ = copy.deepcopy(opts)
             opts_.insert(1, device)
@@ -451,7 +448,7 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
             # afmParallelReadChunkSize:afmParallelReadThreshold:snapId:
             self.log.debug("list_filesets res keys = %s ", res.keys())
             for (key, value) in res.items():
-                info[key] = value
+                info[key].extend(value)
 
         datakeys = list(info.keys())
         datakeys.remove('filesystemName')
