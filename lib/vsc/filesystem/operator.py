@@ -28,27 +28,33 @@ STORAGE_OPERATORS = {
     'lustre': ('LustreOperations', 'LustreOperationError'),
 }
 
-def load_storage_operator(storage):
+
+class StorageOperator:
     """
-    Load and initialize corresponding operator class for this filesystem
-    Return *Operations object
-
-    @type storage: storage attribute from a VscStorage instance (which is a Storage object)
+    Load and initialize the operator class to manage the storage
     """
-    if getattr(storage, 'backend_operator', None):
-        return storage.backend_operator
 
-    Operator, OperatorError = import_operator(storage.backend)
+    def __init__(self, storage):
+        """
+        Inititalise operator for given storage backend
 
-    try:
-        storage.backend_operator = Operator(**storage.operator_config)
-    except TypeError:
-        logging.exception("Operator of storage backend not found: %s", storage.backend)
-        raise
-    else:
-        storage.backend_operator_err = OperatorError
+        @type storage: storage attribute from a VscStorage instance (which is a Storage object)
+        """
 
-    return storage.backend_operator
+        Operator, OperatorError = import_operator(storage.backend)
+
+        try:
+            self.backend_operator = Operator(**storage.operator_config)
+        except TypeError:
+            logging.exception("Operator of storage backend not found: %s", storage.backend)
+            raise
+        else:
+            self.error = OperatorError
+
+    def __call__(self):
+        """Return the backend operator instance"""
+        return self.backend_operator
+
 
 def import_operator(backend):
     """
@@ -62,7 +68,7 @@ def import_operator(backend):
     backend_module_name = '.'.join(['vsc', 'filesystem', backend])
 
     try:
-       backend_module = importlib.import_module(backend_module_name)
+        backend_module = importlib.import_module(backend_module_name)
     except (ImportError, ModuleNotFoundError):
         logging.exception("Failed to load %s module", backend_module_name)
         raise
@@ -78,4 +84,3 @@ def import_operator(backend):
         raise
 
     return Operator, OperatorError
-
