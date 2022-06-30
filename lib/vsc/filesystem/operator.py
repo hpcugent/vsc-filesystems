@@ -41,7 +41,7 @@ def load_storage_operator(storage):
     Operator, OperatorError = import_operator(storage.backend)
 
     try:
-        storage.backend_operator = Operator(**storage.api)
+        storage.backend_operator = Operator(**storage.operator_config)
     except TypeError:
         logging.exception("Operator of storage backend not found: %s", storage.backend)
         raise
