@@ -18,7 +18,15 @@ Interface to dynamically load vsc.filesystem modules and instantiate its XxxxOpe
 
 @author: Alex Domingo (Vrije Universiteit Brussel)
 """
+import importlib
 import logging
+
+STORAGE_OPERATORS = {
+    'posix': ('PosixOperations', 'PosixOperationError'),
+    'gpfs': ('GpfsOperations', 'GpfsOperationError'),
+    'oceanstor': ('OceanStorOperations', 'OceanStorOperationError'),
+    'lustre': ('LustreOperations', 'LustreOperationError'),
+}
 
 def load_storage_operator(storage):
     """
@@ -51,27 +59,23 @@ def import_operator(backend):
     Operator = None
     OperatorError = None
 
-    if backend == 'posix':
-        try:
-            from vsc.filesystem.posix import PosixOperations as Operator, PosixOperationError as OperatorError
-        except ImportError:
-            logging.exception("Failed to load PosixOperations from vsc.filesystem.posix")
-            raise
-    elif backend == 'gpfs':
-        try:
-            from vsc.filesystem.gpfs import GpfsOperations as Operator, GpfsOperationError as OperatorError
-        except ImportError:
-            logging.exception("Failed to load GpfsOperations from vsc.filesystem.gpfs")
-            raise
-    elif backend == 'oceanstor':
-        try:
-            from vsc.filesystem.oceanstor import OceanStorOperations as Operator
-            from vsc.filesystem.oceanstor import OceanStorOperationError as OperatorError
-        except ImportError:
-            logging.exception("Failed to load OceanStorOperations from vsc.filesystem.oceanstor")
-            raise
-    else:
-        logging.error("Storage backend '%s' is unsupported by vsc.filesystem", backend)
+    backend_module_name = '.'.join(['vsc', 'filesystem', backend])
+
+    try:
+       backend_module = importlib.import_module(backend_module_name)
+    except (ImportError, ModuleNotFoundError):
+        logging.exception("Failed to load %s module", backend_module_name)
+        raise
+
+    try:
+        Operator = getattr(backend_module, STORAGE_OPERATORS[backend][0])
+        OperatorError = getattr(backend_module, STORAGE_OPERATORS[backend][1])
+    except AttributeError as err:
+        logging.exception("Operator for %s backend not found: %s", backend, err)
+        raise
+    except KeyError:
+        logging.exception("Unsupported storage backend: %s", backend)
+        raise
 
     return Operator, OperatorError
 
