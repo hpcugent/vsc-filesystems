@@ -25,7 +25,7 @@ def load_storage_operator(storage):
     Load and initialize corresponding operator class for this filesystem
     Return *Operations object
 
-    @type storage: Storage object from vsc.config
+    @type storage: storage attribute from a VscStorage instance (which is a Storage object)
     """
     if getattr(storage, 'backend_operator', None):
         return storage.backend_operator
