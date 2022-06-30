@@ -867,8 +867,9 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
 
         @type obj: string representing the path where the GPFS was mounted or the device itself
         @type grace: grace period expressed in seconds
+        @type who: identifier (eg username or UID)
         """
-        del who
+        _ = who  # avoid lint error, unused in GPFS as user is determined from obj ownership
         self._set_grace(obj, 'user', grace)
 
     def set_group_grace(self, obj, grace=0, who=None):
@@ -876,8 +877,9 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
 
         @type obj: string representing the path where the GPFS was mounted or the device itself
         @type grace: grace period expressed in seconds
+        @type who: identifier (eg group name or GID)
         """
-        del who
+        _ = who  # avoid lint error, unused in GPFS as group is determined from obj ownership
         self._set_grace(obj, 'group', grace)
 
     def set_fileset_grace(self, obj, grace=0):
