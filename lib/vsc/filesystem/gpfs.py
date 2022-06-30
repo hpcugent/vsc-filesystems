@@ -404,7 +404,7 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
 
         for idx, (fs, qt, qid) in enumerate(zip(info['filesystemName'], info['quotaType'], info['id'])):
             details = {k: info[k][idx] for k in datakeys}
-            if qt == Typ2Param.FILESET.value:
+            if qt == self.quota_types.FILESET.value:
                 # GPFS fileset quota have empty filesetName field
                 details['filesetname'] = details['name']
             res[fs][qt][qid].append(StorageQuota(**details))
@@ -543,7 +543,7 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
         @type quota_id: string with quota ID
         @type filesystem_name: string with device name
         """
-        fileset_quotas = self.gpfslocalquotas[filesystem_name][Typ2Param.FILESET.value]
+        fileset_quotas = self.gpfslocalquotas[filesystem_name][self.quota_types.FILESET.value]
 
         if quota_id not in fileset_quotas:
             errmsg = "Fileset quota '%s' not found in GPFS filesystem '%s'" % (quota_id, filesystem_name)
@@ -560,8 +560,8 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
         @type quota_id: string with quota ID
         @type filesystem_name: string with device name
         """
-        user_quotas = self.gpfslocalquotas[filesystem_name][Typ2Param.USR.value]
-        group_quotas = self.gpfslocalquotas[filesystem_name][Typ2Param.GRP.value]
+        user_quotas = self.gpfslocalquotas[filesystem_name][self.quota_types.USR.value]
+        group_quotas = self.gpfslocalquotas[filesystem_name][self.quota_types.GRP.value]
 
         if quota_id not in user_quotas and quota_id not in group_quotas:
             errmsg = "USR/GRP quota '%s' not found in GPFS filesystem '%s'" % (quota_id, filesystem_name)
