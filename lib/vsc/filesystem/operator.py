@@ -61,10 +61,16 @@ class StorageOperator(object):
         Operator = None
         OperatorError = None
 
+        try:
+            # use ModuleNotFoundError if available (Python 3.6+)
+            ModuleImportError = ModuleNotFoundError
+        except NameError:
+            ModuleImportError = ImportError
+
         backend_module_name = '.'.join(['vsc', 'filesystem', backend])
         try:
             backend_module = importlib.import_module(backend_module_name)
-        except (ImportError, ModuleNotFoundError):
+        except ModuleImportError:
             logging.exception("Failed to load %s module", backend_module_name)
             raise
 
