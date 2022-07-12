@@ -37,7 +37,7 @@ class StorageOperator:
         @type storage: storage attribute from a VscStorage instance (which is a Storage object)
         """
 
-        Operator, OperatorError = import_operator(storage.backend)
+        Operator, OperatorError = self.import_operator(storage.backend)
 
         try:
             self.backend_operator = Operator(**storage.operator_config)
@@ -51,32 +51,32 @@ class StorageOperator:
         """Return the backend operator instance"""
         return self.backend_operator
 
+    @staticmethod
+    def import_operator(backend):
+        """
+        Import corresponding filesystem operator class and exception for storage backend
 
-def import_operator(backend):
-    """
-    Import corresponding filesystem operator class and exception for storage backend
+        @type backend: string with name of storage backend
+        """
+        Operator = None
+        OperatorError = None
 
-    @type backend: string with name of storage backend
-    """
-    Operator = None
-    OperatorError = None
+        backend_module_name = '.'.join(['vsc', 'filesystem', backend])
+        try:
+            backend_module = importlib.import_module(backend_module_name)
+        except (ImportError, ModuleNotFoundError):
+            logging.exception("Failed to load %s module", backend_module_name)
+            raise
 
-    backend_module_name = '.'.join(['vsc', 'filesystem', backend])
-    try:
-        backend_module = importlib.import_module(backend_module_name)
-    except (ImportError, ModuleNotFoundError):
-        logging.exception("Failed to load %s module", backend_module_name)
-        raise
+        backend_operator_name = [label for label in STORAGE_OPERATORS if label.lower() == backend]
+        try:
+            Operator = getattr(backend_module, backend_operator_name[0] + OPERATOR_CLASS_SUFFIX)
+            OperatorError = getattr(backend_module, backend_operator_name[0] + OPERATOR_ERROR_CLASS_SUFFIX)
+        except AttributeError as err:
+            logging.exception("Operator for %s backend not found: %s", backend, err)
+            raise
+        except IndexError:
+            logging.exception("Unsupported storage backend: %s", backend)
+            raise
 
-    backend_operator_name = [label for label in STORAGE_OPERATORS if label.lower() == backend]
-    try:
-        Operator = getattr(backend_module, backend_operator_name[0] + OPERATOR_CLASS_SUFFIX)
-        OperatorError = getattr(backend_module, backend_operator_name[0] + OPERATOR_ERROR_CLASS_SUFFIX)
-    except AttributeError as err:
-        logging.exception("Operator for %s backend not found: %s", backend, err)
-        raise
-    except IndexError:
-        logging.exception("Unsupported storage backend: %s", backend)
-        raise
-
-    return Operator, OperatorError
+        return Operator, OperatorError
