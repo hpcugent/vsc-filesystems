@@ -30,25 +30,38 @@ from collections import namedtuple, defaultdict
 from vsc.utils.py2vs3 import unquote as percentdecode
 from socket import gethostname
 from itertools import dropwhile
+from enum import Enum
 
-from vsc.config.base import GPFS_DEFAULT_INODE_LIMIT
+from vsc.config.base import DEFAULT_INODE_MAX, DEFAULT_INODE_PREALLOC
 from vsc.filesystem.posix import PosixOperations, PosixOperationError
+from vsc.utils import fancylogger
 from vsc.utils.missing import nub, find_sublist_index, RUDict
 from vsc.utils.patterns import Singleton
 
 GPFS_BIN_PATH = '/usr/lpp/mmfs/bin'
+GPFS_DEFAULT_INODE_LIMIT = "%d:%d" % (DEFAULT_INODE_MAX, DEFAULT_INODE_PREALLOC)
 
-GpfsQuota = namedtuple('GpfsQuota',
+StorageQuota = namedtuple('StorageQuota',
     ['name',
      'blockUsage', 'blockQuota', 'blockLimit', 'blockInDoubt', 'blockGrace',
      'filesUsage', 'filesQuota', 'filesLimit', 'filesInDoubt', 'filesGrace',
      'remarks', 'quota', 'defQuota', 'fid', 'filesetname'])
+
+class Typ2Param(Enum):
+    USR = 'USR'
+    GRP = 'GRP'
+    FILESET = 'FILESET'
 
 GPFS_OK_STATES = ['HEALTHY', 'DISABLED', 'TIPS']
 GPFS_WARNING_STATES = ['DEGRADED']
 GPFS_ERROR_STATES = ['FAILED', 'DEPEND']
 GPFS_UNKNOWN_STATES = ['CHECKING', 'UNKNOWN']
 GPFS_HEALTH_STATES = GPFS_OK_STATES + GPFS_WARNING_STATES + GPFS_ERROR_STATES + GPFS_UNKNOWN_STATES
+
+GPFS_NOGRACE_REGEX = re.compile(r"none", re.I)
+GPFS_GRACE_REGEX = re.compile(
+    r"(?P<days>\d+)\s*days?|(?P<hours>\d+)\s*hours?|(?P<minutes>\d+)\s*minutes?|(?P<expired>expired)"
+)
 
 
 def _automatic_mount_only(fs):
@@ -91,6 +104,8 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
         self.gpfslocalfilesets = None
 
         self.gpfsdisks = None
+
+        self.quota_types = Typ2Param
 
     # pylint: disable=arguments-differ
     def _execute(self, name, opts=None, changes=False):
@@ -389,10 +404,10 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
 
         for idx, (fs, qt, qid) in enumerate(zip(info['filesystemName'], info['quotaType'], info['id'])):
             details = {k: info[k][idx] for k in datakeys}
-            if qt == 'FILESET':
+            if qt == self.quota_types.FILESET.value:
                 # GPFS fileset quota have empty filesetName field
                 details['filesetname'] = details['name']
-            res[fs][qt][qid].append(GpfsQuota(**details))
+            res[fs][qt][qid].append(StorageQuota(**details))
 
         self.gpfslocalquotas = res
         return res
@@ -503,6 +518,58 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
                 return fset
 
         return None
+
+    def get_fileset_name(self, fileset_id, filesystem_name):
+        """
+        Return name of fileset
+
+        @type fileset_id: string with fileset ID
+        @type filesystem_name: string with device name
+        """
+        self.list_filesets(devices=filesystem_name)
+
+        try:
+            fileset_name = self.gpfslocalfilesets[filesystem_name][fileset_id]['filesetName']
+        except KeyError:
+            errmsg = "Fileset ID '%s' not found in GPFS filesystem '%s'" % (fileset_id, filesystem_name)
+            self.log.raiseException(errmsg, GpfsOperationError)
+
+        return fileset_name
+
+    def get_quota_fileset(self, quota_id, filesystem_name):
+        """
+        Return ID and name of fileset with given quota
+
+        @type quota_id: string with quota ID
+        @type filesystem_name: string with device name
+        """
+        fileset_quotas = self.gpfslocalquotas[filesystem_name][self.quota_types.FILESET.value]
+
+        if quota_id not in fileset_quotas:
+            errmsg = "Fileset quota '%s' not found in GPFS filesystem '%s'" % (quota_id, filesystem_name)
+            self.log.raiseException(errmsg, GpfsOperationError)
+
+        # ID of fileset quota in GPFS corresponds to its fileset ID
+        self.log.debug("Quota '%s' is attached to fileset: %s", quota_id, quota_id)
+        return quota_id
+
+    def get_quota_owner(self, quota_id, filesystem_name):
+        """
+        Return UID/GID of given quota ID
+
+        @type quota_id: string with quota ID
+        @type filesystem_name: string with device name
+        """
+        user_quotas = self.gpfslocalquotas[filesystem_name][self.quota_types.USR.value]
+        group_quotas = self.gpfslocalquotas[filesystem_name][self.quota_types.GRP.value]
+
+        if quota_id not in user_quotas and quota_id not in group_quotas:
+            errmsg = "USR/GRP quota '%s' not found in GPFS filesystem '%s'" % (quota_id, filesystem_name)
+            self.log.raiseException(errmsg, GpfsOperationError)
+
+        # ID of USR/GRP quota in GPFS corresponds to its owner ID
+        self.log.debug("Quota '%s' is owned by uid/gid: %s", quota_id, quota_id)
+        return quota_id
 
     def _list_disk_single_device(self, device):
         """Return disk info for specific device
@@ -795,20 +862,24 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
         self._set_quota(soft, who=fileset_name, obj=fileset_path, typ='fileset', hard=hard,
                         inode_soft=inode_soft, inode_hard=inode_hard)
 
-    def set_user_grace(self, obj, grace=0):
+    def set_user_grace(self, obj, grace=0, who=None):
         """Set the grace period for user data.
 
         @type obj: string representing the path where the GPFS was mounted or the device itself
         @type grace: grace period expressed in seconds
+        @type who: identifier (eg username or UID)
         """
+        _ = who  # avoid lint error, unused in GPFS as user is determined from obj ownership
         self._set_grace(obj, 'user', grace)
 
-    def set_group_grace(self, obj, grace=0):
+    def set_group_grace(self, obj, grace=0, who=None):
         """Set the grace period for user data.
 
         @type obj: string representing the path where the GPFS was mounted or the device itself
         @type grace: grace period expressed in seconds
+        @type who: identifier (eg group name or GID)
         """
+        _ = who  # avoid lint error, unused in GPFS as group is determined from obj ownership
         self._set_grace(obj, 'group', grace)
 
     def set_fileset_grace(self, obj, grace=0):
@@ -846,6 +917,58 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
         ec, _ = self._execute('tssetquota', opts, True)
         if ec > 0:
             self.log.raiseException("_set_grace: tssetquota with opts %s failed" % (opts), GpfsOperationError)
+
+    @staticmethod
+    def determine_grace_periods(quota):
+        """
+        Determine if grace period has expired
+
+        @type quota: StorageQuota named tuple
+
+        @returns: grace expiration on blocks and grace expiration on files
+        """
+
+        block_expire = GpfsOperations._get_grace_expiration(quota.blockGrace)
+        files_expire = GpfsOperations._get_grace_expiration(quota.filesGrace)
+
+        return block_expire, files_expire
+
+    @staticmethod
+    def _get_grace_expiration(grace_record):
+        """
+        Convert grace string from GPFS to expiration time
+
+        @type grace_record: string
+
+        @returns tuple: (expiration state, grace time)
+        """
+
+        grace = GPFS_GRACE_REGEX.search(grace_record)
+        nograce = GPFS_NOGRACE_REGEX.search(grace_record)
+
+        if nograce:
+            expired = (False, None)
+        elif grace:
+            grace = grace.groupdict()
+            grace_time = 0
+            if grace['days']:
+                grace_time = int(grace['days']) * 86400
+            elif grace['hours']:
+                grace_time = int(grace['hours']) * 3600
+            elif grace['minutes']:
+                grace_time = int(grace['minutes']) * 60
+            elif grace['expired']:
+                grace_time = 0
+            else:
+                errmsg = "Unprocessed grace groupdict %s (from string %s)."
+                fancylogger.getLogger().error(errmsg, grace, grace_record)
+                raise GpfsOperationError("Cannot process grace time string")
+            expired = (True, grace_time)
+        else:
+            fancylogger.getLogger().error("Unknown grace record %s.", grace_record)
+            raise GpfsOperationError("Cannot process grace information (%s)" % grace_record)
+
+        return expired
 
     def _set_quota(self, soft, who, obj=None, typ='user', hard=None, inode_soft=None, inode_hard=None):
         """Set quota on the given object.
