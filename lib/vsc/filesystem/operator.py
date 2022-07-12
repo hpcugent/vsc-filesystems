@@ -21,13 +21,9 @@ Interface to dynamically load vsc.filesystem modules and instantiate its XxxxOpe
 import importlib
 import logging
 
-STORAGE_OPERATORS = {
-    'posix': ('PosixOperations', 'PosixOperationError'),
-    'gpfs': ('GpfsOperations', 'GpfsOperationError'),
-    'oceanstor': ('OceanStorOperations', 'OceanStorOperationError'),
-    'lustre': ('LustreOperations', 'LustreOperationError'),
-}
-
+STORAGE_OPERATORS = ('Posix', 'Gpfs', 'OceanStor', 'Lustre')
+OPERATOR_CLASS_SUFFIX = 'Operations'
+OPERATOR_ERROR_CLASS_SUFFIX = 'OperationError'
 
 class StorageOperator:
     """
@@ -66,20 +62,20 @@ def import_operator(backend):
     OperatorError = None
 
     backend_module_name = '.'.join(['vsc', 'filesystem', backend])
-
     try:
         backend_module = importlib.import_module(backend_module_name)
     except (ImportError, ModuleNotFoundError):
         logging.exception("Failed to load %s module", backend_module_name)
         raise
 
+    backend_operator_name = [label for label in STORAGE_OPERATORS if label.lower() == backend]
     try:
-        Operator = getattr(backend_module, STORAGE_OPERATORS[backend][0])
-        OperatorError = getattr(backend_module, STORAGE_OPERATORS[backend][1])
+        Operator = getattr(backend_module, backend_operator_name[0] + OPERATOR_CLASS_SUFFIX)
+        OperatorError = getattr(backend_module, backend_operator_name[0] + OPERATOR_ERROR_CLASS_SUFFIX)
     except AttributeError as err:
         logging.exception("Operator for %s backend not found: %s", backend, err)
         raise
-    except KeyError:
+    except IndexError:
         logging.exception("Unsupported storage backend: %s", backend)
         raise
 
