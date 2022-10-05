@@ -26,6 +26,53 @@ import vsc.filesystem.gpfs as gpfs
 
 from vsc.install.testing import TestCase
 
+TEST_LOCAL_FILESETS = {
+    'fstest': {
+        '0': {'filesetName': 'foo'},
+        '1': {'filesetName': 'bar'},
+        '2': {'filesetName': 'fs1'},
+        '3': {'filesetName': 'fs2'},
+    },
+}
+ 
+TEST_LOCAL_QUOTAS = {
+    'fstest': {
+        'FILESET': {
+            '0': [
+                gpfs.StorageQuota(
+                    name='0', remarks='', quota='on', defQuota='off', fid='0', filesetname='0',
+                    blockUsage=4, blockQuota=1024, blockLimit=1024, blockInDoubt=0, blockGrace='none',
+                    filesUsage=1, filesQuota=1024, filesLimit=1024, filesInDoubt=0, filesGrace='none'
+                ),
+            ],
+        },
+        'USR': {
+            '2510001': [
+                gpfs.StorageQuota(
+                    name='0', remarks='', quota='on', defQuota='off', fid='0', filesetname='0',
+                    blockUsage=4, blockQuota=1024, blockLimit=1024, blockInDoubt=0, blockGrace='none',
+                    filesUsage=1, filesQuota=1024, filesLimit=1024, filesInDoubt=0, filesGrace='none'
+                ),
+            ],
+            '2510002': [
+                gpfs.StorageQuota(
+                    name='0', remarks='e', quota='on', defQuota='off', fid='0', filesetname='0',
+                    blockUsage=1025, blockQuota=1024, blockLimit=1024, blockInDoubt=0, blockGrace='expired',
+                    filesUsage=128, filesQuota=1024, filesLimit=1024, filesInDoubt=0, filesGrace='none'
+                ),
+            ],
+        },
+        'GRP': {
+            '2510001': [
+                gpfs.StorageQuota(
+                    name='0', remarks='', quota='on', defQuota='off', fid='0', filesetname='0',
+                    blockUsage=4, blockQuota=1024, blockLimit=1024, blockInDoubt=0, blockGrace='none',
+                    filesUsage=1, filesQuota=1024, filesLimit=1024, filesInDoubt=0, filesGrace='none'
+                ),
+            ],
+        },
+    },
+}
 
 class ToolsTest(TestCase):
     """
@@ -115,14 +162,8 @@ class ToolsTest(TestCase):
     @mock.patch('vsc.filesystem.gpfs.GpfsOperations.list_filesets')
     def test_create_filesystem_snapshot(self, mock_filesets, mock_list, mock_exec):
         mock_list.return_value = ['autumn_20151012', 'okt_20151028']
-        mock_filesets.return_value = {
-            'fstest': {
-                '0': {'filesetName': 'foo'},
-                '1': {'filesetName': 'bar'},
-                '2': {'filesetName': 'fs1'},
-                '3': {'filesetName': 'fs2'},
-            },
-        }
+        mock_filesets.return_value = TEST_LOCAL_FILESETS
+
         gpfsi = gpfs.GpfsOperations()
         self.assertEqual(gpfsi.create_filesystem_snapshot('fstest', 'okt_20151028'), 0)
         mock_exec.return_value = (1, 'mocked!')
@@ -282,3 +323,45 @@ mmhealth:State:0:1:::test01.gastly.data:OBJECT:test01.gastly.data:NODE:DISABLED:
         res = gpfsi.get_mmhealth_state()
         print(res)
         self.assertEqual(res, expected_res)
+
+    @mock.patch('vsc.filesystem.gpfs.GpfsOperations.list_filesets')
+    def test_get_fileset_name(self, mock_list):
+        mock_list.return_value = True
+
+        gpfsi = gpfs.GpfsOperations()
+        gpfsi.gpfslocalfilesets = TEST_LOCAL_FILESETS
+        self.assertEqual(gpfsi.get_fileset_name('0', 'fstest'), 'foo')
+        self.assertRaises(gpfs.GpfsOperationError, gpfsi.get_fileset_name, '-1', 'fstest')
+
+    def test_get_quota_fileset(self):
+        gpfsi = gpfs.GpfsOperations()
+        gpfsi.gpfslocalquotas = TEST_LOCAL_QUOTAS
+        self.assertEqual(gpfsi.get_quota_fileset('0', 'fstest'), '0')
+        self.assertRaises(gpfs.GpfsOperationError, gpfsi.get_quota_fileset, '-1', 'fstest')
+
+    def test_get_quota_fileset(self):
+        gpfsi = gpfs.GpfsOperations()
+        gpfsi.gpfslocalquotas = TEST_LOCAL_QUOTAS
+        self.assertEqual(gpfsi.get_quota_owner('2510001', 'fstest'), '2510001')
+        self.assertRaises(gpfs.GpfsOperationError, gpfsi.get_quota_owner, '-1', 'fstest')
+
+    def test_determine_grace_periods(self):
+        gpfsi = gpfs.GpfsOperations()
+
+        ref_grace = {
+            '2510001': ((False, None), (False, None)),
+            '2510002': ((True, 0), (False, None)),
+        }
+
+        for test_user in TEST_LOCAL_QUOTAS['fstest']['USR']:
+            for test_quota in TEST_LOCAL_QUOTAS['fstest']['USR'][test_user]:
+                test_grace = gpfsi.determine_grace_periods(test_quota)
+                self.assertEqual(test_grace, ref_grace[test_user])
+
+    def test_get_grace_expiration(self):
+        gpfsi = gpfs.GpfsOperations()
+        self.assertEqual(gpfsi._get_grace_expiration("6 days"), (True, 6 * 86400))
+        self.assertEqual(gpfsi._get_grace_expiration("2 hours"), (True, 2 * 3600))
+        self.assertEqual(gpfsi._get_grace_expiration("13 minutes"), (True, 13 * 60))
+        self.assertEqual(gpfsi._get_grace_expiration("expired"), (True, 0))
+        self.assertEqual(gpfsi._get_grace_expiration("none"), (False, None))
