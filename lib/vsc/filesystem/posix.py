@@ -37,6 +37,7 @@ OS_LINUX_IGNORE_FILESYSTEMS = (
     'rootfs',  # special initramfs filesystem
     'configfs',  # kernel config
     'debugfs',  # kernel debug
+    'tracefs',  # kernel trace
     'usbfs',  # usb devices
     'ipathfs',  # qlogic IB
     'binfmt_misc',  # ?
