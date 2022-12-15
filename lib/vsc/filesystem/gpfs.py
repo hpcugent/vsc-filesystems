@@ -1120,3 +1120,11 @@ class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
         states = res['State']
         comp_entities = ['%s_%s' % ident for ident in zip(states['component'], states['entityname'])]
         return dict(zip(comp_entities, states['status']))
+
+
+    def get_mmhealh_issues(self):
+        """ Get the mmhealth unhealthy events of the GPFS components """
+        opts = ['node', 'show', '--unhealthy']
+        res = self._executeY('mmhealth', opts)
+        events = res['Event']
+        return zip(events['event'], events['message'], events['severity'])
