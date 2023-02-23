@@ -18,8 +18,6 @@ Tests for the gpfs library.
 
 @author: Andy Georges (Ghent University)
 """
-from __future__ import print_function
-
 import os
 import mock
 import vsc.filesystem.gpfs as gpfs

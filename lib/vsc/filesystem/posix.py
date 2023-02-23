@@ -27,7 +27,6 @@ import stat
 from vsc.utils import fancylogger
 from vsc.utils.patterns import Singleton
 from vsc.utils.run import asyncloop
-from future.utils import with_metaclass
 
 OS_LINUX_MOUNTS = '/proc/mounts'
 OS_LINUX_FILESYSTEMS = '/proc/filesystems'
@@ -50,7 +49,7 @@ class PosixOperationError(Exception):
     pass
 
 
-class PosixOperations(with_metaclass(Singleton, object)):
+class PosixOperations(metaclass=Singleton):
     """
     Class to create objects in filesystem, with various properties
     """

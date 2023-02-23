@@ -18,8 +18,6 @@ Tests for the lustre library.
 
 @author: Kenneth Waegeman (Ghent University)
 """
-from __future__ import print_function
-
 import mock
 import os
 import glob

@@ -19,7 +19,6 @@ vsc-filesystems base distribution setup.py
 @author: Stijn De Weirdt (Ghent University)
 @author: Andy Georges (Ghent University)
 """
-import sys
 import vsc.install.shared_setup as shared_setup
 from vsc.install.shared_setup import ag, kh, sdw, kw, wdp
 
@@ -27,16 +26,11 @@ install_requires = [
     'vsc-base >= 3.0.3',
     'vsc-config >= 3.0.0',
     'vsc-utils >= 2.0.0',
-    'future >= 0.16.0',
+    'pyyaml',
 ]
 
-if sys.version_info < (3, 0):
-    install_requires.append('pyyaml < 6')
-else:
-    install_requires.append('pyyaml')
-
 PACKAGE = {
-    'version': '2.0.0',
+    'version': '2.1.0',
     'author': [sdw, ag, kh, kw],
     'maintainer': [sdw, ag, kh, kw, wdp],
     'setup_requires': ['vsc-install >= 0.15.2'],
