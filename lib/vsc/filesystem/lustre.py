@@ -18,8 +18,6 @@ LUSTRE specialised interface
 
 @author: Kenneth Waegeman (Ghent University)
 """
-from __future__ import print_function
-
 import os
 import re
 import glob
@@ -31,8 +29,6 @@ from vsc.utils.patterns import Singleton
 from vsc.utils import fancylogger
 from vsc.utils.run import RunAsyncLoop, RunNoWorries
 from enum import Enum
-
-from future.utils import with_metaclass
 import yaml
 
 LustreQuota = namedtuple('LustreQuota',
@@ -120,7 +116,7 @@ class LustreVscTier1cScratchFs(LustreVscFS):
 
 
 
-class LustreOperations(with_metaclass(Singleton, PosixOperations)):
+class LustreOperations(PosixOperations, metaclass=Singleton):
     """ Lustre Operations """
 
     def __init__(self):

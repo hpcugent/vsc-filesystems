@@ -19,18 +19,15 @@ GPFS specialised interface
 @author: Stijn De Weirdt (Ghent University)
 @author: Andy Georges (Ghent University)
 """
-from __future__ import print_function
-from future.utils import with_metaclass
-
 import copy
 import os
 import re
 
 from collections import namedtuple, defaultdict
-from vsc.utils.py2vs3 import unquote as percentdecode
 from socket import gethostname
 from itertools import dropwhile
 from enum import Enum
+from urllib.parse import unquote  as percentdecode
 
 from vsc.config.base import DEFAULT_INODE_MAX, DEFAULT_INODE_PREALLOC
 from vsc.filesystem.posix import PosixOperations, PosixOperationError
@@ -93,7 +90,7 @@ class GpfsOperationError(PosixOperationError):
     pass
 
 
-class GpfsOperations(with_metaclass(Singleton, PosixOperations)):
+class GpfsOperations(PosixOperations, metaclass=Singleton):
 
     def __init__(self):
         super(GpfsOperations, self).__init__()
