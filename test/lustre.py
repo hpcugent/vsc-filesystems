@@ -1,6 +1,6 @@
 # -*- coding: latin-1 -*-
 #
-# Copyright 2015-2021 Ghent University
+# Copyright 2015-2023 Ghent University
 #
 # This file is part of vsc-filesystems,
 # originally created by the HPC team of Ghent University (http://ugent.be/hpc/en),
@@ -18,8 +18,6 @@ Tests for the lustre library.
 
 @author: Kenneth Waegeman (Ghent University)
 """
-from __future__ import print_function
-
 import mock
 import os
 import glob

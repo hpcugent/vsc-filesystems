@@ -1,6 +1,6 @@
 # -*- coding: latin-1 -*-
 #
-# Copyright 2009-2022 Ghent University
+# Copyright 2009-2023 Ghent University
 #
 # This file is part of vsc-filesystems,
 # originally created by the HPC team of Ghent University (http://ugent.be/hpc/en),
@@ -27,7 +27,6 @@ import stat
 from vsc.utils import fancylogger
 from vsc.utils.patterns import Singleton
 from vsc.utils.run import asyncloop
-from future.utils import with_metaclass
 
 OS_LINUX_MOUNTS = '/proc/mounts'
 OS_LINUX_FILESYSTEMS = '/proc/filesystems'
@@ -50,7 +49,7 @@ class PosixOperationError(Exception):
     pass
 
 
-class PosixOperations(with_metaclass(Singleton, object)):
+class PosixOperations(metaclass=Singleton):
     """
     Class to create objects in filesystem, with various properties
     """
@@ -228,7 +227,8 @@ class PosixOperations(with_metaclass(Singleton, object)):
                                     PosixOperationError)
 
         try:
-            currentmounts = [x.strip().split(" ") for x in open(OS_LINUX_MOUNTS).readlines()]
+            with open(OS_LINUX_MOUNTS) as mounts:
+                currentmounts = [x.strip().split(" ") for x in mounts.readlines()]
             # returns [('rootfs', '/', 2051L, 'rootfs'), ('ext4', '/', 2051L, '/dev/root'),
             # ('tmpfs', '/dev', 17L, '/dev'), ...
             self.localfilesystemnaming = ['type', 'mountpoint', 'id', 'device']
@@ -372,9 +372,8 @@ class PosixOperations(with_metaclass(Singleton, object)):
             for default_key in default_keys:
                 default_key_file = os.path.join(home_dir, '.ssh', 'id_%s.pub' % default_key)
                 if os.path.exists(default_key_file):
-                    fp = open(default_key_file, 'r')
-                    default_public_keys.append(fp.readline())
-                    fp.close()
+                    with open(default_key_file, 'r') as fp:
+                        default_public_keys.append(fp.readline())
 
             if default_public_keys:
                 self.log.info("Default key exists, adding to authorized_keys")
@@ -382,9 +381,9 @@ class PosixOperations(with_metaclass(Singleton, object)):
             else:
                 self.log.info("No default key found, not adding to authorized_keys")
 
-            fp = open(authorized_keys, 'w')
-            fp.write("\n".join(ssh_public_keys + ['']))
-            fp.close()
+            with open(authorized_keys, 'w') as fp:
+                fp.write("\n".join(ssh_public_keys + ['']))
+
         self.chmod(0o644, authorized_keys)
         self.chmod(0o700, ssh_path)
 
