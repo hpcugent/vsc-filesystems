@@ -476,7 +476,9 @@ class GpfsOperations(PosixOperations, metaclass=Singleton):
                 details = dict([(k, info[k][idx]) for k in datakeys if len(info[k]) == count])
                 res[fs][qid] = details
             except IndexError as err:
-                self.log.error(f"ERROR {err}. idx {idx}, info len {[(k, len(info[k])) for k in info.keys()]}, datakeys {datakeys}")
+                self.log.error(
+                    f"ERROR {err}. idx {idx}, info len {[(k, len(info[k])) for k in info.keys()]}, datakeys {datakeys}"
+                )
                 raise
 
         self.gpfslocalfilesets = res
