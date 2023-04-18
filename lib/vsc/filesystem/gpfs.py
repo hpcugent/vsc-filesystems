@@ -469,9 +469,17 @@ class GpfsOperations(PosixOperations, metaclass=Singleton):
         fss = nub(info.get('filesystemName', []))
         res = dict([(fs, {}) for fs in fss])  # build structure
 
+        count = len(info['filesystemName'])
         for idx, (fs, qid) in enumerate(zip(info['filesystemName'], info['id'])):
-            details = dict([(k, info[k][idx]) for k in datakeys])
-            res[fs][qid] = details
+            try:
+                self.log.debug(f"Getting details for {idx} {fs} {qid}")
+                details = dict([(k, info[k][idx]) for k in datakeys if len(info[k]) == count])
+                res[fs][qid] = details
+            except IndexError as err:
+                self.log.error(
+                    f"ERROR {err}. idx {idx}, info len {[(k, len(info[k])) for k in info.keys()]}, datakeys {datakeys}"
+                )
+                raise
 
         self.gpfslocalfilesets = res
         return res
