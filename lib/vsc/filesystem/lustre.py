@@ -411,7 +411,8 @@ class LustreOperations(PosixOperations, metaclass=Singleton):
         return filesetsres
 
 
-    def make_fileset(self, new_fileset_path, fileset_name, inodes_max=1048576, fileset_id=None, parent_fileset_name=None):
+    def make_fileset(self, new_fileset_path, fileset_name, inodes_max=1048576, fileset_id=None,
+                     parent_fileset_name=None):
         """
         Given path, create a new directory and set file quota
           - check uniqueness
@@ -422,7 +423,7 @@ class LustreOperations(PosixOperations, metaclass=Singleton):
         @type parent_fileset_name: unused, for AIP compatibility
 
         """
-
+        del parent_fileset_name
         fsetpath = self._sanity_check(new_fileset_path)
 
         if fileset_name is None:
