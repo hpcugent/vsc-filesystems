@@ -30,6 +30,7 @@ from vsc.utils import fancylogger
 from vsc.utils.run import RunAsyncLoop, RunNoWorries
 from enum import Enum
 import yaml
+from vsc.config.base import SCRATCH_SUBDIR, PROJECTS_SUBDIR, USERS_SUBDIR
 
 LustreQuota = namedtuple('LustreQuota',
     ['name',
@@ -104,6 +105,18 @@ class LustreVscGhentScratchFs(LustreVscFS):
         projectid_maps = {'gvo' : 900000}
         super(LustreVscGhentScratchFs, self).__init__(mountpoint, project_locations, projectid_maps)
 
+class LustreVscScratchFs(LustreVscFS):
+    def __init__(self, mountpoint):
+        project_locations = [os.path.join(SCRATCH_SUBDIR, PROJECTS_SUBDIR), os.path.join(SCRATCH_SUBDIR, USERS_SUBDIR)]
+        projectid_maps = {}
+        super(LustreVscScratchFs, self).__init__(mountpoint, project_locations,
+            projectid_maps)
+
+    def pjid_from_name(self, name):
+        del name
+        self.log.error('Use explicit mapping')
+        raise Exception('Can not use pjid_from_name')
+
 class LustreVscTier1cScratchFs(LustreVscFS):
     """ Make some assumptions on where to find filesets
         This could also be extended to be done by importing config files """
@@ -127,6 +140,7 @@ class LustreOperations(PosixOperations, metaclass=Singleton):
         self.quotadump = '/var/cache/lustre'
 
         self.quota_types = Typ2Param
+        self.default_mapping = LustreVscScratchFs
 
     def set_default_mapping(self, default_mapping=None):
         ''' Set the class for the mapping of ids and search paths'''
