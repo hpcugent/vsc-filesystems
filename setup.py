@@ -24,13 +24,13 @@ from vsc.install.shared_setup import ag, kh, sdw, kw, wdp
 
 install_requires = [
     'vsc-base >= 3.0.3',
-    'vsc-config >= 3.0.0',
+    'vsc-config >= 3.13.1',
     'vsc-utils >= 2.0.0',
     'pyyaml',
 ]
 
 PACKAGE = {
-    'version': '2.2.0',
+    'version': '2.2.1',
     'author': [sdw, ag, kh, kw],
     'maintainer': [sdw, ag, kh, kw, wdp],
     'setup_requires': ['vsc-install >= 0.15.2'],

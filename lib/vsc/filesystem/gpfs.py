@@ -701,7 +701,7 @@ class GpfsOperations(PosixOperations, metaclass=Singleton):
         return res
 
     def make_fileset(self, new_fileset_path, fileset_name=None, parent_fileset_name=None, afm=None, inodes_max=None,
-                     inodes_prealloc=None):
+                     inodes_prealloc=None, fileset_id=None):
         """
         Given path, create a new fileset and link it to said path
           - check uniqueness
@@ -712,6 +712,7 @@ class GpfsOperations(PosixOperations, metaclass=Singleton):
         @type parent_fileset_name: string representing the name of the fileset with whoch the inode space should
                                    be shared. If this is None, then a new inode space will be created for this fileset.
         @type afm: Unused at this point.
+        @type fileset_id: unused, for api compatibility
         @type inodes_max: int representing maximal number of inodes to allocate for this fileset
         @type inodes_preallloc: int representing the maximal number of inodes to preallocate for this fileset
 
@@ -743,6 +744,7 @@ class GpfsOperations(PosixOperations, metaclass=Singleton):
         - create fileset with fsetpath part of symlink
         """
         del afm
+        del fileset_id
         self.list_filesystems()  # get known filesystems
         self.list_filesets()  # do NOT force an update here. We do this at the end, should there be a fileset created.
 
