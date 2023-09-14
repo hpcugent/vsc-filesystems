@@ -30,7 +30,7 @@ install_requires = [
 ]
 
 PACKAGE = {
-    'version': '2.2.1',
+    'version': '2.2.2',
     'author': [sdw, ag, kh, kw],
     'maintainer': [sdw, ag, kh, kw, wdp],
     'setup_requires': ['vsc-install >= 0.15.2'],
