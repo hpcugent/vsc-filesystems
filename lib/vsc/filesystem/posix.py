@@ -86,7 +86,7 @@ class PosixOperations(metaclass=Singleton):
 
         return ec, out
 
-    def _sanity_check(self, obj=None):
+    def _sanity_check(self, obj=None, force_ignorerealpath=False):
         """Run sanity check on obj. E.g. force absolute path.
             @type obj: string to check
         """
@@ -128,9 +128,13 @@ class PosixOperations(metaclass=Singleton):
             self.log.raiseException("_sanity_check no valid filesystem found for obj %s" % obj, PosixOperationError)
 
         # try readlink
+        ignore_real_path_mismatch = self.ignorerealpathmismatch
+        if force_ignorerealpath:
+            ignore_real_path_mismatch = True
+
         if not obj == os.path.realpath(obj):
             # some part of the path is a symlink
-            if self.ignorerealpathmismatch:
+            if ignore_real_path_mismatch:
                 self.log.debug("_sanity_check obj %s doesn't correspond with realpath %s",
                                obj, os.path.realpath(obj))
             else:
@@ -417,9 +421,7 @@ class PosixOperations(metaclass=Singleton):
                   os.path.join(home_dir, '.bash_profile')]:
             self.log.info("Changing ownership of %s to %s:%s", f, user_id, group_id)
             try:
-                self.ignorerealpathmismatch = True
-                self.chown(user_id, group_id, f)
-                self.ignorerealpathmismatch = False
+                self.chown(user_id, group_id, f, force_ignorerealpath=True)
             except OSError:
                 self.log.raiseException("Cannot change ownership of file %s to %s:%s" %
                                         (f, user_id, group_id), PosixOperationError)
@@ -460,9 +462,9 @@ class PosixOperations(metaclass=Singleton):
         obj = self._sanity_check(obj)
         self.log.error("setQuota not implemented for this class %s", self.__class__.__name__)
 
-    def chown(self, owner, group=None, obj=None):
+    def chown(self, owner, group=None, obj=None, force_ignorerealpath=False):
         """Change ownership of the object"""
-        obj = self._sanity_check(obj)
+        obj = self._sanity_check(obj, force_ignorerealpath)
 
         self.log.info("Changing ownership of %s to %s:%s", obj, owner, group)
         try:
