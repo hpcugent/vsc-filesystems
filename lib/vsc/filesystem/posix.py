@@ -534,6 +534,8 @@ class PosixOperations(metaclass=Singleton):
         try:
             statinfo = os.stat(path)
             self.log.debug("Path %s found.", path)
+            if not stat.S_ISDIR(statinfo.st_mode):
+                raise PosixOperationError(f"path {path} exists and is not a directory")
         except OSError:
             created = self.make_dir(path)
             self.log.info("Created directory at %s", path)
