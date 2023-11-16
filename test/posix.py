@@ -17,9 +17,10 @@ Unit tests for vsc.filesystems.posix
 
 @author: Kenneth Hoste (Ghent University)
 """
-import mock
+
 import os
 import tempfile
+import mock
 from collections import namedtuple
 
 from vsc.install.testing import TestCase
@@ -32,7 +33,7 @@ class PosixTest(TestCase):
 
     def setUp(self):
         """Set things up for running tests."""
-        super(PosixTest, self).setUp()
+        super().setUp()
 
         self.po = PosixOperations()
         # mock the sanity check, to ease testing

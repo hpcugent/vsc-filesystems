@@ -1,4 +1,3 @@
-# -*- coding: latin-1 -*-
 #
 # Copyright 2020-2023 Ghent University
 #
@@ -61,7 +60,7 @@ class LustreOperationError(PosixOperationError):
 class LustreVscFSError(Exception):
     """ LustreVSCFS Error """
 
-class LustreVscFS(object):
+class LustreVscFS:
     """Default class for a vsc managed Lustre file system
         Since Lustre doesn't have a 'lsfileset' kind of command,
         we need some hints to defining names, ids and mappings
@@ -84,7 +83,7 @@ class LustreVscFS(object):
             res = self.projectid_maps[prefix] + int(pjid)
             return str(res)
         else:
-            self.log.raiseException("_pjid_from_name: project prefix %s not recognized" % prefix, LustreVscFSError)
+            self.log.raiseException(f"_pjid_from_name: project prefix {prefix} not recognized", LustreVscFSError)
             return None
 
     def get_search_paths(self):
@@ -103,19 +102,19 @@ class LustreVscGhentScratchFs(LustreVscFS):
 
         project_locations = ['gent', 'gent/vo/00[0-9]']
         projectid_maps = {'gvo' : 900000}
-        super(LustreVscGhentScratchFs, self).__init__(mountpoint, project_locations, projectid_maps)
+        super().__init__(mountpoint, project_locations, projectid_maps)
 
 class LustreVscScratchFs(LustreVscFS):
     def __init__(self, mountpoint):
         project_locations = [os.path.join(SCRATCH_SUBDIR, PROJECTS_SUBDIR), os.path.join(SCRATCH_SUBDIR, USERS_SUBDIR)]
         projectid_maps = {}
-        super(LustreVscScratchFs, self).__init__(mountpoint, project_locations,
+        super().__init__(mountpoint, project_locations,
             projectid_maps)
 
     def pjid_from_name(self, name):
         del name
         self.log.error('Use explicit mapping')
-        raise Exception('Can not use pjid_from_name')
+        raise ValueError(f'Can not use pjid_from_name')
 
 class LustreVscTier1cScratchFs(LustreVscFS):
     """ Make some assumptions on where to find filesets
@@ -125,7 +124,7 @@ class LustreVscTier1cScratchFs(LustreVscFS):
 
         project_locations = ['gent', 'gent/projects/00[0-9]']
         projectid_maps = {'pj' : 900000}
-        super(LustreVscTier1cScratchFs, self).__init__(mountpoint, project_locations, projectid_maps)
+        super().__init__(mountpoint, project_locations, projectid_maps)
 
 
 
@@ -133,7 +132,7 @@ class LustreOperations(PosixOperations, metaclass=Singleton):
     """ Lustre Operations """
 
     def __init__(self):
-        super(LustreOperations, self).__init__()
+        super().__init__()
         self.supportedfilesystems = ['lustre']
         self.filesystems = {}
         self.filesets = {}
@@ -155,7 +154,7 @@ class LustreOperations(PosixOperations, metaclass=Singleton):
 
         ec, out = self._execute(cmd, changes)
         if ec != 0:
-            self.log.raiseException("Unable to run command %s. ec: %s, out:%s" % (cmd, ec, out), LustreOperationError)
+            self.log.raiseException(f"Unable to run command {cmd}. ec: {ec}, out:{out}", LustreOperationError)
 
         return out
 
@@ -177,7 +176,7 @@ class LustreOperations(PosixOperations, metaclass=Singleton):
 
         """
 
-        param = 'qmt.%s-*.%s-*.glb-%s' % (device, quotyp.value, typ.value)
+        param = f'qmt.{device}-*.{quotyp.value}-*.glb-{typ.value}'
         if qmt_direct:
             opts = ['get_param', param]
             res = self._execute_lctl(opts)
@@ -185,14 +184,15 @@ class LustreOperations(PosixOperations, metaclass=Singleton):
             cmd = ['cat', os.path.join(self.quotadump, param)]
             ec, res = RunAsyncLoop.run(cmd)
             if ec != 0:
-                self.log.raiseException("Could not get quota info. out:%s" % res, LustreOperationError)
+                self.log.raiseException(f"Could not get quota info. out:{res}", LustreOperationError)
 
         quota_info = res.split("\n", 2)
         try:
             newres = yaml.safe_load(quota_info[2])
         except yaml.YAMLError as exc:
-            self.log.raiseException("_execute_lctl_get_param_qmt_yaml: Error in yaml output: %s"
-                % exc, LustreOperationError)
+            self.log.raiseException(
+                f"_execute_lctl_get_param_qmt_yaml: Error in yaml output: {exc}",
+                LustreOperationError)
 
         return newres
 
@@ -204,7 +204,7 @@ class LustreOperations(PosixOperations, metaclass=Singleton):
 
         ec, out = self._execute(cmd, changes)
         if ec != 0:
-            self.log.raiseException("Unable to run command %s. ec: %s, out:%s" % (cmd, ec, out), LustreOperationError)
+            self.log.raiseException(f"Unable to run command {cmd}. ec: {ec}, out:{out}", LustreOperationError)
 
         return out
 
@@ -233,8 +233,8 @@ class LustreOperations(PosixOperations, metaclass=Singleton):
 
         if not devices and not lustrefss:
             self.log.raiseException("No Lustre Filesystems found", LustreOperationError)
-        elif not all(elem in lustrefss.keys() for elem in devices):
-            self.log.raiseException("Not all Lustre Filesystems of %s found, found %s" % (devices, lustrefss.keys()),
+        elif not all(elem in lustrefss for elem in devices):
+            self.log.raiseException(f"Not all Lustre Filesystems of {devices} found, found {lustrefss}",
                 LustreOperationError)
 
         return lustrefss
@@ -268,7 +268,7 @@ class LustreOperations(PosixOperations, metaclass=Singleton):
             self._execute_lfs('project', opts, True)
             return pjid
         else:
-            self.log.raiseException("Path %s already has a projectid %s" % (project_path, exid), LustreOperationError)
+            self.log.raiseException(f"Path {project_path} already has a projectid {exid}", LustreOperationError)
 
         return None
 
@@ -284,8 +284,9 @@ class LustreOperations(PosixOperations, metaclass=Singleton):
         if flag == 'P' and path == project_path:
             return pjid
         elif existing:
-            self.log.raiseException("Something went wrong fetching project id for %s. Output was %s"
-                    % (project_path, res), LustreOperationError)
+            self.log.raiseException(
+                f"Something went wrong fetching project id for {project_path}. Output was {res}",
+                LustreOperationError)
         else:
             self.log.debug('path has no pjid set')
         return None
@@ -293,7 +294,7 @@ class LustreOperations(PosixOperations, metaclass=Singleton):
     def _quota_src(self, device):
         """ Locate the quota info: directly through qmt params(True) or using a dump(False) """
 
-        qparam = 'qmt.%s-*.*.glb-*' % device
+        qparam = f'qmt.{device}-*.*.glb-*'
         opts = ['list_param', qparam]
         try:
             self._execute_lctl(opts)
@@ -378,12 +379,14 @@ class LustreOperations(PosixOperations, metaclass=Singleton):
                     continue
                 else:
                     if pjid in filesets:
-                        self.log.raiseException("projectids mapping multiple paths: %s: %s, %s" %
-                                                (pjid, filesets[pjid]['path'], path), LustreOperationError)
+                        self.log.raiseException(
+                            f"projectids mapping multiple paths: {pjid}: {filesets[pjid]['path']}, {path}",
+                            LustreOperationError)
                     elif flag != 'P':
                         # Not sure if this should give error or raise Exception
-                        self.log.raiseException("Project inheritance flag not set for project %s: %s"
-                                                % (pjid, path), LustreOperationError)
+                        self.log.raiseException(
+                            f"Project inheritance flag not set for project {pjid}: {path}",
+                            LustreOperationError)
                     else:
                         path = self._sanity_check(path)
                         filesets[pjid] = {'path': path, 'filesetName': os.path.basename(path)}
@@ -416,9 +419,9 @@ class LustreOperations(PosixOperations, metaclass=Singleton):
         devices = self.list_filesystems(devices)
 
         filesetsres = {}
-        for dev in devices.keys():
+        for dev, value in devices.items():
             if dev not in self.filesets:
-                self.filesets[dev] = self._list_filesets(devices[dev])
+                self.filesets[dev] = self._list_filesets(value)
 
             filesetsres[dev] = self.filesets[dev]
 
@@ -443,33 +446,39 @@ class LustreOperations(PosixOperations, metaclass=Singleton):
         if fileset_name is None:
             fileset_name = os.path.basename(fsetpath)
         elif fileset_name != os.path.basename(fsetpath):
-            self.log.raiseException('fileset name %s should be the directory name %s.'
-                                    %(fileset_name, os.path.basename(fsetpath)), LustreOperationError)
+            self.log.raiseException(
+                f"fileset name {fileset_name} should be the directory name {os.path.basename(fsetpath)}.",
+                LustreOperationError)
 
         # does the path exist ?
         if self.exists(fsetpath):
-            self.log.raiseException(("makeFileset for new_fileset_path %s returned sane fsetpath %s,"
-                                     " but it already exists.") % (new_fileset_path, fsetpath), LustreOperationError)
+            self.log.raiseException(
+                f"makeFileset for new_fileset_path {new_fileset_path} returned sane fsetpath {fsetpath}, "
+                "but it already exists.",
+                LustreOperationError)
 
         parentfsetpath = os.path.dirname(fsetpath)
         if not self.exists(parentfsetpath):
-            self.log.raiseException(("parent dir %s of fsetpath %s does not exist. Not going to create it "
-                                     "automatically.") % (parentfsetpath, fsetpath), LustreOperationError)
+            self.log.raiseException(
+                f"parent dir {parentfsetpath} of fsetpath {fsetpath} does not exist. Not going to create it.",
+                LustreOperationError)
 
 
         fsname, _fsmount = self._get_fsinfo_for_path(parentfsetpath)
         fsinfo = self.get_fileset_info(fsname, fileset_name)
         if fsinfo:
             # bail if there is a fileset with the same name
-            self.log.raiseException(("Found existing fileset %s with the same name at %s ") %
-                                    (fileset_name, fsinfo['path']), LustreOperationError)
+            self.log.raiseException(
+                f"Found existing fileset {fileset_name} with the same name at {fsinfo['path']}",
+            LustreOperationError)
             return None
 
         pjid = str(fileset_id) if fileset_id else self._map_project_id(parentfsetpath, fileset_name)
         filesets = self.list_filesets([fsname])
         if pjid in filesets[fsname]:
-            self.log.raiseException("Found existing projectid %s in file system %s: %s"
-                                    % (pjid, fsname, filesets[pjid]), LustreOperationError)
+            self.log.raiseException(
+                f"Found existing projectid {pjid} in file system {fsname}: {filesets[pjid]}",
+                LustreOperationError)
 
         # create the fileset: dir and project
         self.make_dir(fsetpath)
@@ -527,8 +536,9 @@ class LustreOperations(PosixOperations, metaclass=Singleton):
 
         fileset_path = self._sanity_check(fileset_path)
         if fileset_name is not None and fileset_name != os.path.basename(fileset_path):
-            self.log.raiseException('fileset name %s should be the directory name %s.'
-                                    %(fileset_name, os.path.basename(fileset_path)), LustreOperationError)
+            self.log.raiseException(
+                f'fileset name {fileset_name} should be the directory name {os.path.basename(fileset_path)}.',
+                LustreOperationError)
 
         # we need the corresponding project id
         project = self.get_project_id(fileset_path)
@@ -574,12 +584,12 @@ class LustreOperations(PosixOperations, metaclass=Singleton):
 
         obj = self._sanity_check(obj)
         if not self.dry_run and not self.exists(obj):
-            self.log.raiseException("setQuota: can't set quota on none-existing obj %s" % obj, LustreOperationError)
+            self.log.raiseException(f"setQuota: can't set quota on none-existing obj {obj}", LustreOperationError)
 
         opts = ['-t']
-        opts += ["-%s" % typ.value]
-        opts += ["-b", "%s" % int(grace)]
-        opts += ["-i", "%s" % int(grace)]
+        opts += [f"-{typ.value}"]
+        opts += ["-b", f"{int(grace)}"]
+        opts += ["-i", f"{int(grace)}"]
 
         opts.append(obj)
 
@@ -595,10 +605,10 @@ class LustreOperations(PosixOperations, metaclass=Singleton):
 
         obj = self._sanity_check(obj)
         if not self.dry_run and not self.exists(obj):
-            self.log.raiseException("setQuota: can't set quota on none-existing obj %s" % obj, LustreOperationError)
+            self.log.raiseException(f"setQuota: can't set quota on none-existing obj {obj}", LustreOperationError)
 
         opts = []
-        opts += ["-%s" % typ.value, "%s" % who]
+        opts += [f"-{typ.value}", f"{who}"]
         if human:
             opts.append("-h")
         opts.append(obj)
@@ -625,11 +635,11 @@ class LustreOperations(PosixOperations, metaclass=Singleton):
 
         obj = self._sanity_check(obj)
         if not self.dry_run and not self.exists(obj):
-            self.log.raiseException("setQuota: can't set quota on none-existing obj %s" % obj, LustreOperationError)
+            self.log.raiseException(f"setQuota: can't set quota on none-existing obj {obj}", LustreOperationError)
 
         soft2hard_factor = 1.05
 
-        opts = ["-%s" % typ.value, "%s" % who]
+        opts = [f"-{typ.value}", f"{who}"]
 
         if soft is None and inode_soft is None:
             self.log.raiseException("setQuota: At least one type of quota (block,inode) should be specified",
@@ -639,22 +649,24 @@ class LustreOperations(PosixOperations, metaclass=Singleton):
             if hard is None:
                 hard = int(soft * soft2hard_factor)
             elif hard < soft:
-                self.log.raiseException("setQuota: can't set hard limit %s lower then soft limit %s" %
-                                        (hard, soft), LustreOperationError)
+                self.log.raiseException(
+                    f"setQuota: can't set hard limit {hard} lower then soft limit {soft}",
+                    LustreOperationError)
             softm = int(soft / 1024 ** 2) # round to MB
             hardm = int(hard / 1024 ** 2) # round to MB
             if softm == 0 or hardm == 0:
                 self.log.raiseException("setQuota: setting quota to 0 would be infinite quota", LustreOperationError)
             else:
-                opts += ["-b", "%sm" % softm]
-                opts += ["-B", "%sm" % hardm]
+                opts += ["-b", f"{softm}m"]
+                opts += ["-B", f"{hardm}m"]
 
         if inode_soft:
             if inode_hard is None:
                 inode_hard = int(inode_soft * soft2hard_factor)
             elif inode_hard < inode_soft:
-                self.log.raiseException("setQuota: can't set hard inode limit %s lower then soft inode limit %s" %
-                                        (inode_hard, inode_soft), LustreOperationError)
+                self.log.raiseException(
+                    f"setQuota: can't set hard inode limit {inode_hard} lower then soft inode limit {inode_soft}",
+                    LustreOperationError)
 
             opts += ["-i", str(inode_soft)]
             opts += ["-I", str(inode_hard)]

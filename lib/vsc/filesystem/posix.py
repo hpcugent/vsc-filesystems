@@ -1,4 +1,3 @@
-# -*- coding: latin-1 -*-
 #
 # Copyright 2009-2023 Ghent University
 #
@@ -102,7 +101,7 @@ class PosixOperations(metaclass=Singleton):
 
         if self.forceabsolutepath:
             if not os.path.isabs(obj):  # other test: obj.startswith(os.path.sep)
-                self.log.raiseException("_sanity_check check absolute path: obj %s is not an absolute path" % obj,
+                self.log.raiseException(f"_sanity_check check absolute path: obj {obj} is not an absolute path",
                                         PosixOperationError)
                 return None
 
@@ -120,12 +119,12 @@ class PosixOperations(metaclass=Singleton):
                     filesystem = tmpfs[0]
                 else:
                     self.log.raiseException(
-                        ("_sanity_check found filesystem %s for subpath %s of obj %s is "
-                         "not a supported filesystem (supported %s)")
-                        % (tmpfs[0], fp, obj, self.supportedfilesystems), PosixOperationError)
+                        f"_sanity_check found filesystem {tmpfs[0]} for subpath {fp} of obj {obj} is not a "
+                        "supported filesystem (supported {self.supportedfilesystems})",
+                    PosixOperationError)
 
         if filesystem is None:
-            self.log.raiseException("_sanity_check no valid filesystem found for obj %s" % obj, PosixOperationError)
+            self.log.raiseException(f"_sanity_check no valid filesystem found for obj {obj}", PosixOperationError)
 
         # try readlink
         ignore_real_path_mismatch = self.ignorerealpathmismatch
@@ -138,8 +137,9 @@ class PosixOperations(metaclass=Singleton):
                 self.log.debug("_sanity_check obj %s doesn't correspond with realpath %s",
                                obj, os.path.realpath(obj))
             else:
-                self.log.raiseException("_sanity_check obj %s doesn't correspond with realpath %s"
-                                        % (obj, os.path.realpath(obj)), PosixOperationError)
+                self.log.raiseException(
+                    f"_sanity_check obj {obj} doesn't correspond with realpath {os.path.realpath(obj)}",
+                    PosixOperationError)
                 return None
 
         return obj
@@ -211,11 +211,14 @@ class PosixOperations(metaclass=Singleton):
         fss = [x for x in self.localfilesystems if x[self.localfilesystemnaming.index('id')] == fsid]
 
         if len(fss) == 0:
-            self.log.raiseException("No matching filesystem found for obj %s with id %s (localfilesystems: %s)" %
-                                    (obj, fsid, self.localfilesystems), PosixOperationError)
+            self.log.raiseException(
+                f"No matching filesystem found for obj {obj} id {fsid} (localfilesystems: {self.localfilesystems})",
+                PosixOperationError)
         elif len(fss) > 1:
-            self.log.raiseException("More than one matching filesystem found for obj %s with "
-                                    "id %s (matched localfilesystems: %s)" % (obj, fsid, fss), PosixOperationError)
+            self.log.raiseException(
+                f"More than one matching filesystem found for obj {obj} with id {fsid} "
+                f"(matched localfilesystems: {fsid})",
+                PosixOperationError)
         else:
             self.log.debug("Found filesystem for obj %s: %s", obj, fss[0])
             return fss[0]
@@ -225,9 +228,9 @@ class PosixOperations(metaclass=Singleton):
         """What filesystems are mounted / available atm"""
         # what is currently mounted
         if not os.path.isfile(OS_LINUX_MOUNTS):
-            self.log.raiseException("Missing Linux OS overview of mounts %s" % OS_LINUX_MOUNTS, PosixOperationError)
+            self.log.raiseException(f"Missing Linux OS overview of mounts {OS_LINUX_MOUNTS}", PosixOperationError)
         if not os.path.isfile(OS_LINUX_FILESYSTEMS):
-            self.log.raiseException("Missing Linux OS overview of filesystems %s" % OS_LINUX_FILESYSTEMS,
+            self.log.raiseException(f"Missing Linux OS overview of filesystems {OS_LINUX_FILESYSTEMS}",
                                     PosixOperationError)
 
         try:
@@ -240,7 +243,7 @@ class PosixOperations(metaclass=Singleton):
             if self.ignorefilesystems:
                 currentmounts = [x for x in currentmounts if not x[2] in OS_LINUX_IGNORE_FILESYSTEMS]
             self.localfilesystems = [[y[2], y[1], os.stat(y[1]).st_dev, y[0]] for y in currentmounts]
-        except (IOError, OSError):
+        except OSError:
             self.log.exception("Failed to create the list of current mounted filesystems")
             raise
 
@@ -288,7 +291,7 @@ class PosixOperations(metaclass=Singleton):
                     os.unlink(target)
                     target = self._sanity_check(target_)
         elif not self.dry_run:
-            self.log.raiseException("Target %s does not exist, cannot make symlink to it" % (target),
+            self.log.raiseException(f"Target {target} does not exist, cannot make symlink to it",
                                     PosixOperationError)
 
         self.log.info("Attempting to create a symlink from %s to %s", obj, target)
@@ -300,7 +303,7 @@ class PosixOperations(metaclass=Singleton):
                     else:
                         os.unlink(obj)
                 except OSError:
-                    self.log.raiseException("Cannot unlink existing symlink from %s to %s" % (obj, target),
+                    self.log.raiseException(f"Cannot unlink existing symlink from {obj} to {target}",
                                             PosixOperationError)
             else:
                 self.log.info("Symlink already exists from %s to %s", obj, target)
@@ -311,7 +314,7 @@ class PosixOperations(metaclass=Singleton):
             else:
                 os.symlink(target, obj)
         except OSError:
-            self.log.raiseException("Cannot create symlink from %s to %s" % (obj, target), PosixOperationError)
+            self.log.raiseException(f"Cannot create symlink from {obj} to {target}", PosixOperationError)
 
     def is_dir(self, obj=None):
         """Check if obj is (symlink to) a directory"""
@@ -337,7 +340,7 @@ class PosixOperations(metaclass=Singleton):
             if err.errno == errno.EEXIST:
                 return False
             else:
-                self.log.raiseException("Cannot create the directory hierarchy %s" % (obj), PosixOperationError)
+                self.log.raiseException(f"Cannot create the directory hierarchy {obj}", PosixOperationError)
                 return False
 
     def make_home_dir(self, obj=None):
@@ -374,9 +377,9 @@ class PosixOperations(metaclass=Singleton):
             self.log.info("Writing ssh keys. Dry-run, so not really doing anything.")
         else:
             for default_key in default_keys:
-                default_key_file = os.path.join(home_dir, '.ssh', 'id_%s.pub' % default_key)
+                default_key_file = os.path.join(home_dir, '.ssh', f'id_{default_key}.pub')
                 if os.path.exists(default_key_file):
-                    with open(default_key_file, 'r') as fp:
+                    with open(default_key_file) as fp:
                         default_public_keys.append(fp.readline())
 
             if default_public_keys:
@@ -423,8 +426,8 @@ class PosixOperations(metaclass=Singleton):
             try:
                 self.chown(user_id, group_id, f, force_ignorerealpath=True)
             except OSError:
-                self.log.raiseException("Cannot change ownership of file %s to %s:%s" %
-                                        (f, user_id, group_id), PosixOperationError)
+                self.log.raiseException(
+                    f"Cannot change ownership of file {f} to {user_id}:{group_id}", PosixOperationError)
 
     def _deploy_dot_file(self, path, filename, user_id, contents):
         """
@@ -474,7 +477,7 @@ class PosixOperations(metaclass=Singleton):
             else:
                 os.chown(obj, owner, group)
         except OSError:
-            self.log.raiseException("Cannot change ownership of object %s to %s:%s" % (obj, owner, group),
+            self.log.raiseException(f"Cannot change ownership of object {obj} to {owner}:{group}",
                                     PosixOperationError)
 
     def chmod(self, permissions, obj=None):
@@ -494,7 +497,7 @@ class PosixOperations(metaclass=Singleton):
             else:
                 os.chmod(obj, permissions)
         except OSError:
-            self.log.raiseException("Could not change the permissions on object %s to %o" % (obj, permissions),
+            self.log.raiseException(f"Could not change the permissions on object {obj} to {permissions:o}",
                                     PosixOperationError)
 
     def compare_files(self, target, obj=None):

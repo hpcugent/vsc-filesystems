@@ -1,4 +1,3 @@
-# -*- coding: latin-1 -*-
 #
 # Copyright 2015-2023 Ghent University
 #
@@ -18,9 +17,8 @@ Tests for the lustre library.
 
 @author: Kenneth Waegeman (Ghent University)
 """
-import mock
 import os
-import glob
+import mock
 import vsc.filesystem.lustre as lustre
 from vsc.filesystem.lustre import LustreQuota, LustreVscTier1cScratchFs
 

@@ -1,4 +1,3 @@
-# -*- coding: latin-1 -*-
 #
 # Copyright 2015-2023 Ghent University
 #
@@ -32,7 +31,7 @@ TEST_LOCAL_FILESETS = {
         '3': {'filesetName': 'fs2'},
     },
 }
- 
+
 TEST_LOCAL_QUOTAS = {
     'fstest': {
         'FILESET': {
