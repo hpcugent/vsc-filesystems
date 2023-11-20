@@ -1,4 +1,3 @@
-# -*- coding: latin-1 -*-
 #
 # Copyright 2009-2023 Ghent University
 #
@@ -25,7 +24,7 @@ STORAGE_OPERATORS = ('Posix', 'Gpfs', 'OceanStor', 'Lustre')
 OPERATOR_CLASS_SUFFIX = 'Operations'
 OPERATOR_ERROR_CLASS_SUFFIX = 'OperationError'
 
-class StorageOperator(object):
+class StorageOperator:
     """
     Load and initialize the operator class to manage the storage
     """

@@ -1,4 +1,3 @@
-# -*- coding: latin-1 -*-
 #
 # Copyright 2009-2023 Ghent University
 #
@@ -31,5 +30,5 @@ class ExtOperationError(PosixOperationError):
 class ExtOperations(PosixOperations):
 
     def __init__(self):
-        super(ExtOperations, self).__init__()
+        super().__init__()
         self.supportedfilesystems = ['ext2', 'ext3', 'ext4']

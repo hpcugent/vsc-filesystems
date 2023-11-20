@@ -1,4 +1,3 @@
-# -*- coding: latin-1 -*-
 #
 # Copyright 2009-2023 Ghent University
 #
@@ -36,7 +35,7 @@ from vsc.utils.missing import nub, find_sublist_index, RUDict
 from vsc.utils.patterns import Singleton
 
 GPFS_BIN_PATH = '/usr/lpp/mmfs/bin'
-GPFS_DEFAULT_INODE_LIMIT = "%d:%d" % (DEFAULT_INODE_MAX, DEFAULT_INODE_PREALLOC)
+GPFS_DEFAULT_INODE_LIMIT = f"{int(DEFAULT_INODE_MAX)}:{int(DEFAULT_INODE_PREALLOC)}"
 
 StorageQuota = namedtuple('StorageQuota',
     ['name',
@@ -93,7 +92,7 @@ class GpfsOperationError(PosixOperationError):
 class GpfsOperations(PosixOperations, metaclass=Singleton):
 
     def __init__(self):
-        super(GpfsOperations, self).__init__()
+        super().__init__()
         self.supportedfilesystems = ['gpfs', 'nfs']
 
         self.gpfslocalfilesystems = None  # the locally found GPFS filesystems
@@ -121,16 +120,17 @@ class GpfsOperations(PosixOperations, metaclass=Singleton):
             if isinstance(opts, (tuple, list,)):
                 cmd += list(opts)
             else:
-                self.log.raiseException("_execute: please use a list or tuple for options: cmd %s opts %s" %
-                                        (cmdname, opts), GpfsOperationError)
+                self.log.raiseException(
+                    f"_execute: please use a list or tuple for options: cmd {cmdname} opts {opts}",
+                    GpfsOperationError)
 
-        ec, out = super(GpfsOperations, self)._execute(cmd, changes)
+        ec, out = super()._execute(cmd, changes)
 
         return ec, out
 
     def _local_filesystems(self):
         """Add the gpfs device name"""
-        super(GpfsOperations, self)._local_filesystems()
+        super()._local_filesystems()
 
         if self.gpfslocalfilesystems is None:
             self.list_filesystems()
@@ -147,8 +147,9 @@ class GpfsOperations(PosixOperations, metaclass=Singleton):
                         gpfsdevice = tmp[0]
                     else:
                         fs.append(None)
-                        self.log.raiseException(("Something went wrong trying to resolve GPFS device from "
-                                                 "localfilesystem device: fs %s") % fs, GpfsOperationError)
+                        self.log.raiseException(
+                            f"Something went wrong trying to resolve GPFS device from localfilesystem device: fs {fs}",
+                        GpfsOperationError)
                 else:
                     gpfsdevice = localdevice
 
@@ -181,17 +182,17 @@ class GpfsOperations(PosixOperations, metaclass=Singleton):
 
         sub_index = find_sublist_index(ls, sub_ls)
         if sub_index is None:
-            self.log.raiseException("Too many fields: %d (description has %d fields).\
-                                        Cannot find match for the start field. Not fixing line %s" %
-                                    (len(fields), description_count, fields))
+            self.log.raiseException(
+                f"Too many fields: {len(fields)} (description has {description_count} fields)."
+                f"Cannot find match for the start field. Not fixing line {fields}")
         else:
             self.log.info("Fixing found an index for the sublist at %d", sub_index)
             line = expected_start_fields + ls[:sub_index]
             remainder = ls[sub_index:]
 
             if len(line) > description_count:
-                self.log.raiseException("After fixing, line still has too many fields: line (%s), original (%s)" %
-                                        (line, fields))
+                self.log.raiseException(
+                    f"After fixing, line still has too many fields: line ({line}), original ({fields})")
 
             # now we need to check if the string in the first field has somehow magically merged with the previous line
             first_field = fields[0]
@@ -204,8 +205,9 @@ class GpfsOperations(PosixOperations, metaclass=Singleton):
                 remainder.insert(0, first_field)
                 return [line, remainder]
             else:
-                self.log.raiseException(("Failed to find the initial field of the line: %s after fixup and "
-                                         "splitting line into [%s, %s]") % (first_field, line, remainder))
+                self.log.raiseException(
+                    f"Failed to find the initial field of the line: {first_field} "
+                    f"after fixup and splitting line into [{line}, {remainder}]")
 
         return []
 
@@ -240,7 +242,7 @@ class GpfsOperations(PosixOperations, metaclass=Singleton):
                     for (_, line) in fields[1:]:
                         res[name].append(line[6 + index])
         except IndexError:
-            self.log.raiseException("Failed to regroup data %s (from output %s)" % (fields, out))
+            self.log.raiseException(f"Failed to regroup data {fields} (from output {out})")
 
         return res
 
@@ -292,13 +294,13 @@ class GpfsOperations(PosixOperations, metaclass=Singleton):
                 try:
                     fields = [(len(x), x) for x in what if x[1] == typ]
                 except IndexError:
-                    self.log.raiseException("No valid lines for output: %s" % (out,), GpfsOperationError)
+                    self.log.raiseException(f"No valid lines for output: {out}", GpfsOperationError)
                 if len(fields):
                     res = self._assemble_fields(fields, out)
                     rest[typ] = res
 
                 else:
-                    self.log.raiseException("No valid lines of header type %s for output: %s" % (typ, out),
+                    self.log.raiseException(f"No valid lines of header type {typ} for output: {out}",
                                             GpfsOperationError)
 
             return rest
@@ -329,17 +331,17 @@ class GpfsOperations(PosixOperations, metaclass=Singleton):
             # set the gpfsdevices
             gpfsdevices = nub(info.get('deviceName', []))
             if len(gpfsdevices) == 0:
-                self.log.raiseException("No devices found. Returned info %s" % info, GpfsOperationError)
+                self.log.raiseException(f"No devices found. Returned info {info}", GpfsOperationError)
             else:
                 self.log.debug("listAllFilesystems found device %s out of requested %s", gpfsdevices, devices)
 
-            res_ = dict([(dev, {}) for dev in gpfsdevices])  # build structure
+            res_ = {dev: {} for dev in gpfsdevices}  # build structure
             res.update(res_)
             for dev, k, v in zip(info['deviceName'], info['fieldName'], info['data']):
                 res[dev][k] = v
 
         if fs_filter:
-            res = dict((f, v) for (f, v) in res.items() if fs_filter(v))
+            res = {f: v for (f, v) in res.items() if fs_filter(v)}
 
         self.gpfslocalfilesystems = res
         return res
@@ -467,17 +469,17 @@ class GpfsOperations(PosixOperations, metaclass=Singleton):
         datakeys.remove('id')
 
         fss = nub(info.get('filesystemName', []))
-        res = dict([(fs, {}) for fs in fss])  # build structure
+        res = {fs: {} for fs in fss}  # build structure
 
         count = len(info['filesystemName'])
         for idx, (fs, qid) in enumerate(zip(info['filesystemName'], info['id'])):
             try:
                 self.log.debug(f"Getting details for {idx} {fs} {qid}")
-                details = dict([(k, info[k][idx]) for k in datakeys if len(info[k]) == count])
+                details = {k: info[k][idx] for k in datakeys if len(info[k]) == count}
                 res[fs][qid] = details
             except IndexError as err:
                 self.log.error(
-                    f"ERROR {err}. idx {idx}, info len {[(k, len(info[k])) for k in info.keys()]}, datakeys {datakeys}"
+                    f"ERROR {err}. idx {idx}, info len {[(k, len(v)) for k, v in info.items()]}, datakeys {datakeys}"
                 )
                 raise
 
@@ -497,7 +499,7 @@ class GpfsOperations(PosixOperations, metaclass=Singleton):
         try:
             return self.gpfslocalfilesystems[filesystem]
         except KeyError:
-            self.log.raiseException("GPFS has no information for filesystem %s" % (filesystem), GpfsOperationError)
+            self.log.raiseException(f"GPFS has no information for filesystem {filesystem}", GpfsOperationError)
             return None
 
     def get_fileset_info(self, filesystem_name, fileset_name):
@@ -515,8 +517,8 @@ class GpfsOperations(PosixOperations, metaclass=Singleton):
         try:
             filesets = self.gpfslocalfilesets[filesystem_name]
         except KeyError:
-            self.log.raiseException("GPFS has no fileset information for filesystem %s" %
-                                    (filesystem_name), GpfsOperationError)
+            self.log.raiseException(
+                f"GPFS has no fileset information for filesystem {filesystem_name}", GpfsOperationError)
 
         for fset in filesets.values():
             if fset['filesetName'] == fileset_name:
@@ -536,7 +538,7 @@ class GpfsOperations(PosixOperations, metaclass=Singleton):
         try:
             fileset_name = self.gpfslocalfilesets[filesystem_name][fileset_id]['filesetName']
         except KeyError:
-            errmsg = "Fileset ID '%s' not found in GPFS filesystem '%s'" % (fileset_id, filesystem_name)
+            errmsg = f"Fileset ID '{fileset_id}' not found in GPFS filesystem '{filesystem_name}'"
             self.log.raiseException(errmsg, GpfsOperationError)
 
         return fileset_name
@@ -551,7 +553,7 @@ class GpfsOperations(PosixOperations, metaclass=Singleton):
         fileset_quotas = self.gpfslocalquotas[filesystem_name][self.quota_types.FILESET.value]
 
         if quota_id not in fileset_quotas:
-            errmsg = "Fileset quota '%s' not found in GPFS filesystem '%s'" % (quota_id, filesystem_name)
+            errmsg = f"Fileset quota '{quota_id}' not found in GPFS filesystem '{filesystem_name}'"
             self.log.raiseException(errmsg, GpfsOperationError)
 
         # ID of fileset quota in GPFS corresponds to its fileset ID
@@ -569,7 +571,7 @@ class GpfsOperations(PosixOperations, metaclass=Singleton):
         group_quotas = self.gpfslocalquotas[filesystem_name][self.quota_types.GRP.value]
 
         if quota_id not in user_quotas and quota_id not in group_quotas:
-            errmsg = "USR/GRP quota '%s' not found in GPFS filesystem '%s'" % (quota_id, filesystem_name)
+            errmsg = f"USR/GRP quota '{quota_id}' not found in GPFS filesystem '{filesystem_name}'"
             self.log.raiseException(errmsg, GpfsOperationError)
 
         # ID of USR/GRP quota in GPFS corresponds to its owner ID
@@ -607,7 +609,7 @@ class GpfsOperations(PosixOperations, metaclass=Singleton):
             if node == 'localhost':
                 infoM['IOPerformedOnNode'][idx] = '.'.join([x for x in [shorthn, commondomain] if x is not None])
 
-        res = dict([(nsd, {}) for nsd in infoL['nsdName']])  # build structure
+        res = {nsd: {} for nsd in infoL['nsdName']}  # build structure
         for idx, nsd in enumerate(infoL['nsdName']):
             for k in keysL:
                 res[nsd][k] = infoL[k][idx]
@@ -618,7 +620,7 @@ class GpfsOperations(PosixOperations, metaclass=Singleton):
                     if not infoL[k][idx] == infoM[k][idx]:
                         self.log.error(("nsdName %s has named value %s in both -L and -M, but have different value"
                                         " L=%s M=%s"), nsd, k, infoL[k][idx], infoM[k][idx])
-                    Mk = "M_%s" % k
+                    Mk = f"M_{k}"
                 res[nsd][Mk] = infoM[k][idx]
 
         return res
@@ -663,7 +665,7 @@ class GpfsOperations(PosixOperations, metaclass=Singleton):
 
         ec, out = self._execute('mmlsattr', ["-L", obj])
         if ec > 0:
-            self.log.raiseException("getAttr: mmlsattr with opts -L %s failed" % (obj), GpfsOperationError)
+            self.log.raiseException(f"getAttr: mmlsattr with opts -L {obj} failed", GpfsOperationError)
 
         res = {}
 
@@ -752,14 +754,18 @@ class GpfsOperations(PosixOperations, metaclass=Singleton):
 
         # does the path exist ?
         if self.exists(fsetpath):
-            self.log.raiseException(("makeFileset for new_fileset_path %s returned sane fsetpath %s,"
-                                     " but it already exists.") % (new_fileset_path, fsetpath), GpfsOperationError)
+            self.log.raiseException(
+                f"makeFileset for new_fileset_path {new_fileset_path} returned sane fsetpath {fsetpath},"
+                " but it already exists.",
+                GpfsOperationError)
 
         # choose unique name
         parentfsetpath = os.path.dirname(fsetpath)
         if not self.exists(parentfsetpath):
-            self.log.raiseException(("parent dir %s of fsetpath %s does not exist. Not going to create it "
-                                     "automatically.") % (parentfsetpath, fsetpath), GpfsOperationError)
+            self.log.raiseException(
+                f"parent dir {parentfsetpath} of fsetpath {fsetpath} does not exist."
+                 "Not going to create it automatically.",
+                GpfsOperationError)
 
         fs = self.what_filesystem(parentfsetpath)
         foundgpfsdevice = fs[self.localfilesystemnaming.index('gpfsdevice')]
@@ -782,9 +788,10 @@ class GpfsOperations(PosixOperations, metaclass=Singleton):
             efsetpath = efset.get('path', None)
             efsetname = efset.get('filesetName', None)
             if efsetpath == fsetpath or efsetname == fileset_name:
-                self.log.raiseException(("Found existing fileset %s that has same path %s or same name %s as new "
-                                         "path %s or new name %s") %
-                                        (efset, efsetpath, efsetname, fsetpath, fileset_name), GpfsOperationError)
+                self.log.raiseException(
+                    f"Found existing fileset {efset} that has same path {efsetpath} or same name {efsetname}"
+                    f" as new path {fsetpath} or new name {fileset_name}",
+                GpfsOperationError)
 
         # create the fileset
         # if created, try to link it with -J to path
@@ -792,9 +799,9 @@ class GpfsOperations(PosixOperations, metaclass=Singleton):
         if parent_fileset_name is None:
             mmcrfileset_options += ['--inode-space', 'new']
             if inodes_max:
-                INODE_LIMIT_STRING = "%d" % (inodes_max,)
+                INODE_LIMIT_STRING = f"{int(inodes_max)}"
                 if inodes_prealloc:
-                    INODE_LIMIT_STRING += ":%d" % (inodes_prealloc,)
+                    INODE_LIMIT_STRING += f":{int(inodes_prealloc)}"
             else:
                 INODE_LIMIT_STRING = GPFS_DEFAULT_INODE_LIMIT
             mmcrfileset_options += ['--inode-limit', INODE_LIMIT_STRING]
@@ -804,20 +811,24 @@ class GpfsOperations(PosixOperations, metaclass=Singleton):
                 if parent_fileset_name and parent_fileset_name == efset.get('filesetName', None):
                     parent_fileset_exists = True
             if not parent_fileset_exists:
-                self.log.raiseException("Parent fileset %s does not appear to exist." %
-                                        parent_fileset_name, GpfsOperationError)
+                self.log.raiseException(
+                    f"Parent fileset {parent_fileset_name} does not appear to exist.",
+                    GpfsOperationError)
             mmcrfileset_options += ['--inode-space', parent_fileset_name]
 
         (ec, out) = self._execute('mmcrfileset', mmcrfileset_options, True)
         if ec > 0:
-            self.log.raiseException("Creating fileset with name %s on device %s failed (out: %s)" %
-                                    (fileset_name, foundgpfsdevice, out), GpfsOperationError)
+            self.log.raiseException(
+                f"Creating fileset with name {fileset_name} on device {foundgpfsdevice} failed (out: {out})",
+                GpfsOperationError)
 
         # link the fileset
         ec, out = self._execute('mmlinkfileset', [foundgpfsdevice, fileset_name, '-J', fsetpath], True)
         if ec > 0:
-            self.log.raiseException("Linking fileset with name %s on device %s to path %s failed (out: %s)" %
-                                    (fileset_name, foundgpfsdevice, fsetpath, out), GpfsOperationError)
+            self.log.raiseException(
+                f"Linking fileset with name {fileset_name} on device {foundgpfsdevice} "
+                f"to path {fsetpath} failed (out: {out})",
+                GpfsOperationError)
 
         # at the end, rescan the filesets and force update the info
         self.list_filesets(update=True)
@@ -863,8 +874,9 @@ class GpfsOperations(PosixOperations, metaclass=Singleton):
                 fileset_name = attr['filesetname']
                 self.log.info("set_fileset_quota: setting fileset to %s for obj %s", fileset_name, fileset_path)
             else:
-                self.log.raiseException(("set_fileset_quota: attrs for obj %s don't have filestename property "
-                                         "(attr: %s)") % (fileset_path, attr), GpfsOperationError)
+                self.log.raiseException(
+                    f"set_fileset_quota: attrs for obj {fileset_path} don't have filestename property (attr: {attr})",
+                    GpfsOperationError)
 
         self._set_quota(soft, who=fileset_name, obj=fileset_path, typ='fileset', hard=hard,
                         inode_soft=inode_soft, inode_hard=inode_hard)
@@ -907,7 +919,7 @@ class GpfsOperations(PosixOperations, metaclass=Singleton):
 
         obj = self._sanity_check(obj)
         if not self.dry_run and not self.exists(obj):
-            self.log.raiseException("setQuota: can't set quota on none-existing obj %s" % obj, GpfsOperationError)
+            self.log.raiseException(f"setQuota: can't set quota on none-existing obj {obj}", GpfsOperationError)
 
         # FIXME: this should be some constant or such
         typ2opt = {'user': 'u',
@@ -916,14 +928,14 @@ class GpfsOperations(PosixOperations, metaclass=Singleton):
                    }
 
         opts = []
-        opts += ["-%s" % typ2opt[typ], "%s" % id_]
-        opts += ["-t", "%s" % int(grace)]
+        opts += [f"-{typ2opt[typ]}", f"{id_}"]
+        opts += ["-t", f"{int(grace)}"]
 
         opts.append(obj)
 
         ec, _ = self._execute('tssetquota', opts, True)
         if ec > 0:
-            self.log.raiseException("_set_grace: tssetquota with opts %s failed" % (opts), GpfsOperationError)
+            self.log.raiseException(f"_set_grace: tssetquota with opts {opts} failed", GpfsOperationError)
 
     @staticmethod
     def determine_grace_periods(quota):
@@ -973,7 +985,7 @@ class GpfsOperations(PosixOperations, metaclass=Singleton):
             expired = (True, grace_time)
         else:
             fancylogger.getLogger().error("Unknown grace record %s.", grace_record)
-            raise GpfsOperationError("Cannot process grace information (%s)" % grace_record)
+            raise GpfsOperationError(f"Cannot process grace information ({grace_record})")
 
         return expired
 
@@ -1016,7 +1028,7 @@ class GpfsOperations(PosixOperations, metaclass=Singleton):
 
         obj = self._sanity_check(obj)
         if not self.dry_run and not self.exists(obj):  # FIXME: hardcoding this here is fugly.
-            self.log.raiseException("setQuota: can't set quota on none-existing obj %s" % obj, GpfsOperationError)
+            self.log.raiseException(f"setQuota: can't set quota on none-existing obj {obj}", GpfsOperationError)
 
         # FIXME: this should be some constant or such
         typ2opt = {
@@ -1028,26 +1040,28 @@ class GpfsOperations(PosixOperations, metaclass=Singleton):
         soft2hard_factor = 1.05
 
         if typ not in typ2opt:
-            self.log.raiseException("_set_quota: unsupported type %s" % typ, GpfsOperationError)
+            self.log.raiseException(f"_set_quota: unsupported type {typ}", GpfsOperationError)
 
         opts = []
 
         if hard is None:
             hard = int(soft * soft2hard_factor)
         elif hard < soft:
-            self.log.raiseException("setQuota: can't set hard limit %s lower then soft limit %s" %
-                                    (hard, soft), GpfsOperationError)
+            self.log.raiseException(
+                f"setQuota: can't set hard limit {hard} lower then soft limit {soft}",
+                GpfsOperationError)
 
-        opts += ["-%s" % typ2opt[typ], "%s" % who]
-        opts += ["-s", "%sm" % int(soft / 1024 ** 2)]  # round to MB
-        opts += ["-h", "%sm" % int(hard / 1024 ** 2)]  # round to MB
+        opts += [f"-{typ2opt[typ]}", f"{who}"]
+        opts += ["-s", f"{int(soft / 1024 ** 2)}m"]  # round to MB
+        opts += ["-h", f"{int(hard / 1024 ** 2)}m"]  # round to MB
 
         if inode_soft is not None:
             if inode_hard is None:
                 inode_hard = int(inode_soft * soft2hard_factor)
             elif inode_hard < inode_soft:
-                self.log.raiseException("setQuota: can't set hard inode limit %s lower then soft inode limit %s" %
-                                        (inode_hard, inode_soft), GpfsOperationError)
+                self.log.raiseException(
+                    f"setQuota: can't set hard inode limit {inode_hard} lower then soft inode limit {inode_soft}",
+                    GpfsOperationError)
 
             opts += ["-S", str(inode_soft)]
             opts += ["-H", str(inode_hard)]
@@ -1056,7 +1070,7 @@ class GpfsOperations(PosixOperations, metaclass=Singleton):
 
         ec, _ = self._execute('tssetquota', opts, True)
         if ec > 0:
-            self.log.raiseException("_set_quota: tssetquota with opts %s failed" % (opts), GpfsOperationError)
+            self.log.raiseException(f"_set_quota: tssetquota with opts {opts} failed", GpfsOperationError)
 
     def list_snapshots(self, filesystem):
         """ List the snapshots of the given filesystem """
@@ -1096,8 +1110,9 @@ class GpfsOperations(PosixOperations, metaclass=Singleton):
 
         ec, out = self._execute('mmcrsnapshot', opts, True)
         if ec > 0:
-            self.log.raiseException("create_filesystem_snapshot: mmcrsnapshot with opts %s failed: %s"
-                % (opts, out), GpfsOperationError)
+            self.log.raiseException(
+                f"create_filesystem_snapshot: mmcrsnapshot with opts {opts} failed: {out}",
+                GpfsOperationError)
 
         return ec == 0
 
@@ -1116,8 +1131,9 @@ class GpfsOperations(PosixOperations, metaclass=Singleton):
         opts = [fsname, snapname]
         ec, out = self._execute('mmdelsnapshot', opts, True)
         if ec > 0:
-            self.log.raiseException("delete_filesystem_snapshot: mmdelsnapshot with opts %s failed: %s" %
-                                    (opts, out), GpfsOperationError)
+            self.log.raiseException(
+                f"delete_filesystem_snapshot: mmdelsnapshot with opts {opts} failed: {out}",
+                 GpfsOperationError)
         return ec == 0
 
     def get_mmhealth_state(self):
@@ -1125,7 +1141,7 @@ class GpfsOperations(PosixOperations, metaclass=Singleton):
         opts = ['node', 'show']
         res = self._executeY('mmhealth', opts)
         states = res['State']
-        comp_entities = ['%s_%s' % ident for ident in zip(states['component'], states['entityname'])]
+        comp_entities = [f'{ident}_{value}' for ident, value in zip(states['component'], states['entityname'])]
         return dict(zip(comp_entities, states['status']))
 
 
