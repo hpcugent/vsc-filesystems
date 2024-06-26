@@ -22,20 +22,20 @@ import vsc.install.shared_setup as shared_setup
 from vsc.install.shared_setup import ag, kh, sdw, kw, wdp
 
 install_requires = [
-    'vsc-base >= 3.0.3',
-    'vsc-config >= 3.13.1',
-    'vsc-utils >= 2.0.0',
-    'pyyaml',
+    "vsc-base >= 3.0.3",
+    "vsc-config >= 3.13.1",
+    "vsc-utils >= 2.0.0",
+    "pyyaml <= 6.0.1",
 ]
 
 PACKAGE = {
-    'version': '2.2.4',
-    'author': [sdw, ag, kh, kw],
-    'maintainer': [sdw, ag, kh, kw, wdp],
-    'setup_requires': ['vsc-install >= 0.15.2'],
-    'tests_require': ['mock'],
-    'install_requires': install_requires
+    "version": "2.2.4",
+    "author": [sdw, ag, kh, kw],
+    "maintainer": [sdw, ag, kh, kw, wdp],
+    "setup_requires": ["vsc-install >= 0.15.2"],
+    "tests_require": ["mock"],
+    "install_requires": install_requires,
 }
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     shared_setup.action_target(PACKAGE)
