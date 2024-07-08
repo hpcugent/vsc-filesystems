@@ -31,10 +31,13 @@ install_requires = [
 
 if sys.version_info < (3,9):
     install_requires.append("pyyaml <= 6.0.1")
+else:
+    install_requires.append("pyyaml")
+
 
 
 PACKAGE = {
-    "version": "2.2.4",
+    "version": "2.3.0",
     "author": [sdw, ag, kh, kw],
     "maintainer": [sdw, ag, kh, kw, wdp],
     "setup_requires": ["vsc-install >= 0.15.2"],
