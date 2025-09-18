@@ -37,7 +37,7 @@ else:
 
 
 PACKAGE = {
-    "version": "2.3.2",
+    "version": "2.4.0",
     "author": [sdw, ag, kh, kw],
     "maintainer": [sdw, ag, kh, kw, wdp],
     "setup_requires": ["vsc-install >= 0.15.2"],

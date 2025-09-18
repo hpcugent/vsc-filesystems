@@ -551,9 +551,17 @@ class PosixOperations(metaclass=Singleton):
         else:
             self.log.debug("Path %s already exists with correct permissions", path)
 
-        if created or statinfo.st_uid != uid or statinfo.st_gid != gid:
-            self.chown(uid, gid, path)
-            self.log.info("Ownership changed for path %s to %d, %d", path, uid, gid)
+        if created:
+            self.chown(uid, group=gid, obj=path)
+            self.log.info("Ownership changed for new directory %s to %d, %d", path, uid, gid)
+        elif override_permissions and statinfo.st_gid != gid:
+            # only reset group owner if requested
+            self.chown(uid, group=gid, obj=path)
+            self.log.info("Group ownership reset for directory %s to %d, %d", path, uid, gid)
+        elif statinfo.st_uid != uid:
+            # always reset user owner
+            self.chown(uid, obj=path)
+            self.log.info("User ownership reset for directory %s to %d", path, uid)
         else:
             self.log.debug("Path %s already exists with correct ownership", path)
 

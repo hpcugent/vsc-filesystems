@@ -164,7 +164,7 @@ class PosixTest(TestCase):
 
         mock_os_stat.assert_called_with(test_path)
         mock_makedirs.assert_not_called
-        mock_chown.assert_called_with(test_path, test_uid, test_gid)
+        mock_chown.assert_called_with(test_path, test_uid, None)
 
     @mock.patch('vsc.filesystem.posix.os.stat')
     @mock.patch('stat.S_ISDIR')
@@ -188,7 +188,7 @@ class PosixTest(TestCase):
 
         mock_os_stat.assert_called_with(test_path)
         mock_makedirs.assert_not_called
-        mock_chown.assert_called_with(test_path, test_uid, test_gid)
+        mock_chown.assert_called_with(test_path, test_uid, None)
 
     @mock.patch('vsc.filesystem.posix.os.stat')
     @mock.patch('stat.S_ISDIR')
