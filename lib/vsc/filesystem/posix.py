@@ -22,6 +22,7 @@ General POSIX filesystem interaction (sort of replacement for linux_utils)
 import errno
 import os
 import stat
+import tempfile
 
 from vsc.utils import fancylogger
 from vsc.utils.patterns import Singleton
@@ -558,3 +559,69 @@ class PosixOperations(metaclass=Singleton):
             self.log.debug("Path %s already exists with correct ownership", path)
 
         return created
+
+    def replace_acl(self, path, permissions):
+        """
+        Overwrite ACL permissions on given path
+        """
+        path = self._sanity_check(path)
+        fs = self._what_filesystem(path)
+        if fs is None:
+            self.log.warning(f"ACL replacement requested on  filesystem with unknown support: {path}")
+            return False
+
+        if not isinstance(permissions, (tuple, list,)):
+            raise PosixOperationError("Given ACL permissions are not a list or tuple")
+
+        replace_acl_method = self._replace_acl_posix
+        if fs[0] in ['gpfs', 'nfs4']:
+            replace_acl_method = self._replace_acl_nfs
+
+        return replace_acl_method(path, permissions)
+
+    def _replace_acl_posix(self, path, permissions):
+        """
+        Overwrite ACL permissions in POSIX format on given path
+        """
+        setfacl_exe = 'setfacl'
+
+        with tempfile.NamedTemporaryFile() as acl_file:
+            self.log.debug(f"Input file for {setfacl_exe} created in: {acl_file.name}")
+            acl_entries = '\n'.join(permissions)
+            acl_file.write(acl_entries.encode('utf-8'))
+            self.log.debug(f"Setting POSIX ACLs on '{path}' to:\n{acl_entries}")
+
+            setfacl_cmd = [
+                setfacl_exe,
+                f'--set-file={acl_file.name}',
+                path
+            ]
+
+            try:
+                ec, out = self._execute(setfacl_cmd)
+            except FileNotFoundError as err:
+                raise PosixOperationError(f"Cannot set POSIX ACLs, command {setfacl_exe} not found") from err
+            else:
+                return ec, out
+
+    def _replace_acl_nfs(self, path, permissions):
+        """
+        Overwrite ACL permissions in NFSv4 format on given path
+        """
+        acl_entries = ','.join(permissions)
+        self.log.debug(f"Setting NFSv4 ACLs on '{path}' to: {acl_entries}")
+
+        setfacl_exe = 'nfs4_setfacl'
+        setfacl_cmd = [
+            'nfs4_setfacl',
+            '-s',
+            f'"{acl_entries}"',
+            path
+        ]
+
+        try:
+            ec, _ = self._execute(setfacl_cmd)
+        except FileNotFoundError as err:
+            raise PosixOperationError(f"Cannot set NFSv4 ACLs, command {setfacl_exe} not found") from err
+        else:
+            return ec

@@ -240,3 +240,42 @@ class PosixTest(TestCase):
 
         mock_os_stat.assert_called_with(test_path)
         mock_makedirs.assert_not_called
+
+    @mock.patch('vsc.filesystem.posix.PosixOperations._execute')
+    @mock.patch('vsc.filesystem.posix.PosixOperations._what_filesystem')
+    @mock.patch('vsc.filesystem.posix.tempfile.NamedTemporaryFile')
+    def test_replace_acl(self, mock_tempfile, mock_what_filesystem, mock_execute):
+        """
+        Test replacement of ACLs
+        """
+        mock_aclfile = mock.MagicMock()
+        mock_aclfile.name = "/tmp/acl_input_file"
+        mock_context = mock.MagicMock()
+        mock_context.__enter__.return_value = mock_aclfile
+        mock_tempfile.return_value = mock_context
+        mock_execute.return_value = (0, "")
+        test_path = '/tmp/test'
+
+        # POSIX ACLs
+        mock_what_filesystem.return_value = ['posix', '/data', 0, '127.0.0.1@tcp']
+
+        test_acl_posix = "user::rwx"
+        self.assertRaises(PosixOperationError, self.po.replace_acl, test_path, test_acl_posix)
+
+        test_acl_posix = ["user::rwx", "group::r-x", "other::r-x"]
+        self.po.replace_acl(test_path, test_acl_posix)
+        mock_execute.assert_called_with(
+            ['setfacl', '--set-file=/tmp/acl_input_file', '/tmp/test']
+        )
+
+        # NFSv4 ACLs
+        mock_what_filesystem.return_value = ['nfs4', '/data', 0, '127.0.0.1@tcp']
+
+        test_acl_posix = "A:d:OWNER@:rwaDdxtTnNcoy"
+        self.assertRaises(PosixOperationError, self.po.replace_acl, test_path, test_acl_posix)
+
+        test_acl_posix = ["A:d:OWNER@:rwaDdxtTnNcoy", "A:dg:GROUP@:rxtncy", "A:fd:EVERYONE@:tncy"]
+        self.po.replace_acl(test_path, test_acl_posix)
+        mock_execute.assert_called_with(
+            ['nfs4_setfacl', '-s', '"A:d:OWNER@:rwaDdxtTnNcoy,A:dg:GROUP@:rxtncy,A:fd:EVERYONE@:tncy"', '/tmp/test']
+        )
