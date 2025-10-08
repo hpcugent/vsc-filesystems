@@ -23,12 +23,12 @@ For now, this just offers the posix operations, nothing more.
 
 from vsc.filesystem.posix import PosixOperations, PosixOperationError
 
+
 class ExtOperationError(PosixOperationError):
     pass
 
 
 class ExtOperations(PosixOperations):
-
     def __init__(self):
         super().__init__()
-        self.supportedfilesystems = ['ext2', 'ext3', 'ext4']
+        self.supportedfilesystems = ["ext2", "ext3", "ext4"]

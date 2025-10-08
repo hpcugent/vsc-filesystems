@@ -17,12 +17,14 @@ Interface to dynamically load vsc.filesystem modules and instantiate its XxxxOpe
 
 @author: Alex Domingo (Vrije Universiteit Brussel)
 """
+
 import importlib
 import logging
 
-STORAGE_OPERATORS = ('Posix', 'Gpfs', 'OceanStor', 'Lustre')
-OPERATOR_CLASS_SUFFIX = 'Operations'
-OPERATOR_ERROR_CLASS_SUFFIX = 'OperationError'
+STORAGE_OPERATORS = ("Posix", "Gpfs", "OceanStor", "Lustre")
+OPERATOR_CLASS_SUFFIX = "Operations"
+OPERATOR_ERROR_CLASS_SUFFIX = "OperationError"
+
 
 class StorageOperator:
     """
@@ -66,7 +68,7 @@ class StorageOperator:
         except NameError:
             ModuleImportError = ImportError
 
-        backend_module_name = '.'.join(['vsc', 'filesystem', backend])
+        backend_module_name = ".".join(["vsc", "filesystem", backend])
         try:
             backend_module = importlib.import_module(backend_module_name)
         except ModuleImportError:
